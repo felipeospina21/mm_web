@@ -1,0 +1,62 @@
+# Run the whole stack with a single command:
+#
+#   docker compose up --build
+#
+# This starts Postgres, applies Drizzle migrations, then boots the Next.js app
+# on http://localhost:3000. To create a login user afterwards, run:
+#
+#   docker compose run --rm migrate pnpm db:seed you@company.com "your-password" "Your Name"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: mm_web
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mm_web"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/mm_web
+      SKIP_ENV_VALIDATION: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/mm_web
+      AUTH_SECRET: ${AUTH_SECRET:-9Gv/kDxxLnDuGQm5PG4EERmtARcuRCq7MVDXj8Jai0A=}
+      AUTH_TRUST_HOST: "true"
+      # Public URL the browser uses — without this, NextAuth v5 derives the
+      # origin from the container bind host (0.0.0.0) and redirects there.
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  db-data:

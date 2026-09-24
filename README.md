@@ -1,29 +1,55 @@
-# Create T3 App
+# mm_web
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+Quotation editor built on the [T3 Stack](https://create.t3.gg/) — Next.js (App
+Router), NextAuth (email/password), Drizzle ORM, and PostgreSQL.
 
-## What's next? How do I make an app with this?
+## Run everything with one command (Docker)
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+Requires Docker with Compose v2 (`docker compose`).
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+```bash
+docker compose up --build
+```
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+This will:
 
-## Learn More
+1. Start PostgreSQL (data persisted in the `db-data` volume).
+2. Wait for the database to be healthy, then apply Drizzle migrations.
+3. Start the Next.js app on http://localhost:3000 once migrations succeed.
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+The app opens on the **login page** (`/`). After signing in you are redirected to
+the **quotation editor** (`/editor`).
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+### Create a login user
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+The app has no public sign-up, so seed a user once the stack is running:
 
-## How do I deploy this?
+```bash
+docker compose run --rm migrate pnpm db:seed you@company.com "your-password" "Your Name"
+```
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+### Configuration
+
+Compose reads these optional environment variables (sensible defaults are baked in
+for local use — override them in production):
+
+- `POSTGRES_PASSWORD` — Postgres password (default `postgres`)
+- `AUTH_SECRET` — NextAuth secret (a dev default is provided)
+
+## Local development (without Docker)
+
+```bash
+./start-database.sh   # starts a local Postgres container
+pnpm install
+pnpm db:migrate
+pnpm db:seed you@company.com "your-password" "Your Name"
+pnpm dev
+```
+
+## Useful scripts
+
+- `pnpm dev` — start the dev server
+- `pnpm build` / `pnpm start` — production build and serve
+- `pnpm db:migrate` — apply migrations
+- `pnpm db:seed <email> <password> [name]` — create/update a login user
+- `pnpm typecheck` — TypeScript check

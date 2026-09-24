@@ -1,6 +1,8 @@
+import { verify } from "argon2";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { eq } from "drizzle-orm";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import DiscordProvider from "next-auth/providers/discord";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 import { db } from "@/server/db";
 import {
@@ -38,16 +40,34 @@ declare module "next-auth" {
  */
 export const authConfig = {
   providers: [
-    DiscordProvider,
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
+    CredentialsProvider({
+      name: "Email and password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const email =
+          typeof credentials?.email === "string" ? credentials.email : null;
+        const password =
+          typeof credentials?.password === "string" ? credentials.password : null;
+        if (!email || !password) return null;
+
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+
+        // No account, or account without a password (e.g. OAuth-only user)
+        if (!user?.passwordHash) return null;
+
+        const passwordMatches = await verify(user.passwordHash, password);
+        if (!passwordMatches) return null;
+
+        return { id: user.id, name: user.name, email: user.email, image: user.image };
+      },
+    }),
   ],
   adapter: DrizzleAdapter(db, {
     usersTable: users,

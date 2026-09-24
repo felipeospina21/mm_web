@@ -44,3 +44,9 @@ yarn-error.log*
 
 # idea files
 .idea
+
+.coda
+
+# agent tooling (local caches — not project code)
+.hippo
+.codegraph
