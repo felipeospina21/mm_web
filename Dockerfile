@@ -1,13 +1,12 @@
 ##########
 # Base   #
 ##########
-FROM node:20-slim AS base
+FROM node:22-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 # argon2 is a native addon — needs a toolchain + python to compile.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 build-essential \
-  && rm -rf /var/lib/apt/lists/*
+# Alpine uses musl libc, so build tools come from apk (build-base = gcc/g++/make).
+RUN apk add --no-cache python3 build-base libc6-compat
 RUN corepack enable
 WORKDIR /app
 
@@ -50,16 +49,19 @@ CMD ["pnpm", "db:migrate"]
 ##################
 # Runner         #
 ##################
-FROM node:20-slim AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Run as an unprivileged user.
+# libc6-compat helps native addons (e.g. argon2) load under musl.
+RUN apk add --no-cache libc6-compat
+
+# Run as an unprivileged user (Alpine/BusyBox adduser syntax).
 RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 nextjs
+  && adduser --system --uid 1001 --ingroup nodejs nextjs
 
 # The standalone output bundles only the files the server actually needs.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
