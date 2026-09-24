@@ -11,6 +11,10 @@ const config = {
   // Pin the workspace root: a stray pnpm-lock.yaml in ~/ makes Next
   // infer the wrong root otherwise.
   outputFileTracingRoot: import.meta.dirname,
+  // Keep native/server-only packages external so they are never bundled
+  // (loaded from node_modules at runtime instead). Correct default for
+  // native addons like argon2 and the postgres driver.
+  serverExternalPackages: ["argon2", "postgres"],
 };
 
 export default config;
