@@ -8,6 +8,13 @@
       "when": 1790285446210,
       "tag": "0000_ancient_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790893629220,
+      "tag": "0001_dry_joseph",
+      "breakpoints": true
     }
   ]
 }
