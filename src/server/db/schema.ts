@@ -31,6 +31,66 @@ export const posts = createTable(
   ],
 );
 
+/**
+ * Catalog products rendered on the home page as cards.
+ * For the POC these are mocked rows seeded into the database.
+ */
+export const products = createTable(
+  "product",
+  (d) => ({
+    id: d
+      .varchar({ length: 255 })
+      .notNull()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    name: d.varchar({ length: 256 }).notNull(),
+    description: d.text(),
+    price: d.varchar({ length: 64 }).notNull(),
+    imageUrl: d.text(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  }),
+  (t) => [index("products_name_idx").on(t.name)],
+);
+
+/**
+ * Color variant of a product: swatch color, current stock and
+ * packaging info shown on the product card.
+ */
+export const productVariants = createTable(
+  "product_variant",
+  (d) => ({
+    id: d
+      .varchar({ length: 255 })
+      .notNull()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    productId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    colorName: d.varchar({ length: 128 }).notNull(),
+    colorHex: d.varchar({ length: 9 }).notNull(),
+    stock: d.integer().notNull().default(0),
+    /** Packaging info, e.g. "Box of 24" or "Bulk pallet" */
+    packaging: d.varchar({ length: 256 }),
+  }),
+  (t) => [index("product_variants_product_id_idx").on(t.productId)],
+);
+
+export const productsRelations = relations(products, ({ many }) => ({
+  variants: many(productVariants),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ one }) => ({
+  product: one(products, {
+    fields: [productVariants.productId],
+    references: [products.id],
+  }),
+}));
+
 export const users = createTable("user", (d) => ({
   id: d
     .varchar({ length: 255 })

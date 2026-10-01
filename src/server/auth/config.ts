@@ -75,12 +75,26 @@ export const authConfig = {
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
+  // The credentials provider cannot use database sessions; NextAuth only
+  // persists a session for credentials logins when the JWT strategy is set
+  // explicitly. Without this the login "succeeds" but no readable session
+  // cookie is created, so auth() keeps returning null and the login page
+  // re-renders instead of redirecting.
+  session: { strategy: "jwt" },
   callbacks: {
-    session: ({ session, user }) => ({
+    // JWT strategy (required for the credentials provider): carry the
+    // user id from the authorize() result into the token.
+    jwt: ({ token, user }) => {
+      if (user) {
+        token.sub = user.id;
+      }
+      return token;
+    },
+    session: ({ session, token }) => ({
       ...session,
       user: {
         ...session.user,
-        id: user.id,
+        id: token.sub,
       },
     }),
   },

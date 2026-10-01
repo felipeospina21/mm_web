@@ -158,12 +158,14 @@ function makeFooter(): TemplateElement[] {
 }
 
 /**
- * First page: company + client header, then the FIRST product.
+ * First page: company + client header. When `withProduct` is true the
+ * first product block is included (used once products are added);
+ * otherwise it is just the header + footer (initial empty quotation).
  */
-function makeFirstPageElements(): TemplateElement[] {
+function makeFirstPageElements(withProduct: boolean): TemplateElement[] {
   return [
     ...makeFirstPageHeader(),
-    ...makeProductElements('p1'),
+    ...(withProduct ? makeProductElements('p1') : []),
     {
       id: 'customer-name-line',
       type: 'text',
@@ -296,8 +298,9 @@ function interpolate(
 
 /**
  * Builds the full page set from a quotation:
- *  - Page 1: header (company + client) + first product
- *  - Pages 2..n-1: one product per page
+ *  - Page 1: header (company + client) + first product (header only if
+ *    the quotation has no products yet)
+ *  - Pages 2..n: one product per page
  *  - Last page: commercial policies
  */
 export function buildPagesFromQuotation(
@@ -309,7 +312,9 @@ export function buildPagesFromQuotation(
     const pageNumber = pages.length + 1
 
     const baseElements =
-      index === 0 ? makeFirstPageElements() : makeProductPageElements(`p${pageNumber}`)
+      index === 0
+        ? makeFirstPageElements(true)
+        : makeProductPageElements(`p${pageNumber}`)
 
     const pageElements = baseElements.map((el) => {
       const next: TemplateElement = {
@@ -335,6 +340,15 @@ export function buildPagesFromQuotation(
     })
   })
 
+  // Empty quotation: header-only first page
+  if (quotation.products.length === 0) {
+    pages.push({
+      id: 'page-1',
+      pageNumber: 1,
+      elements: makeFirstPageElements(false),
+    })
+  }
+
   // Final policies page
   const policiesPageNumber = quotation.products.length + 1
   pages.push({
@@ -346,12 +360,17 @@ export function buildPagesFromQuotation(
   return pages
 }
 
-/** Master template shown before "Populate Data" is clicked */
+/** Initial quotation: header page + policies page, no products yet */
+export function makeEmptyQuotationPages(): PageData[] {
+  return buildPagesFromQuotation({ ...DUMMY_QUOTATION, products: [] })
+}
+
+/** Master template shown before products are added */
 export function makeMasterTemplate(): PageData {
   return {
     id: 'page-template',
     pageNumber: 1,
-    elements: makeFirstPageElements(),
+    elements: makeFirstPageElements(false),
   }
 }
 

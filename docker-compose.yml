@@ -1,9 +1,10 @@
 # Run the whole stack with a single command:
 #
-#   docker compose up --build
+#   AUTH_SECRET=$(npx auth secret) docker compose up --build
 #
-# This starts Postgres, applies Drizzle migrations, then boots the Next.js app
-# on http://localhost:3000. To create a login user afterwards, run:
+# AUTH_SECRET is required (no committed default). This starts Postgres, applies
+# Drizzle migrations, then boots the Next.js app on http://localhost:3000.
+# To create a login user afterwards, run:
 #
 #   docker compose run --rm migrate pnpm db:seed you@company.com "your-password" "Your Name"
 
@@ -13,6 +14,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
+      # Local-dev default only — never a real secret, and the DB is not exposed
+      # beyond the host. Override POSTGRES_PASSWORD with a strong value in prod.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: mm_web
     ports:
@@ -43,7 +46,10 @@ services:
       target: runner
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/mm_web
-      AUTH_SECRET: ${AUTH_SECRET:-9Gv/kDxxLnDuGQm5PG4EERmtARcuRCq7MVDXj8Jai0A=}
+      # No committed fallback: AUTH_SECRET signs/encrypts session JWTs, so a
+      # hardcoded default would be a public signing key. Compose errors out if
+      # it isn't provided. Generate one with `npx auth secret`.
+      AUTH_SECRET: "${AUTH_SECRET:?AUTH_SECRET must be set - generate one with npx auth secret}"
       AUTH_TRUST_HOST: "true"
       # Public URL the browser uses — without this, NextAuth v5 derives the
       # origin from the container bind host (0.0.0.0) and redirects there.

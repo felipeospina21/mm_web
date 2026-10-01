@@ -7,7 +7,14 @@ ENV PATH="$PNPM_HOME:$PATH"
 # argon2 is a native addon — needs a toolchain + python to compile.
 # Alpine uses musl libc, so build tools come from apk (build-base = gcc/g++/make).
 RUN apk add --no-cache python3 build-base libc6-compat
-RUN corepack enable
+# Install pnpm as a pinned global package rather than via corepack. corepack
+# only installs a lazy shim that re-downloads the real pnpm binary over the
+# network on first use in each stage (even when it's cached), which is why
+# every build appeared to re-download pnpm. A global install bakes the actual
+# binary into this rarely-changing base layer, so it's downloaded exactly once
+# and reused by every downstream stage with no runtime network access.
+# Keep this version in sync with package.json's `packageManager` field.
+RUN npm install -g pnpm@12.5.1
 WORKDIR /app
 
 ##################
@@ -17,7 +24,11 @@ WORKDIR /app
 FROM base AS deps
 ENV PNPM_CONFIG_STRICT_DEP_BUILDS=false
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-RUN pnpm install --frozen-lockfile
+# BuildKit cache mount: persist pnpm's content-addressable store across builds
+# so dependencies are re-linked from cache instead of re-downloaded from the
+# registry whenever this layer is invalidated (e.g. a lockfile change).
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 ##################
 # Builder        #
@@ -28,7 +39,10 @@ COPY . .
 # Env vars are validated at build time; skip since they arrive at runtime.
 ENV SKIP_ENV_VALIDATION=1
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm build
+# BuildKit cache mount: persist Next.js' compilation cache across builds for
+# incremental rebuilds when only source changes.
+RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
+    pnpm build
 
 ##################
 # Migrator       #

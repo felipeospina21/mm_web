@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 function LoginFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/editor";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +30,9 @@ function LoginFormInner() {
       }
       router.push(callbackUrl);
       router.refresh();
+    } catch (error) {
+      console.error("Sign-in failed:", error);
+      setError("Something went wrong signing in. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

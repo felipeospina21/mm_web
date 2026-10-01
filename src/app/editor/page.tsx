@@ -1,13 +1,18 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import type Konva from 'konva'
 import { exportPagesToPdf } from './_components/pdf-export'
-import { buildPagesFromQuotation, DUMMY_QUOTATION, makeMasterTemplate } from './_components/template-data'
+import { buildPagesFromQuotation, makeEmptyQuotationPages, DUMMY_QUOTATION } from './_components/template-data'
 import type { PageData, QuotationData, TemplateElement } from './_components/types'
+import {
+  getQuotationProducts,
+  type QuotationProduct,
+} from '@/lib/quotation-selection'
 
 // Konva touches `window` at import time, so the canvas is loaded
 // client-side only.
@@ -18,14 +23,6 @@ const QuotationCanvas = dynamic(
 
 export default function EditorPage() {
   const router = useRouter()
-  // Starts with the master template (one page of placeholders)
-  const [pages, setPages] = useState<PageData[]>([makeMasterTemplate()])
-  const [isExporting, setIsExporting] = useState(false)
-  const stageRef = useRef<Konva.Stage | null>(null)
-
-  // ---- Undo/redo history ----
-  const historyRef = useRef<PageData[][]>([[makeMasterTemplate()]])
-  const historyIndexRef = useRef(0)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
 
@@ -85,14 +82,35 @@ export default function EditorPage() {
   }, [router])
 
   /**
-   * "Populate Data": builds the full page set from the quotation —
-   * first page with company/client header + first product, one page
-   * per additional product, and a fixed commercial-policies last page.
+   * Builds the initial quotation pages from the products selected on
+   * the home page: header page + first product, one page per additional
+   * product, and the fixed policies last page. Falls back to the empty
+   * quotation (header page + policies page) when nothing is picked.
    */
-  const handlePopulateData = useCallback(() => {
-    const quotation: QuotationData = DUMMY_QUOTATION
-    setPagesWithHistory(buildPagesFromQuotation(quotation))
-  }, [setPagesWithHistory])
+  const makeInitialPages = useCallback(() => {
+    const picked = getQuotationProducts()
+    if (picked.length === 0) return makeEmptyQuotationPages()
+
+    const quotation: QuotationData = {
+      ...DUMMY_QUOTATION,
+      products: picked.map((product: QuotationProduct) => ({
+        name: product.name,
+        price: product.price,
+        description: product.description,
+      })),
+    }
+    return buildPagesFromQuotation(quotation)
+  }, [])
+
+  // Initial quotation pages: header page + policies page, plus one page
+  // per product picked on the home page.
+  const [pages, setPages] = useState<PageData[]>(makeInitialPages)
+  const [isExporting, setIsExporting] = useState(false)
+  const stageRef = useRef<Konva.Stage | null>(null)
+
+  // ---- Undo/redo history ----
+  const historyRef = useRef<PageData[][]>([makeInitialPages()])
+  const historyIndexRef = useRef(0)
 
   /** Persist any element edit (drag, resize, text, formatting) */
   const handleElementChange = useCallback(
@@ -290,12 +308,12 @@ export default function EditorPage() {
           >
             + Image
           </button>
-          <button
-            onClick={handlePopulateData}
+          <Link
+            href="/"
             className="rounded border border-neutral-300 bg-neutral-100 px-2.5 py-1.5 text-sm hover:bg-neutral-200"
           >
-            Populate Data
-          </button>
+            + Add products
+          </Link>
           <button
             onClick={handleExportPdf}
             disabled={isExporting}
