@@ -4,11 +4,22 @@
  * selection survives navigation between the catalog and the editor.
  */
 
+/** A color variant of a product, with the stock shown in the inventory table. */
+export interface QuotationProductVariant {
+  id: string
+  colorName: string
+  colorHex: string
+  stock: number
+  packaging: string | null
+}
+
 export interface QuotationProduct {
   id: string
   name: string
   price: string
   description: string
+  /** Color variants (stock + packaging) captured when the product was picked. */
+  variants: QuotationProductVariant[]
 }
 
 const STORAGE_KEY = "mm_quotation_products";
@@ -18,7 +29,14 @@ function readAll(): QuotationProduct[] {
   if (typeof window === "undefined") return []
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as QuotationProduct[]) : []
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as QuotationProduct[]
+    // Selections saved before variants existed have no `variants` field;
+    // normalize so consumers can always rely on it being an array.
+    return parsed.map((product) => ({
+      ...product,
+      variants: product.variants ?? [],
+    }))
   } catch {
     return []
   }

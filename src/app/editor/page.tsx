@@ -1,14 +1,12 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import type Konva from 'konva'
 import { exportPagesToPdf } from './_components/pdf-export'
 import { buildPagesFromQuotation, makeEmptyQuotationPages, DUMMY_QUOTATION } from './_components/template-data'
 import type { PageData, QuotationData, TemplateElement } from './_components/types'
+import { ActionsMenu } from './_components/actions-menu'
 import {
   getQuotationProducts,
   type QuotationProduct,
@@ -22,7 +20,6 @@ const QuotationCanvas = dynamic(
 )
 
 export default function EditorPage() {
-  const router = useRouter()
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
 
@@ -72,15 +69,6 @@ export default function EditorPage() {
     stageRef.current = stage
   }, [])
 
-  /** Log out and return to the login home page */
-  const handleSignOut = useCallback(async () => {
-    // redirect:false keeps NextAuth from building an absolute URL from the
-    // server host (which is 0.0.0.0 in the container). We navigate ourselves.
-    await signOut({ redirect: false })
-    router.push('/')
-    router.refresh()
-  }, [router])
-
   /**
    * Builds the initial quotation pages from the products selected on
    * the home page: header page + first product, one page per additional
@@ -97,6 +85,12 @@ export default function EditorPage() {
         name: product.name,
         price: product.price,
         description: product.description,
+        variants: product.variants.map((variant) => ({
+          colorName: variant.colorName,
+          colorHex: variant.colorHex,
+          stock: variant.stock,
+          packaging: variant.packaging,
+        })),
       })),
     }
     return buildPagesFromQuotation(quotation)
@@ -264,56 +258,22 @@ export default function EditorPage() {
   }, [pages])
 
   return (
-    <div className="flex h-screen flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4">
-        <h1 className="text-lg font-semibold">Quotation Editor</h1>
+    // h-screen minus the 56px global navbar rendered above by the layout,
+    // so the editor fills the viewport exactly without the body scrolling.
+    <div className="flex h-[calc(100vh-56px)] flex-col">
+      {/* Slim editor toolbar. The global navbar (Catalog / Editor / Sign
+          out) is rendered above this by the layout, so we only keep the
+          editor-specific actions here — collapsed into a dropdown. */}
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4">
+        <h1 className="text-base font-semibold">Quotation Editor</h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleUndo}
-            disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
-            className="rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Undo
-          </button>
-          <button
-            onClick={handleRedo}
-            disabled={!canRedo}
-            title="Redo (Ctrl+Shift+Z)"
-            className="rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Redo
-          </button>
-          <button
-            onClick={() => handleAddElement('text')}
-            className="rounded border border-neutral-300 bg-neutral-100 px-2.5 py-1.5 text-sm hover:bg-neutral-200"
-          >
-            + Text
-          </button>
-          <button
-            onClick={() => handleAddElement('rect')}
-            className="rounded border border-neutral-300 bg-neutral-100 px-2.5 py-1.5 text-sm hover:bg-neutral-200"
-          >
-            + Shape
-          </button>
-          <button
-            onClick={() => handleAddElement('table')}
-            className="rounded border border-neutral-300 bg-neutral-100 px-2.5 py-1.5 text-sm hover:bg-neutral-200"
-          >
-            + Table
-          </button>
-          <button
-            onClick={() => handleAddElement('image')}
-            className="rounded border border-neutral-300 bg-neutral-100 px-2.5 py-1.5 text-sm hover:bg-neutral-200"
-          >
-            + Image
-          </button>
-          <Link
-            href="/"
-            className="rounded border border-neutral-300 bg-neutral-100 px-2.5 py-1.5 text-sm hover:bg-neutral-200"
-          >
-            + Add products
-          </Link>
+          <ActionsMenu
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onAddElement={handleAddElement}
+          />
           <button
             onClick={handleExportPdf}
             disabled={isExporting}
@@ -321,24 +281,19 @@ export default function EditorPage() {
           >
             {isExporting ? 'Exporting…' : 'Export to PDF'}
           </button>
-          <span className="mx-1 h-6 w-px bg-neutral-300" aria-hidden="true" />
-          <button
-            onClick={handleSignOut}
-            title="Sign out"
-            className="rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm hover:bg-neutral-200"
-          >
-            Sign out
-          </button>
         </div>
       </header>
-      <QuotationCanvas
-        pages={pages}
-        onElementChange={handleElementChange}
-        onStageReady={handleStageReady}
-        onDeleteElement={handleDeleteElement}
-        onDuplicateElement={handleDuplicateElement}
-        onSelectionChange={handleSelectionChange}
-      />
+
+      <div className="min-h-0 flex-1">
+        <QuotationCanvas
+          pages={pages}
+          onElementChange={handleElementChange}
+          onStageReady={handleStageReady}
+          onDeleteElement={handleDeleteElement}
+          onDuplicateElement={handleDuplicateElement}
+          onSelectionChange={handleSelectionChange}
+        />
+      </div>
     </div>
   )
 }

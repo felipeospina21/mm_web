@@ -24,12 +24,6 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // The editor is a full-height (h-screen) layout with its own dense
-  // toolbar header and navigation back to the catalog. Showing the
-  // global navbar there would push the canvas past the viewport and
-  // duplicate controls, so we hide it on that route.
-  if (pathname.startsWith("/editor")) return null;
-
   const handleSignOut = async () => {
     // redirect:false keeps NextAuth from building an absolute URL from the
     // server host; we navigate ourselves and force a refresh so server

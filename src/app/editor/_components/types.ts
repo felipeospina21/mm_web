@@ -55,10 +55,20 @@ export interface PageData {
   elements: TemplateElement[]
 }
 
+/** A color variant of a product, used to build the inventory table. */
+export interface ProductVariant {
+  colorName: string
+  colorHex: string
+  stock: number
+  packaging: string | null
+}
+
 export interface Product {
   name: string
   price: string
   description: string
+  /** Color variants (stock + packaging) for the inventory table. */
+  variants?: ProductVariant[]
 }
 
 export interface QuotationData {

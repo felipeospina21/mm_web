@@ -1,4 +1,4 @@
-import type { PageData, QuotationData, TemplateElement } from './types'
+import type { PageData, Product, QuotationData, TemplateElement } from './types'
 import { PAGE_WIDTH } from './types'
 
 /**
@@ -297,6 +297,57 @@ function interpolate(
 }
 
 /**
+ * Builds the inventory table for a single product: one row per color
+ * variant, showing stock and packaging. Rendered as a small table in the
+ * bottom-left of that product's page (draggable, like the line-items table).
+ */
+export function buildInventoryTable(
+  product: Product,
+  suffix: string,
+): TemplateElement {
+  const colWidths = [160, 110, 150]
+  const rowHeight = 22
+  const fontSize = 11
+
+  const variants = product.variants ?? []
+  const cells: string[][] = [['Color', 'Stock', 'Packaging']]
+
+  if (variants.length === 0) {
+    cells.push(['—', '—', '—'])
+  } else {
+    for (const variant of variants) {
+      cells.push([
+        variant.colorName,
+        variant.stock > 0 ? variant.stock.toLocaleString() : 'Out of stock',
+        variant.packaging ?? '—',
+      ])
+    }
+  }
+
+  return {
+    id: `inventory-${suffix}`,
+    type: 'table',
+    x: 40,
+    y: 700,
+    width: colWidths.reduce((a, b) => a + b, 0),
+    height: rowHeight * cells.length,
+    text: '',
+    fontSize,
+    fill: '#333333',
+    isDraggable: true,
+    table: {
+      colWidths,
+      rowHeight,
+      cells,
+      headerFill: '#eef2f7',
+      headerColor: '#1f4e79',
+      borderColor: '#c9d2dc',
+      fontSize,
+    },
+  }
+}
+
+/**
  * Builds the full page set from a quotation:
  *  - Page 1: header (company + client) + first product (header only if
  *    the quotation has no products yet)
@@ -332,6 +383,10 @@ export function buildPagesFromQuotation(
       }
       return next
     })
+
+    // Each product page carries its own inventory table (one row per
+    // variant) in the bottom-left.
+    pageElements.push(buildInventoryTable(product, `p${pageNumber}`))
 
     pages.push({
       id: `page-${pageNumber}`,

@@ -51,6 +51,7 @@ export default function QuotationCanvas({
   onSelectionChange,
 }: QuotationCanvasProps) {
   const stageRef = useRef<Konva.Stage | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [stageSize, setStageSize] = useState({
     width: 0,
     height: 0,
@@ -74,18 +75,22 @@ export default function QuotationCanvas({
     [onStageReady],
   )
 
-  // Keep the stage sized to the window; pages scroll inside the container.
-  const updateSize = useCallback(() => {
-    setStageSize({ width: window.innerWidth, height: window.innerHeight })
-  }, [])
-
-  // The canvas is only mounted client-side (dynamic import with ssr:false),
-  // so window is always available here.
+  // Keep the stage sized to its container (not the window) so it fits
+  // beside the inventory panel and under the toolbar. Pages scroll inside.
   useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateSize = () => {
+      const { width, height } = container.getBoundingClientRect()
+      setStageSize({ width, height })
+    }
+
     updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [updateSize])
+    const observer = new ResizeObserver(updateSize)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
 
   /**
    * Restricts dragging so the element can never leave its parent page.
@@ -295,7 +300,8 @@ export default function QuotationCanvas({
 
   return (
     <div
-      className="relative h-[calc(100vh-56px)] w-full overflow-auto"
+      ref={containerRef}
+      className="relative h-full w-full overflow-auto"
       style={{ background: STAGE_BG }}
     >
       <Stage

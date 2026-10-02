@@ -54,6 +54,13 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
       name: product.name,
       price: product.price,
       description: product.description ?? '',
+      variants: product.variants.map((variant) => ({
+        id: variant.id,
+        colorName: variant.colorName,
+        colorHex: variant.colorHex,
+        stock: variant.stock,
+        packaging: variant.packaging,
+      })),
     }
     if (isAdded) {
       removeQuotationProduct(product.id)
