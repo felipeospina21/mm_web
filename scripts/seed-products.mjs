@@ -4,8 +4,10 @@
  * Usage:
  *   pnpm db:seed:products
  *
- * Idempotent: products are keyed by a stable slug id, so re-running
- * updates the existing rows instead of duplicating them.
+ * Idempotent: product ids are DB-generated UUIDs, so rows are keyed for
+ * re-runs by product `name` (and by `name` + `color_name` per product for
+ * variants) via application-side lookup-then-upsert. Re-running updates
+ * existing rows instead of duplicating them.
  * Requires DATABASE_URL (loaded from .env via --env-file-if-exists).
  */
 import postgres from "postgres";
@@ -17,19 +19,28 @@ if (!process.env.DATABASE_URL) {
 
 const sql = postgres(process.env.DATABASE_URL, { max: 1 });
 
-/** Offline-safe placeholder image: an inline SVG data URL with the product name. */
-function placeholderImage(name, background) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="100%" height="100%" fill="${background}"/><text x="50%" y="50%" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${name}</text></svg>`;
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+/**
+ * Prices are in COP (Colombian pesos), the only currency. The CATALOG below
+ * keeps the original small demo numbers; we scale them into a realistic COP
+ * range (whole pesos) deterministically so re-seeding is stable.
+ */
+function toCop(demoPrice) {
+  const usdLike = Number(String(demoPrice).replace(/[^0-9.]/g, "")) || 0;
+  // ~4000 COP per unit, rounded to the nearest 100 pesos.
+  return String(Math.round((usdLike * 4000) / 100) * 100);
 }
 
-function slugify(text) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+/** Stable, unique product reference code derived from the product name. */
+function referenceFor(name) {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `ref-${slug}`;
 }
 
 const CATALOG = [
   {
-    id: "prod-canvas-tote",
     name: "Canvas Tote Bag",
     description:
       "Heavy-duty 12oz cotton canvas tote with reinforced handles and interior zip pocket. Ideal for retail and promotional giveaways.",
@@ -42,7 +53,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-ceramic-mug",
     name: "Ceramic Mug 11oz",
     description:
       "Dishwasher-safe ceramic mug with glossy finish and comfortable C-handle. Perfect for sublimation printing.",
@@ -55,7 +65,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-steel-bottle",
     name: "Insulated Steel Bottle",
     description:
       "Double-wall vacuum-insulated 750ml bottle. Keeps drinks cold 24h or hot 12h. Laser engraving ready.",
@@ -68,7 +77,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-cotton-hoodie",
     name: "Fleece Hoodie",
     description:
       "Unisex brushed-fleece hoodie with kangaroo pocket and metal drawstring tips. Sizes S–XXL available.",
@@ -81,7 +89,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-notebook-a5",
     name: "Hardcover Notebook A5",
     description:
       "A5 dotted notebook with elastic closure, ribbon marker and 160 pages of 100gsm ivory paper. Deboss or foil stamping available.",
@@ -94,7 +101,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-tote-jute",
     name: "Jute Shopping Bag",
     description:
       "Laminated jute bag with long cotton rope handles and laminated interior. Great for eco-friendly campaigns.",
@@ -106,7 +112,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-tumbler-20oz",
     name: "Tumbler 20oz",
     description:
       "Powder-coated stainless steel tumbler with leak-proof lid and straw. Sublimation-ready white or laser-ready black.",
@@ -119,7 +124,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-tote-nonwoven",
     name: "Non-Woven Tote",
     description:
       "Recycled polypropylene non-woven tote with heat-sealed handles. Lightweight, foldable and screen-printable.",
@@ -132,7 +136,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-umbrella-classic",
     name: "Classic Umbrella",
     description:
       "8-rib fiberglass umbrella with auto open/close and reflective trim. UV50+ canopy, fits in a branded sleeve.",
@@ -145,7 +148,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-pen-metal",
     name: "Metal Rollerball Pen",
     description:
       "Weighted aluminium rollerball with click action and laser-engravable barrel. Smooth 0.7mm gel ink.",
@@ -158,7 +160,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-notebook-spiral",
     name: "Spiral Notebook A4",
     description:
       "A4 spiral notebook with 80 sheets of 70gsm white paper and lay-flat binding. Full-colour cover printing.",
@@ -170,7 +171,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-bottle-glass",
     name: "Glass Water Bottle 500ml",
     description:
       "Borosilicate glass bottle with bamboo cap and silicone sleeve. Dishwasher-safe, BPA-free.",
@@ -183,7 +183,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-hat-6panel",
     name: "6-Panel Cap",
     description:
       "Structured 6-panel cotton twill cap with adjustable strap. Embroidery-ready front panel, 3D puff available.",
@@ -196,7 +195,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-tshirt-organic",
     name: "Organic Cotton T-Shirt",
     description:
       "180gsm GOTS-certified organic cotton tee with ribbed collar. DTG and screen printing ready. Sizes S–XXL.",
@@ -209,7 +207,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-laptop-sleeve",
     name: "Laptop Sleeve 14\"",
     description:
       "Water-resistant neoprene sleeve for 13–14\" laptops with interior microfibre lining and zip closure.",
@@ -222,7 +219,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-bottle-sports",
     name: "Sports Bottle 700ml",
     description:
       "Tritan sports bottle with flip-top cap and carry loop. BPA-free, dishwasher-safe, leak-proof.",
@@ -235,7 +231,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-tote-canvas-small",
     name: "Canvas Tote (Small)",
     description:
       "Compact 10oz cotton canvas tote with gusset base and reinforced handles. Great for events and retail.",
@@ -247,7 +242,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-mug-travel",
     name: "Travel Mug 350ml",
     description:
       "Double-wall stainless travel mug with silicone base and twist-lock lid. Keeps drinks hot 6h, cold 12h.",
@@ -260,7 +254,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-backpack-urban",
     name: "Urban Backpack 20L",
     description:
       "Water-resistant polyester backpack with padded 15.6\" laptop compartment and front zip pocket.",
@@ -273,7 +266,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-sticky-notes",
     name: "Sticky Notes Set",
     description:
       "Set of 4 pads (76×76mm) with 100 sheets each. Acid-free, re-stickable, full-colour cover printing.",
@@ -286,7 +278,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-bottle-thermos",
     name: "Thermos Flask 500ml",
     description:
       "Vacuum-insulated stainless steel flask with wide mouth and powder-coat finish. Hot 12h, cold 24h.",
@@ -299,7 +290,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-tote-kids",
     name: "Kids' Tote Bag",
     description:
       "Lightweight 8oz cotton tote sized for kids with short handles. Perfect for school events and parties.",
@@ -311,7 +301,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-mug-ceramic-15oz",
     name: "Ceramic Mug 15oz",
     description:
       "Oversized 15oz ceramic mug with glossy finish. Sublimation-ready, dishwasher and microwave safe.",
@@ -323,7 +312,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-hoodie-zip",
     name: "Zip-Up Hoodie",
     description:
       "Unisex 320gsm fleece zip-up hoodie with metal zipper and kangaroo pocket. Sizes S–XXL.",
@@ -336,7 +324,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-notebook-pocket",
     name: "Pocket Notebook",
     description:
       "A6 pocket notebook with 48 pages of 90gsm ivory paper and elastic closure. Deboss or foil stamping.",
@@ -349,7 +336,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-bottle-eco",
     name: "Eco Bottle 600ml",
     description:
       "Recycled PET bottle with bamboo cap and silicone sleeve. BPA-free, dishwasher-safe, 100% recyclable.",
@@ -361,7 +347,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-tote-gift",
     name: "Gift Tote with Ribbon",
     description:
       "Premium 12oz cotton tote with satin ribbon handles and interior lining. Ideal for premium gifting.",
@@ -374,7 +359,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-mug-enamel",
     name: "Enamel Camp Mug",
     description:
       "Retro enamel camp mug with powder-coat finish. Durable, lightweight, perfect for outdoor events.",
@@ -387,7 +371,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-sweatshirt",
     name: "Crewneck Sweatshirt",
     description:
       "Unisex 300gsm brushed-fleece crewneck with ribbed cuffs and hem. Sizes S–XXL, embroidery ready.",
@@ -400,7 +383,6 @@ const CATALOG = [
     ],
   },
   {
-    id: "prod-notebook-journal",
     name: "Leather Journal",
     description:
       "A5 faux-leather journal with 120 pages of 100gsm ivory paper, elastic closure and ribbon marker.",
@@ -416,29 +398,58 @@ const CATALOG = [
 
 try {
   for (const item of CATALOG) {
-    const imageUrl = placeholderImage(item.name, item.background);
+    const price = toCop(item.price);
+    const reference = referenceFor(item.name);
 
-    await sql`
-      INSERT INTO mm_web_product (id, name, description, price, "imageUrl", "createdAt")
-      VALUES (${item.id}, ${item.name}, ${item.description}, ${item.price}, ${imageUrl}, now())
-      ON CONFLICT (id) DO UPDATE
-        SET name = EXCLUDED.name,
-            description = EXCLUDED.description,
-            price = EXCLUDED.price,
-            "imageUrl" = EXCLUDED."imageUrl"
+    // Idempotency: look up the product by its (unique within this catalog)
+    // name. Update if present, otherwise insert and let the DB generate the
+    // uuid. We capture the id to key the variants below.
+    const existing = await sql`
+      SELECT id FROM mm_web_product WHERE name = ${item.name} LIMIT 1
     `;
 
-    for (const variant of item.variants) {
-      const variantId = `${item.id}-${slugify(variant.colorName)}`;
+    let productId;
+    if (existing.length > 0) {
+      productId = existing[0].id;
       await sql`
-        INSERT INTO mm_web_product_variant (id, "productId", "colorName", "colorHex", stock, packaging)
-        VALUES (${variantId}, ${item.id}, ${variant.colorName}, ${variant.colorHex}, ${variant.stock}, ${variant.packaging})
-        ON CONFLICT (id) DO UPDATE
-          SET "colorName" = EXCLUDED."colorName",
-              "colorHex" = EXCLUDED."colorHex",
-              stock = EXCLUDED.stock,
-              packaging = EXCLUDED.packaging
+        UPDATE mm_web_product
+          SET description = ${item.description},
+              price = ${price},
+              reference = ${reference},
+              image_url = NULL
+          WHERE id = ${productId}
       `;
+    } else {
+      const inserted = await sql`
+        INSERT INTO mm_web_product (name, reference, description, price, image_url)
+        VALUES (${item.name}, ${reference}, ${item.description}, ${price}, NULL)
+        RETURNING id
+      `;
+      productId = inserted[0].id;
+    }
+
+    for (const variant of item.variants) {
+      // Variants are keyed by (product_id, color_name) for idempotency.
+      const existingVariant = await sql`
+        SELECT id FROM mm_web_product_variant
+          WHERE product_id = ${productId} AND color_name = ${variant.colorName}
+          LIMIT 1
+      `;
+
+      if (existingVariant.length > 0) {
+        await sql`
+          UPDATE mm_web_product_variant
+            SET color_hex = ${variant.colorHex},
+                stock = ${variant.stock},
+                packaging = ${variant.packaging}
+            WHERE id = ${existingVariant[0].id}
+        `;
+      } else {
+        await sql`
+          INSERT INTO mm_web_product_variant (product_id, color_name, color_hex, stock, packaging)
+          VALUES (${productId}, ${variant.colorName}, ${variant.colorHex}, ${variant.stock}, ${variant.packaging})
+        `;
+      }
     }
   }
 

@@ -16,6 +16,8 @@ export interface QuotationProductVariant {
 export interface QuotationProduct {
   id: string
   name: string
+  /** Product reference / catalog code, e.g. "tx-10". */
+  reference: string
   price: string
   description: string
   /** Color variants (stock + packaging) captured when the product was picked. */

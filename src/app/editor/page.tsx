@@ -11,6 +11,7 @@ import {
   getQuotationProducts,
   type QuotationProduct,
 } from '@/lib/quotation-selection'
+import { api } from '@/trpc/react'
 
 // Konva touches `window` at import time, so the canvas is loaded
 // client-side only.
@@ -22,6 +23,8 @@ const QuotationCanvas = dynamic(
 export default function EditorPage() {
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
+  // Unsaved-changes flag: true after any edit, cleared on successful save.
+  const [isDirty, setIsDirty] = useState(false)
 
   /** Push a new state snapshot onto the history stack */
   const commitHistory = useCallback((next: PageData[]) => {
@@ -41,6 +44,8 @@ export default function EditorPage() {
         commitHistory(next)
         return next
       })
+      // Any edit leaves the quotation with unsaved changes.
+      setIsDirty(true)
     },
     [commitHistory],
   )
@@ -69,20 +74,31 @@ export default function EditorPage() {
     stageRef.current = stage
   }, [])
 
-  /**
-   * Builds the initial quotation pages from the products selected on
-   * the home page: header page + first product, one page per additional
-   * product, and the fixed policies last page. Falls back to the empty
-   * quotation (header page + policies page) when nothing is picked.
-   */
-  const makeInitialPages = useCallback(() => {
-    const picked = getQuotationProducts()
-    if (picked.length === 0) return makeEmptyQuotationPages()
+  // Warn before leaving/reloading the tab when there are unsaved changes.
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      // Modern browsers show their own generic message; setting
+      // returnValue is what actually triggers the prompt.
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
 
-    const quotation: QuotationData = {
+  /**
+   * Builds the initial quotation `meta` (client/company details + the
+   * products picked on the home page). Falls back to the dummy header-only
+   * quotation when nothing was picked.
+   */
+  const makeInitialMeta = useCallback((): QuotationData => {
+    const picked = getQuotationProducts()
+    return {
       ...DUMMY_QUOTATION,
       products: picked.map((product: QuotationProduct) => ({
         name: product.name,
+        reference: product.reference,
         price: product.price,
         description: product.description,
         variants: product.variants.map((variant) => ({
@@ -93,14 +109,71 @@ export default function EditorPage() {
         })),
       })),
     }
-    return buildPagesFromQuotation(quotation)
   }, [])
+
+  /**
+   * Builds the initial quotation pages from the products selected on
+   * the home page: header page + first product, one page per additional
+   * product, and the fixed policies last page. Falls back to the empty
+   * quotation (header page + policies page) when nothing is picked.
+   */
+  const makeInitialPages = useCallback((): PageData[] => {
+    const picked = getQuotationProducts()
+    if (picked.length === 0) return makeEmptyQuotationPages()
+    return buildPagesFromQuotation(makeInitialMeta())
+  }, [makeInitialMeta])
+
+  // Source `meta` for the quotation (client + products). Captured at mount;
+  // persisted alongside the edited pages on save.
+  const metaRef = useRef<QuotationData>(makeInitialMeta())
 
   // Initial quotation pages: header page + policies page, plus one page
   // per product picked on the home page.
   const [pages, setPages] = useState<PageData[]>(makeInitialPages)
   const [isExporting, setIsExporting] = useState(false)
   const stageRef = useRef<Konva.Stage | null>(null)
+
+  // Saved identity: null while a draft, { id, quotationNumber } once persisted.
+  const [saved, setSaved] = useState<{
+    id: string
+    quotationNumber: number
+  } | null>(null)
+
+  const saveMutation = api.quotation.save.useMutation({
+    onSuccess: (result) => {
+      setSaved(result)
+      setIsDirty(false)
+    },
+    onError: (error) => {
+      console.error('Save failed:', error)
+      alert(`Save failed: ${error.message}`)
+    },
+  })
+
+  const handleSave = useCallback(() => {
+    const meta = metaRef.current
+
+    // The client name is edited on the canvas in the first page's
+    // "Prepared for:" block (element id `client-info`), which reads
+    // "Prepared for:\n<name>\n<address>\n<email>". Take the name line.
+    const clientInfo = pages[0]?.elements.find((el) => el.id === 'client-info')
+    const nameLine = clientInfo?.text.split('\n')[1]?.trim()
+    const metaName = metaRef.current.customerName.trim()
+    const clientName =
+      nameLine && nameLine.length > 0
+        ? nameLine
+        : metaName.length > 0
+          ? metaName
+          : 'Untitled client'
+
+    saveMutation.mutate({
+      id: saved?.id,
+      clientName,
+      // Snapshot of the product reference codes in this quotation.
+      references: meta.products.map((p) => p.reference),
+      data: { meta, pages },
+    })
+  }, [saveMutation, saved?.id, pages])
 
   // ---- Undo/redo history ----
   const historyRef = useRef<PageData[][]>([makeInitialPages()])
@@ -265,7 +338,29 @@ export default function EditorPage() {
           out) is rendered above this by the layout, so we only keep the
           editor-specific actions here — collapsed into a dropdown. */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4">
-        <h1 className="text-base font-semibold">Quotation Editor</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-semibold">Quotation Editor</h1>
+          {/* Draft until saved; shows the DB-assigned number once persisted. */}
+          {saved ? (
+            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+              Quotation #{saved.quotationNumber}
+            </span>
+          ) : (
+            <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-500">
+              Draft
+            </span>
+          )}
+          {/* Unsaved-changes indicator. */}
+          {isDirty && (
+            <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-amber-500"
+                aria-hidden="true"
+              />
+              Unsaved changes
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <ActionsMenu
             canUndo={canUndo}
@@ -274,6 +369,17 @@ export default function EditorPage() {
             onRedo={handleRedo}
             onAddElement={handleAddElement}
           />
+          <button
+            onClick={handleSave}
+            disabled={saveMutation.isPending}
+            className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saveMutation.isPending
+              ? 'Saving…'
+              : saved
+                ? 'Save'
+                : 'Save quotation'}
+          </button>
           <button
             onClick={handleExportPdf}
             disabled={isExporting}

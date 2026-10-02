@@ -20,6 +20,7 @@ export interface ProductVariantView {
 export interface CatalogProduct {
   id: string
   name: string
+  reference: string
   description: string | null
   price: string
   imageUrl: string | null
@@ -52,6 +53,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
     const quotationProduct: QuotationProduct = {
       id: product.id,
       name: product.name,
+      reference: product.reference,
       price: product.price,
       description: product.description ?? '',
       variants: product.variants.map((variant) => ({

@@ -65,6 +65,8 @@ export interface ProductVariant {
 
 export interface Product {
   name: string
+  /** Product reference / catalog code, e.g. "tx-10". */
+  reference: string
   price: string
   description: string
   /** Color variants (stock + packaging) for the inventory table. */
@@ -79,6 +81,17 @@ export interface QuotationData {
   customerAddress: string
   customerEmail: string
   products: Product[]
+}
+
+/**
+ * The full persisted quotation document: the source `meta` (client/company
+ * details + products) plus the rendered `pages` (canvas layout, positions,
+ * added elements). Stored as JSONB in `quotations.data` so a saved quote
+ * restores exactly as it was edited.
+ */
+export interface QuotationDocument {
+  meta: QuotationData
+  pages: PageData[]
 }
 
 /** A4 at 96 DPI */

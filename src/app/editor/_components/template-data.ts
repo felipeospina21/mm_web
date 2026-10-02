@@ -75,10 +75,22 @@ function makeProductElements(suffix: string): TemplateElement[] {
       isDraggable: true,
     },
     {
+      id: `product-reference-${suffix}`,
+      type: 'text',
+      x: 40,
+      y: 262,
+      width: 400,
+      height: 20,
+      text: 'Ref: {{productReference}}',
+      fontSize: 12,
+      fill: '#888888',
+      isDraggable: true,
+    },
+    {
       id: `product-price-${suffix}`,
       type: 'text',
       x: 40,
-      y: 280,
+      y: 290,
       width: 300,
       height: 36,
       text: 'Price: {{productPrice}}',
@@ -292,6 +304,7 @@ function interpolate(
     .replace('{{customerName}}', quotation.customerName)
     .replace('{{customerEmail}}', quotation.customerEmail)
     .replace('{{productName}}', product.name)
+    .replace('{{productReference}}', product.reference)
     .replace('{{productPrice}}', product.price)
     .replace('{{productDescription}}', product.description)
 }
@@ -439,18 +452,21 @@ export const DUMMY_QUOTATION: QuotationData = {
   products: [
     {
       name: 'Enterprise Web Platform',
+      reference: 'ref-enterprise-web-platform',
       price: '$12,500.00',
       description:
         'A full-featured web platform including CMS, user management, and analytics dashboard. Includes 12 months of support and hosting.',
     },
     {
       name: 'Mobile App Development',
+      reference: 'ref-mobile-app-development',
       price: '$8,900.00',
       description:
         'Native iOS and Android application with offline sync, push notifications, and app store deployment assistance.',
     },
     {
       name: 'UI/UX Design Sprint',
+      reference: 'ref-ui-ux-design-sprint',
       price: '$4,200.00',
       description:
         'A two-week design sprint covering user research, wireframes, high-fidelity mockups, and an interactive prototype.',

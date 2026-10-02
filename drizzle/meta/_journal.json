@@ -15,6 +15,27 @@
       "when": 1790893629220,
       "tag": "0001_dry_joseph",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790970861956,
+      "tag": "0002_talented_wong",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790973462621,
+      "tag": "0003_parallel_lilandra",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790974936471,
+      "tag": "0004_schema_improvements",
+      "breakpoints": true
     }
   ]
 }

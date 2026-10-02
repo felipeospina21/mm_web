@@ -46,7 +46,9 @@ yarn-error.log*
 .idea
 
 .coda
+.kiro
 
 # agent tooling (local caches — not project code)
 .hippo
 .codegraph
+
