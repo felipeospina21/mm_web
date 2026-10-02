@@ -155,6 +155,25 @@ Optionally seed demo catalog products:
 docker compose run --rm migrate pnpm db:seed:products
 ```
 
+### Hot reload (Docker Compose Watch)
+
+For development with hot module reload, run the `dev` service instead of `app`:
+
+```bash
+AUTH_SECRET="$(openssl rand -base64 33)" pnpm docker:dev
+```
+
+This starts Postgres, applies migrations, then boots the Next.js **dev** server
+(HMR) on http://localhost:3000 and watches the project:
+
+- **Source edits** are synced into the container and hot-reload — no rebuild.
+- **Dependency changes** (`package.json` / `pnpm-lock.yaml`) or `Dockerfile`
+  edits trigger an image rebuild and a service restart.
+
+Watch requires Docker Compose v2.22+. To stop, press `Ctrl+C` (or
+`pnpm docker:down` in another terminal). Tail the dev logs with
+`pnpm docker:dev:logs`.
+
 ### Configuration
 
 Environment variables read by Compose:
@@ -181,6 +200,8 @@ Ensure `.env` contains a valid `AUTH_SECRET` and `DATABASE_URL` (see `.env.examp
 ## Useful scripts
 
 - `pnpm dev` — start the dev server
+- `pnpm docker:dev` — run the stack in Docker with hot reload (Compose Watch)
+- `pnpm docker:dev:logs` — tail the Docker dev service logs
 - `pnpm build` / `pnpm start` — production build and serve
 - `pnpm db:generate` — generate a migration from schema changes
 - `pnpm db:migrate` — apply migrations

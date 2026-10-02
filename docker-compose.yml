@@ -7,6 +7,16 @@
 # To create a login user afterwards, run:
 #
 #   docker compose run --rm migrate pnpm db:seed you@company.com "your-password" "Your Name"
+#
+# For development with hot reload, use the `dev` service instead of `app`:
+#
+#   AUTH_SECRET=$(npx auth secret) pnpm docker:dev
+#
+# (equivalent to: docker compose watch db migrate dev)
+#
+# `watch` keeps the dev server running and:
+#   - syncs source file changes into the container (HMR, no rebuild)
+#   - rebuilds the image when package.json / pnpm-lock.yaml change
 
 services:
   db:
@@ -63,6 +73,50 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+
+  # Development service with hot reload. Run with `docker compose watch dev`
+  # (plus db + migrate). Source is bind-mounted so edits hot-reload; the
+  # `watch` block rebuilds the image when dependencies change.
+  dev:
+    build:
+      context: .
+      target: dev
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/mm_web
+      AUTH_SECRET: "${AUTH_SECRET:?AUTH_SECRET must be set - generate one with npx auth secret}"
+      AUTH_TRUST_HOST: "true"
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Compose Watch (requires Docker Compose v2.22+). Run with
+    # `docker compose watch dev` (or `docker compose up --watch dev`):
+    #   - source edits: synced into the container (HMR picks them up)
+    #   - dependency / Dockerfile changes: rebuild the image, then restart
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - node_modules/
+            - .next/
+            - .git/
+            - .env
+            - .env*.local
+            - .coda/
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: pnpm-lock.yaml
+        - action: rebuild
+          path: Dockerfile
 
 volumes:
   db-data:

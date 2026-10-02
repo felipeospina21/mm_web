@@ -61,6 +61,23 @@ COPY scripts ./scripts
 CMD ["pnpm", "db:migrate"]
 
 ##################
+# Dev            #
+##################
+# Development image for `docker compose watch`: runs the Next.js dev server
+# (HMR) instead of the production build. Source is bind-mounted by compose,
+# so edits hot-reload without a rebuild; only dependency changes trigger a
+# rebuild (see the `watch` block in docker-compose.yml).
+FROM base AS dev
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+# Bind to all interfaces so the dev server is reachable from the host.
+ENV HOSTNAME=0.0.0.0
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+CMD ["pnpm", "dev"]
+
+##################
 # Runner         #
 ##################
 FROM node:22-alpine AS runner
