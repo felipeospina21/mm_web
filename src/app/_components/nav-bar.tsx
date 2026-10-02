@@ -8,6 +8,7 @@ import { signOut } from "next-auth/react";
 const NAV_LINKS = [
   { href: "/", label: "Catalog" },
   { href: "/editor", label: "Editor" },
+  { href: "/my-quotations", label: "My Quotations" },
 ] as const;
 
 interface NavBarClientProps {

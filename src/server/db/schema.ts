@@ -105,6 +105,10 @@ export const quotations = createTable(
       .uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** Number of products in the quotation (denormalized from data for listing). */
+    productCount: d.integer("product_count").notNull().default(0),
+    /** Total amount in COP (denormalized from data for listing/sorting). */
+    total: d.numeric({ precision: 14, scale: 2 }).notNull().default("0"),
     /**
      * Snapshot of the product reference codes included in this quotation,
      * e.g. ["tx-10", "ser 001", "j8"]. Captured at quote time.

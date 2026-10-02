@@ -11,6 +11,8 @@ import {
   getQuotationProducts,
   type QuotationProduct,
 } from '@/lib/quotation-selection'
+import { takePendingQuotationLoad } from '@/lib/quotation-load'
+import { ConfirmModal } from '@/app/_components/confirm-modal'
 import { api } from '@/trpc/react'
 
 // Konva touches `window` at import time, so the canvas is loaded
@@ -174,6 +176,57 @@ export default function EditorPage() {
       data: { meta, pages },
     })
   }, [saveMutation, saved?.id, pages])
+
+  // ---- Load a saved quotation (handed off from the My Quotations page) ----
+
+  // Pending quotation id to load, read once from sessionStorage on mount.
+  const [pendingLoadId, setPendingLoadId] = useState<string | null>(null)
+  useEffect(() => {
+    setPendingLoadId(takePendingQuotationLoad())
+  }, [])
+
+  const loadQuery = api.quotation.byId.useQuery(
+    { id: pendingLoadId ?? '' },
+    { enabled: !!pendingLoadId },
+  )
+
+  // When a dirty editor would be overwritten by a load, hold the row here
+  // and show the confirm modal before applying it.
+  const [confirmLoad, setConfirmLoad] = useState<
+    NonNullable<typeof loadQuery.data> | null
+  >(null)
+
+  /** Replace the editor contents with a loaded quotation and mark it saved. */
+  const hydrateFromRow = useCallback(
+    (row: NonNullable<typeof loadQuery.data>) => {
+      const doc = row.data
+      metaRef.current = doc.meta
+      setPages(doc.pages)
+      // Reset history to the loaded state.
+      historyRef.current = [doc.pages]
+      historyIndexRef.current = 0
+      setCanUndo(false)
+      setCanRedo(false)
+      setSaved({ id: row.id, quotationNumber: row.quotationNumber })
+      setIsDirty(false)
+    },
+    [],
+  )
+
+  // Apply the loaded quotation: hydrate immediately when the editor has no
+  // unsaved work; otherwise defer to the confirm modal.
+  useEffect(() => {
+    const row = loadQuery.data
+    if (!row) return
+    if (isDirty) {
+      setConfirmLoad(row)
+    } else {
+      hydrateFromRow(row)
+    }
+    // Consume the pending id so the query doesn't re-trigger.
+    setPendingLoadId(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadQuery.data])
 
   // ---- Undo/redo history ----
   const historyRef = useRef<PageData[][]>([makeInitialPages()])
@@ -400,6 +453,20 @@ export default function EditorPage() {
           onSelectionChange={handleSelectionChange}
         />
       </div>
+
+      {/* Guard: loading a saved quotation would discard unsaved changes. */}
+      <ConfirmModal
+        open={confirmLoad !== null}
+        title="Discard unsaved changes?"
+        message="This quotation has unsaved changes. Loading another quotation will discard them. Do you want to continue?"
+        confirmLabel="Discard and load"
+        cancelLabel="Keep editing"
+        onConfirm={() => {
+          if (confirmLoad) hydrateFromRow(confirmLoad)
+          setConfirmLoad(null)
+        }}
+        onCancel={() => setConfirmLoad(null)}
+      />
     </div>
   )
 }
