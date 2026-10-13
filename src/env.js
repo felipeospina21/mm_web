@@ -11,7 +11,19 @@ export const env = createEnv({
       process.env.NODE_ENV === "production"
         ? z.string()
         : z.string().optional(),
+    /**
+     * Pooled connection string used by the running app. On Supabase this is the
+     * pgBouncer pooler (port 6543). On a local Docker Postgres it is the plain
+     * connection string — both work with the same `postgres-js` client.
+     */
     DATABASE_URL: z.string().url(),
+    /**
+     * Direct (non-pooled) connection string used ONLY for migrations and
+     * Drizzle Studio (Supabase port 5432). Optional: when unset, migration
+     * tooling falls back to `DATABASE_URL`. Running migrations through the
+     * pgBouncer pooler is unreliable, so set this in any Supabase environment.
+     */
+    DIRECT_URL: z.string().url().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -33,6 +45,7 @@ export const env = createEnv({
   runtimeEnv: {
     AUTH_SECRET: process.env.AUTH_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
+    DIRECT_URL: process.env.DIRECT_URL,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**

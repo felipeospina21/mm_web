@@ -121,7 +121,40 @@ erDiagram
 > `verification_token` has no foreign key (it is keyed by `identifier` + `token`)
 > and so stands alone.
 
-## Run everything with one command (Docker)
+## Database & environments
+
+The app uses **PostgreSQL** via Drizzle, with this split:
+
+| Role           | Where                        | Purpose                                               |
+| -------------- | ---------------------------- | ----------------------------------------------------- |
+| **Production** | Supabase (prod project)      | Real app + data                                       |
+| **Dev**        | Supabase (dev project/branch)| Day-to-day development — identical to prod, only data differs |
+| **Test**       | Docker Postgres (ephemeral)  | SQL/ORM integration tests; migrated fresh, then discarded |
+
+Dev and prod both run on Supabase so there are **no behavioral differences**
+(connection pooling, SSL, limits) between them — only the data differs. Docker
+Postgres is kept purely as a fast, throwaway database for integration tests.
+
+The schema is identical everywhere because it comes from one source of truth —
+the Drizzle migrations in `drizzle/`. Whatever database `pnpm db:migrate` points
+at gets the same tables.
+
+### Connection URLs
+
+Two connection strings drive this (see `.env.example`):
+
+- `DATABASE_URL` — **pooled** connection used by the running app. On Supabase this
+  is the pgBouncer pooler (port 6543, `?pgbouncer=true`). The DB client sets
+  `prepare: false` so pooled connections work; this is a no-op on plain Postgres.
+- `DIRECT_URL` — **direct**, non-pooled connection (Supabase port 5432) used only
+  for migrations and Drizzle Studio. Optional — falls back to `DATABASE_URL` when
+  unset (e.g. a local Docker Postgres with no separate direct endpoint).
+
+## Run everything with one command (Docker — test DB)
+
+> Docker is kept as an **ephemeral test database**, not the app's primary store.
+> For normal development, run the app against Supabase (see
+> [Local development](#local-development)).
 
 Requires Docker with Compose v2 (`docker compose`).
 
@@ -185,17 +218,30 @@ Environment variables read by Compose:
   only; set a strong value in production.
 - `AUTH_URL` — public URL the browser uses (default `http://localhost:3000`).
 
-## Local development (without Docker)
+## Local development
+
+Develop against the **Supabase dev project** so your environment matches
+production exactly (only the data differs).
 
 ```bash
-./start-database.sh   # starts a local Postgres container
 pnpm install
+# 1. Create a .env from the template and fill in the Supabase dev URLs + AUTH_SECRET
+cp .env.example .env
+#    - DATABASE_URL -> Supabase pooled (6543, ?pgbouncer=true)
+#    - DIRECT_URL   -> Supabase direct (5432)
+#    - AUTH_SECRET  -> openssl rand -base64 33
+# 2. Apply migrations (uses DIRECT_URL) and seed a login user
 pnpm db:migrate
 pnpm db:seed you@company.com "your-password" "Your Name"
+# 3. Run the dev server
 pnpm dev
 ```
 
-Ensure `.env` contains a valid `AUTH_SECRET` and `DATABASE_URL` (see `.env.example`).
+The app has no public sign-up, so `pnpm db:seed` is how you create a login user.
+
+> **Tests** use an ephemeral Docker Postgres instead of Supabase — see
+> [Run everything with one command (Docker — test DB)](#run-everything-with-one-command-docker--test-db).
+> `./start-database.sh` still spins up a local Postgres container for that purpose.
 
 ## Useful scripts
 
