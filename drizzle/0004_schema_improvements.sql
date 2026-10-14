@@ -56,4 +56,4 @@ ALTER TABLE "mm_web_quotation" RENAME CONSTRAINT "mm_web_quotation_userId_mm_web
 ALTER INDEX "t_user_id_idx" RENAME TO "session_user_id_idx";--> statement-breakpoint
 
 -- --- colorHex CHECK constraint ---
-ALTER TABLE "mm_web_product_variant" ADD CONSTRAINT "product_variant_color_hex_check" CHECK ("mm_web_product_variant"."color_hex" ~ '^#[0-9A-Fa-f]{6,8}$');
+ALTER TABLE "mm_web_product_variant" ADD CONSTRAINT "product_variant_color_hex_check" CHECK ("color_hex" ~ '^#[0-9A-Fa-f]{6,8}$');
