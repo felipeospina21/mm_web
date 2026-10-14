@@ -157,8 +157,8 @@ export default function EditorPage() {
     const meta = metaRef.current
 
     // The client name is edited on the canvas in the first page's
-    // "Prepared for:" block (element id `client-info`), which reads
-    // "Prepared for:\n<name>\n<address>\n<email>". Take the name line.
+    // "Cotización para:" block (element id `client-info`), which reads
+    // "Cotización para:\n<name>\n<address>\n<email>". Take the name line.
     const clientInfo = pages[0]?.elements.find((el) => el.id === 'client-info')
     const nameLine = clientInfo?.text.split('\n')[1]?.trim()
     const metaName = metaRef.current.customerName.trim()

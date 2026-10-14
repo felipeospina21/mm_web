@@ -87,9 +87,26 @@ function decodeEntities(text: string): string {
     "&#39;": "'",
     "&apos;": "'",
     "&nbsp;": " ",
+    "&aacute;": "á",
+    "&eacute;": "é",
+    "&iacute;": "í",
+    "&oacute;": "ó",
+    "&uacute;": "ú",
+    "&ntilde;": "ñ",
+    "&uuml;": "ü",
+    "&Aacute;": "Á",
+    "&Eacute;": "É",
+    "&Iacute;": "Í",
+    "&Oacute;": "Ó",
+    "&Uacute;": "Ú",
+    "&Ntilde;": "Ñ",
+    "&Uuml;": "Ü",
   };
   return text
-    .replace(/&amp;|&lt;|&gt;|&quot;|&#39;|&apos;|&nbsp;/g, (m) => named[m] ?? m)
+    .replace(
+      /&amp;|&lt;|&gt;|&quot;|&#39;|&apos;|&nbsp;|&aacute;|&eacute;|&iacute;|&oacute;|&uacute;|&ntilde;|&uuml;|&Aacute;|&Eacute;|&Iacute;|&Oacute;|&Uacute;|&Ntilde;|&Uuml;/g,
+      (m) => named[m] ?? m,
+    )
     .replace(/&#(\d+);/g, (_, dec: string) =>
       String.fromCodePoint(Number(dec)),
     )
@@ -135,13 +152,19 @@ export function stripHtml(input: string): string {
 }
 
 /**
- * Extract the first product image URL from the stringified `images` field.
- * The payload looks like `{"main_image":["https://…"],"gallery_images":[…]}`
- * (JSON encoded as a string). Prefers the first `main_image`, falling back to
- * the first `gallery_images`. Returns `null` when nothing usable is present.
+ * Extract the first product image URL from the `images` field. The API may
+ * return a plain array of URLs or the older object shape with `main_image`
+ * and `gallery_images` arrays (sometimes JSON-encoded as a string). Returns
+ * `null` when nothing usable is present.
  */
 export function firstImageUrl(images: unknown): string | null {
   const parsed = parseMaybeJson(images);
+  if (Array.isArray(parsed)) {
+    const first = parsed.find(
+      (u): u is string => typeof u === "string" && u.trim().length > 0,
+    );
+    return first ? first.trim() : null;
+  }
   if (!parsed || typeof parsed !== "object") return null;
 
   const obj = parsed as Record<string, unknown>;

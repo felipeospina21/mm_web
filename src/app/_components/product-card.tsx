@@ -56,6 +56,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
       reference: product.reference,
       price: product.price,
       description: product.description ?? '',
+      imageUrl: product.imageUrl,
       variants: product.variants.map((variant) => ({
         id: variant.id,
         colorName: variant.colorName,

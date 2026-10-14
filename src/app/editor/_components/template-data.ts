@@ -1,6 +1,11 @@
-import type { PageData, Product, QuotationData, TemplateElement } from './types'
-import { PAGE_WIDTH } from './types'
-import { proxiedImageUrl } from '@/lib/product-image'
+import type {
+  PageData,
+  Product,
+  QuotationData,
+  TemplateElement,
+} from "./types";
+import { PAGE_WIDTH } from "./types";
+import { proxiedImageUrl } from "@/lib/product-image";
 
 /**
  * Shared header band + title used on the first page only.
@@ -9,180 +14,158 @@ import { proxiedImageUrl } from '@/lib/product-image'
 function makeFirstPageHeader(): TemplateElement[] {
   return [
     {
-      id: 'header-band',
-      type: 'rect',
+      id: "header-band",
+      type: "rect",
       x: 0,
       y: 0,
       width: PAGE_WIDTH,
       height: 150,
-      text: '',
+      text: "",
       fontSize: 0,
-      fill: '#1f4e79',
+      fill: "#1f4e79",
       isDraggable: true,
     },
     {
-      id: 'doc-title',
-      type: 'text',
+      id: "doc-title",
+      type: "text",
       x: 40,
       y: 20,
       width: 300,
       height: 40,
-      text: 'QUOTATION',
+      text: "COTIZACIÓN",
       fontSize: 28,
-      fill: '#ffffff',
+      fill: "#ffffff",
       isDraggable: true,
     },
     {
-      id: 'company-info',
-      type: 'text',
+      id: "company-info",
+      type: "text",
       x: 40,
       y: 60,
       width: 350,
       height: 60,
-      text: '{{companyName}}\n{{companyAddress}}\n{{companyPhone}}',
+      text: "{{companyName}}\n{{companyAddress}}\n{{companyPhone}}",
       fontSize: 11,
-      fill: '#cfe2f3',
+      fill: "#cfe2f3",
       isDraggable: true,
     },
     {
-      id: 'client-info',
-      type: 'text',
+      id: "client-info",
+      type: "text",
       x: 460,
       y: 20,
       width: 300,
       height: 110,
-      text:
-        'Prepared for:\n{{customerName}}\n{{customerAddress}}\n{{customerEmail}}',
+      text: "Cotización para:\n{{customerName}}\n{{customerAddress}}\n{{customerEmail}}",
       fontSize: 12,
-      fill: '#ffffff',
+      fill: "#ffffff",
       isDraggable: true,
     },
-  ]
+  ];
 }
 
 /** Product block: name, price, description (used on pages 1..n-1) */
-function makeProductElements(suffix: string): TemplateElement[] {
+function makeProductElements(
+  suffix: string,
+  verticalOffset = 0,
+): TemplateElement[] {
   return [
     {
       id: `product-name-${suffix}`,
-      type: 'text',
+      type: "text",
       x: 40,
-      y: 220,
+      y: 220 + verticalOffset,
       width: 600,
       height: 40,
-      text: 'Product: {{productName}}',
+      text: "{{productName}}",
       fontSize: 24,
-      fill: '#1f4e79',
+      fill: "#1f4e79",
       isDraggable: true,
     },
     {
       id: `product-reference-${suffix}`,
-      type: 'text',
+      type: "text",
       x: 40,
-      y: 262,
+      y: 262 + verticalOffset,
       width: 400,
       height: 20,
-      text: 'Ref: {{productReference}}',
+      text: "Ref: {{productReference}}",
       fontSize: 12,
-      fill: '#888888',
-      isDraggable: true,
-    },
-    {
-      id: `product-price-${suffix}`,
-      type: 'text',
-      x: 40,
-      y: 290,
-      width: 300,
-      height: 36,
-      text: 'Price: {{productPrice}}',
-      fontSize: 20,
-      fill: '#2e7d32',
+      fill: "#888888",
       isDraggable: true,
     },
     {
       id: `product-description-${suffix}`,
-      type: 'text',
+      type: "text",
       x: 40,
-      y: 340,
+      y: 290 + verticalOffset,
       width: 700,
       height: 120,
-      text: 'Description: {{productDescription}}',
+      text: "{{productDescription}}",
       fontSize: 16,
-      fill: '#555555',
+      fill: "#555555",
       isDraggable: true,
-    },
-    {
-      // Product image (top-right of the product block). `src` is filled in
-      // per-product by buildPagesFromQuotation; empty renders a placeholder.
-      id: `product-image-${suffix}`,
-      type: 'image',
-      x: 560,
-      y: 180,
-      width: 194,
-      height: 194,
-      text: '',
-      fontSize: 0,
-      fill: '#000000',
-      isDraggable: true,
-      src: '',
     },
     {
       id: `line-items-${suffix}`,
-      type: 'table',
+      type: "table",
       x: 40,
-      y: 500,
+      y: 420 + verticalOffset,
       width: 714,
       height: 150,
-      text: '',
+      text: "",
       fontSize: 0,
-      fill: '#000000',
+      fill: "#000000",
       isDraggable: true,
       table: {
         colWidths: [80, 300, 120, 120],
         rowHeight: 36,
         cells: [
-          ['Qty', 'Item', 'Unit Price', 'Total'],
-          ['1', '{{productName}}', '{{productPrice}}', '{{productPrice}}'],
-          ['', '', '', ''],
-          ['', '', '', ''],
+          ["Cant.", "Producto", "Precio unitario", "Total"],
+          ["1", "{{productName}}", "{{productPrice}}", "{{productPrice}}"],
+          ["", "", "", ""],
+          ["", "", "", ""],
         ],
-        headerFill: '#1f4e79',
-        headerColor: '#ffffff',
-        borderColor: '#cccccc',
+        headerFill: "#1f4e79",
+        headerColor: "#ffffff",
+        borderColor: "#cccccc",
         fontSize: 13,
       },
     },
     {
-      id: `accent-box-${suffix}`,
-      type: 'rect',
-      x: 40,
-      y: 180,
-      width: 8,
-      height: 220,
-      text: '',
+      // Product image (bottom-right of the product block). `src` is filled in
+      // per-product by buildPagesFromQuotation; empty renders a placeholder.
+      id: `product-image-${suffix}`,
+      type: "image",
+      x: 560,
+      y: 700 + verticalOffset,
+      width: 194,
+      height: 194,
+      text: "",
       fontSize: 0,
-      fill: '#f0a500',
+      fill: "#000000",
       isDraggable: true,
+      src: "",
     },
-  ]
+  ];
 }
 
 /** Footer used on every page */
 function makeFooter(): TemplateElement[] {
   return [
     {
-      id: 'footer',
-      type: 'text',
+      id: "footer",
+      type: "text",
       x: 40,
       y: 1060,
       width: 500,
       height: 24,
-      text: 'Thank you for your business.',
+      text: "Gracias por su preferencia.",
       fontSize: 12,
-      fill: '#999999',
+      fill: "#999999",
       isDraggable: true,
     },
-  ]
+  ];
 }
 
 /**
@@ -193,21 +176,21 @@ function makeFooter(): TemplateElement[] {
 function makeFirstPageElements(withProduct: boolean): TemplateElement[] {
   return [
     ...makeFirstPageHeader(),
-    ...(withProduct ? makeProductElements('p1') : []),
+    ...(withProduct ? makeProductElements("p1") : []),
     {
-      id: 'customer-name-line',
-      type: 'text',
+      id: "customer-name-line",
+      type: "text",
       x: 40,
       y: 120,
       width: 500,
       height: 30,
-      text: 'Customer: {{customerName}}',
+      text: "Cliente: {{customerName}}",
       fontSize: 18,
-      fill: '#333333',
+      fill: "#333333",
       isDraggable: true,
     },
     ...makeFooter(),
-  ]
+  ];
 }
 
 /**
@@ -217,32 +200,34 @@ function makeFirstPageElements(withProduct: boolean): TemplateElement[] {
 function makeProductPageElements(suffix: string): TemplateElement[] {
   return [
     {
-      id: 'page-band',
-      type: 'rect',
+      id: "page-band",
+      type: "rect",
       x: 0,
       y: 0,
       width: PAGE_WIDTH,
       height: 50,
-      text: '',
+      text: "",
       fontSize: 0,
-      fill: '#1f4e79',
+      fill: "#1f4e79",
       isDraggable: true,
     },
     {
-      id: 'page-title',
-      type: 'text',
+      id: "page-title",
+      type: "text",
       x: 40,
       y: 12,
       width: 400,
       height: 30,
-      text: 'QUOTATION (cont.)',
+      text: "COTIZACIÓN (continuación)",
       fontSize: 18,
-      fill: '#ffffff',
+      fill: "#ffffff",
       isDraggable: true,
     },
-    ...makeProductElements(suffix),
+    // These pages have only a 50px title band, so move the product content
+    // up to use the space that the first page's company header occupies.
+    ...makeProductElements(suffix, -120),
     ...makeFooter(),
-  ]
+  ];
 }
 
 /**
@@ -251,78 +236,78 @@ function makeProductPageElements(suffix: string): TemplateElement[] {
 function makePoliciesPageElements(): TemplateElement[] {
   return [
     {
-      id: 'policies-band',
-      type: 'rect',
+      id: "policies-band",
+      type: "rect",
       x: 0,
       y: 0,
       width: PAGE_WIDTH,
       height: 50,
-      text: '',
+      text: "",
       fontSize: 0,
-      fill: '#1f4e79',
+      fill: "#1f4e79",
       isDraggable: true,
     },
     {
-      id: 'policies-title',
-      type: 'text',
+      id: "policies-title",
+      type: "text",
       x: 40,
       y: 12,
       width: 400,
       height: 30,
-      text: 'COMMERCIAL POLICIES',
+      text: "CONDICIONES COMERCIALES",
       fontSize: 18,
-      fill: '#ffffff',
+      fill: "#ffffff",
       isDraggable: true,
     },
     {
-      id: 'policies-body',
-      type: 'text',
+      id: "policies-body",
+      type: "text",
       x: 40,
       y: 100,
       width: 700,
       height: 500,
-      text: `1. Prices are quoted in USD and are valid for 30 days from the quotation date.
-2. Payment terms: 50% upfront, 50% upon delivery.
-3. Delivery timeline: 8–12 weeks from project kickoff.
-4. Prices do not include taxes; applicable taxes will be added to the final invoice.
-5. Any scope change must be agreed in writing and may affect price and timeline.
-6. This quotation does not constitute a contract until signed by both parties.`,
+      text: `1. Los precios están expresados en USD y tienen una vigencia de 30 días a partir de la fecha de cotización.
+2. Forma de pago: 50 % por adelantado y 50 % contra entrega.
+3. Plazo de entrega: de 8 a 12 semanas a partir del inicio del proyecto.
+4. Los precios no incluyen impuestos; los impuestos aplicables se agregarán a la factura final.
+5. Cualquier cambio en el alcance debe acordarse por escrito y puede afectar el precio y el plazo.
+6. Esta cotización no constituye un contrato hasta que ambas partes la firmen.`,
       fontSize: 14,
-      fill: '#444444',
+      fill: "#444444",
       isDraggable: true,
     },
     {
-      id: 'signature-line',
-      type: 'text',
+      id: "signature-line",
+      type: "text",
       x: 40,
       y: 900,
       width: 300,
       height: 24,
-      text: 'Accepted by: ______________________',
+      text: "Aceptado por: ______________________",
       fontSize: 14,
-      fill: '#333333',
+      fill: "#333333",
       isDraggable: true,
     },
     ...makeFooter(),
-  ]
+  ];
 }
 
 /** Replaces all placeholders in a text string with quotation values */
 function interpolate(
   text: string,
   quotation: QuotationData,
-  product: QuotationData['products'][number],
+  product: QuotationData["products"][number],
 ): string {
   return text
-    .replace('{{companyName}}', quotation.companyName)
-    .replace('{{companyAddress}}', quotation.companyAddress)
-    .replace('{{companyPhone}}', quotation.companyPhone)
-    .replace('{{customerName}}', quotation.customerName)
-    .replace('{{customerEmail}}', quotation.customerEmail)
-    .replace('{{productName}}', product.name)
-    .replace('{{productReference}}', product.reference)
-    .replace('{{productPrice}}', product.price)
-    .replace('{{productDescription}}', product.description)
+    .replace("{{companyName}}", quotation.companyName)
+    .replace("{{companyAddress}}", quotation.companyAddress)
+    .replace("{{companyPhone}}", quotation.companyPhone)
+    .replace("{{customerName}}", quotation.customerName)
+    .replace("{{customerEmail}}", quotation.customerEmail)
+    .replace("{{productName}}", product.name)
+    .replace("{{productReference}}", product.reference)
+    .replace("{{productPrice}}", product.price)
+    .replace("{{productDescription}}", product.description);
 }
 
 /**
@@ -333,47 +318,48 @@ function interpolate(
 export function buildInventoryTable(
   product: Product,
   suffix: string,
+  verticalOffset = 0,
 ): TemplateElement {
-  const colWidths = [160, 110, 150]
-  const rowHeight = 22
-  const fontSize = 11
+  const colWidths = [160, 110, 150];
+  const rowHeight = 22;
+  const fontSize = 11;
 
-  const variants = product.variants ?? []
-  const cells: string[][] = [['Color', 'Stock', 'Packaging']]
+  const variants = product.variants ?? [];
+  const cells: string[][] = [["Color", "Existencias", "Presentación"]];
 
   if (variants.length === 0) {
-    cells.push(['—', '—', '—'])
+    cells.push(["—", "—", "—"]);
   } else {
     for (const variant of variants) {
       cells.push([
         variant.colorName,
-        variant.stock > 0 ? variant.stock.toLocaleString() : 'Out of stock',
-        variant.packaging ?? '—',
-      ])
+        variant.stock > 0 ? variant.stock.toLocaleString() : "Agotado",
+        variant.packaging ?? "—",
+      ]);
     }
   }
 
   return {
     id: `inventory-${suffix}`,
-    type: 'table',
+    type: "table",
     x: 40,
-    y: 700,
+    y: 600 + verticalOffset,
     width: colWidths.reduce((a, b) => a + b, 0),
     height: rowHeight * cells.length,
-    text: '',
+    text: "",
     fontSize,
-    fill: '#333333',
+    fill: "#333333",
     isDraggable: true,
     table: {
       colWidths,
       rowHeight,
       cells,
-      headerFill: '#eef2f7',
-      headerColor: '#1f4e79',
-      borderColor: '#c9d2dc',
+      headerFill: "#eef2f7",
+      headerColor: "#1f4e79",
+      borderColor: "#c9d2dc",
       fontSize,
     },
-  }
+  };
 }
 
 /**
@@ -383,24 +369,22 @@ export function buildInventoryTable(
  *  - Pages 2..n: one product per page
  *  - Last page: commercial policies
  */
-export function buildPagesFromQuotation(
-  quotation: QuotationData,
-): PageData[] {
-  const pages: PageData[] = []
+export function buildPagesFromQuotation(quotation: QuotationData): PageData[] {
+  const pages: PageData[] = [];
 
   quotation.products.forEach((product, index) => {
-    const pageNumber = pages.length + 1
+    const pageNumber = pages.length + 1;
 
     const baseElements =
       index === 0
         ? makeFirstPageElements(true)
-        : makeProductPageElements(`p${pageNumber}`)
+        : makeProductPageElements(`p${pageNumber}`);
 
     const pageElements = baseElements.map((el) => {
       const next: TemplateElement = {
         ...el,
         text: interpolate(el.text, quotation, product),
-      }
+      };
       // Placeholders inside table cells too
       if (next.table) {
         next.table = {
@@ -408,91 +392,93 @@ export function buildPagesFromQuotation(
           cells: next.table.cells.map((row) =>
             row.map((cell) => interpolate(cell, quotation, product)),
           ),
-        }
+        };
       }
       // Fill the product image element's src from the product (image src
       // can't be interpolated via {{...}} text placeholders). Route external
       // URLs through our same-origin proxy so they load despite missing CORS
       // headers and keep the canvas exportable to PDF.
-      if (next.type === 'image' && next.id.startsWith('product-image-')) {
-        next.src = proxiedImageUrl(product.imageUrl)
+      if (next.type === "image" && next.id.startsWith("product-image-")) {
+        next.src = proxiedImageUrl(product.imageUrl);
       }
-      return next
-    })
+      return next;
+    });
 
     // Each product page carries its own inventory table (one row per
     // variant) in the bottom-left.
-    pageElements.push(buildInventoryTable(product, `p${pageNumber}`))
+    pageElements.push(
+      buildInventoryTable(product, `p${pageNumber}`, index === 0 ? 0 : -120),
+    );
 
     pages.push({
       id: `page-${pageNumber}`,
       pageNumber,
       elements: pageElements,
-    })
-  })
+    });
+  });
 
   // Empty quotation: header-only first page
   if (quotation.products.length === 0) {
     pages.push({
-      id: 'page-1',
+      id: "page-1",
       pageNumber: 1,
       elements: makeFirstPageElements(false),
-    })
+    });
   }
 
   // Final policies page
-  const policiesPageNumber = quotation.products.length + 1
+  const policiesPageNumber = quotation.products.length + 1;
   pages.push({
     id: `page-${policiesPageNumber}`,
     pageNumber: policiesPageNumber,
     elements: makePoliciesPageElements(),
-  })
+  });
 
-  return pages
+  return pages;
 }
 
 /** Initial quotation: header page + policies page, no products yet */
 export function makeEmptyQuotationPages(): PageData[] {
-  return buildPagesFromQuotation({ ...DUMMY_QUOTATION, products: [] })
+  return buildPagesFromQuotation({ ...DUMMY_QUOTATION, products: [] });
 }
 
 /** Master template shown before products are added */
 export function makeMasterTemplate(): PageData {
   return {
-    id: 'page-template',
+    id: "page-template",
     pageNumber: 1,
     elements: makeFirstPageElements(false),
-  }
+  };
 }
 
 export const DUMMY_QUOTATION: QuotationData = {
-  companyName: 'My Company Inc.',
-  companyAddress: '123 Business Ave, Suite 400',
-  companyPhone: '+1 (555) 123-4567',
-  customerName: 'Acme Corporation',
-  customerAddress: '789 Client Blvd, Suite 200',
-  customerEmail: 'contact@acme.com',
+  companyName: "My Company Inc.",
+  companyAddress: "123 Business Ave, Suite 400",
+  companyPhone: "+1 (555) 123-4567",
+  customerName: "Acme Corporation",
+  customerAddress: "789 Client Blvd, Suite 200",
+  customerEmail: "contact@acme.com",
   products: [
     {
-      name: 'Enterprise Web Platform',
-      reference: 'ref-enterprise-web-platform',
-      price: '$12,500.00',
+      name: "Enterprise Web Platform",
+      reference: "ref-enterprise-web-platform",
+      price: "$12,500.00",
       description:
-        'A full-featured web platform including CMS, user management, and analytics dashboard. Includes 12 months of support and hosting.',
+        "A full-featured web platform including CMS, user management, and analytics dashboard. Includes 12 months of support and hosting.",
     },
     {
-      name: 'Mobile App Development',
-      reference: 'ref-mobile-app-development',
-      price: '$8,900.00',
+      name: "Mobile App Development",
+      reference: "ref-mobile-app-development",
+      price: "$8,900.00",
       description:
-        'Native iOS and Android application with offline sync, push notifications, and app store deployment assistance.',
+        "Native iOS and Android application with offline sync, push notifications, and app store deployment assistance.",
     },
     {
-      name: 'UI/UX Design Sprint',
-      reference: 'ref-ui-ux-design-sprint',
-      price: '$4,200.00',
+      name: "UI/UX Design Sprint",
+      reference: "ref-ui-ux-design-sprint",
+      price: "$4,200.00",
       description:
-        'A two-week design sprint covering user research, wireframes, high-fidelity mockups, and an interactive prototype.',
+        "A two-week design sprint covering user research, wireframes, high-fidelity mockups, and an interactive prototype.",
     },
   ],
-}
+};
