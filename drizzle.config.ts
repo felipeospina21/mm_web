@@ -13,4 +13,5 @@ export default {
     url: env.DIRECT_URL ?? env.DATABASE_URL,
   },
   tablesFilter: ["mm_web_*"],
+  casing: "snake_case",
 } satisfies Config;

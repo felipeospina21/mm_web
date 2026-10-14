@@ -1,0 +1,1 @@
+ALTER TABLE "mm_web_user" ADD COLUMN "cellphone" varchar(32);

@@ -12,6 +12,34 @@ import {
   verificationTokens,
 } from "@/server/db/schema";
 
+const drizzleAdapter = DrizzleAdapter(db, {
+  usersTable: users,
+  // Auth.js account payloads use snake_case OAuth field names. The app schema
+  // exposes camelCase properties, so linkAccount below maps between them.
+  accountsTable: accounts as never,
+  sessionsTable: sessions,
+  verificationTokensTable: verificationTokens,
+});
+
+const adapter = {
+  ...drizzleAdapter,
+  async linkAccount(account: Parameters<NonNullable<typeof drizzleAdapter.linkAccount>>[0]) {
+    await db.insert(accounts).values({
+      userId: account.userId,
+      type: account.type,
+      provider: account.provider,
+      providerAccountId: account.providerAccountId,
+      refreshToken: account.refresh_token ?? null,
+      accessToken: account.access_token ?? null,
+      expiresAt: account.expires_at ?? null,
+      tokenType: account.token_type ?? null,
+      scope: account.scope ?? null,
+      idToken: account.id_token ?? null,
+      sessionState: account.session_state ?? null,
+    });
+  },
+};
+
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
  * object and keep type safety.
@@ -69,12 +97,7 @@ export const authConfig = {
       },
     }),
   ],
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
+  adapter,
   // The credentials provider cannot use database sessions; NextAuth only
   // persists a session for credentials logins when the JWT strategy is set
   // explicitly. Without this the login "succeeds" but no readable session

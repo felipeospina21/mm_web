@@ -29,13 +29,13 @@ export const products = createTable(
     /** Unit price in COP (the only currency). Stored as exact decimal. */
     price: d.numeric({ precision: 14, scale: 2 }).notNull(),
     /** Image URL (eventually a CDN / object-storage link). */
-    imageUrl: d.text("image_url"),
+    imageUrl: d.text(),
     createdAt: d
-      .timestamp("created_at", { withTimezone: true })
+      .timestamp({ withTimezone: true })
       .defaultNow()
       .notNull(),
     updatedAt: d
-      .timestamp("updated_at", { withTimezone: true })
+      .timestamp({ withTimezone: true })
       .defaultNow()
       .notNull()
       .$onUpdate(() => /* @__PURE__ */ new Date()),
@@ -52,11 +52,11 @@ export const productVariants = createTable(
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
     productId: d
-      .uuid("product_id")
+      .uuid()
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
-    colorName: d.varchar("color_name", { length: 128 }).notNull(),
-    colorHex: d.varchar("color_hex", { length: 9 }).notNull(),
+    colorName: d.varchar({ length: 128 }).notNull(),
+    colorHex: d.varchar({ length: 9 }).notNull(),
     stock: d.integer().notNull().default(0),
     /** Packaging info, e.g. "Box of 24" or "Bulk pallet" */
     packaging: d.varchar({ length: 256 }),
@@ -75,12 +75,15 @@ export const productsRelations = relations(products, ({ many }) => ({
   variants: many(productVariants),
 }));
 
-export const productVariantsRelations = relations(productVariants, ({ one }) => ({
-  product: one(products, {
-    fields: [productVariants.productId],
-    references: [products.id],
+export const productVariantsRelations = relations(
+  productVariants,
+  ({ one }) => ({
+    product: one(products, {
+      fields: [productVariants.productId],
+      references: [products.id],
+    }),
   }),
-}));
+);
 
 /**
  * A saved quotation. The full quotation document (pages, elements, client
@@ -93,20 +96,20 @@ export const quotations = createTable(
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
     /** Auto-incrementing sequential quotation number (1, 2, 3, ...). */
-    quotationNumber: d.serial("quotation_number").notNull().unique(),
-    clientName: d.varchar("client_name", { length: 256 }).notNull(),
+    quotationNumber: d.serial().notNull().unique(),
+    clientName: d.varchar({ length: 256 }).notNull(),
     /**
      * External CRM client identifier. No local FK by design — the CRM is the
      * system of record; `clientName` is a point-in-time snapshot on the quote.
      */
-    clientId: d.varchar("client_id", { length: 255 }),
+    clientId: d.varchar({ length: 255 }),
     /** Owner of the quotation (the user who created it). */
     userId: d
-      .uuid("user_id")
+      .uuid()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     /** Number of products in the quotation (denormalized from data for listing). */
-    productCount: d.integer("product_count").notNull().default(0),
+    productCount: d.integer().notNull().default(0),
     /** Total amount in COP (denormalized from data for listing/sorting). */
     total: d.numeric({ precision: 14, scale: 2 }).notNull().default("0"),
     /**
@@ -117,11 +120,11 @@ export const quotations = createTable(
     /** Full quotation document: { meta, pages }. See QuotationDocument. */
     data: d.jsonb().$type<QuotationDocument>().notNull(),
     createdDate: d
-      .timestamp("created_date", { withTimezone: true })
+      .timestamp({ withTimezone: true })
       .defaultNow()
       .notNull(),
     updatedDate: d
-      .timestamp("updated_date", { withTimezone: true })
+      .timestamp({ withTimezone: true })
       .defaultNow()
       .notNull()
       .$onUpdate(() => /* @__PURE__ */ new Date()),
@@ -138,6 +141,8 @@ export const users = createTable("user", (d) => ({
   name: d.varchar({ length: 255 }),
   email: d.varchar({ length: 255 }).notNull().unique(),
   phone: d.varchar({ length: 32 }),
+  phoneExt: d.integer(),
+  cellphone: d.varchar({ length: 32 }),
   emailVerified: d
     .timestamp({
       mode: "date",
@@ -163,13 +168,13 @@ export const accounts = createTable(
     type: d.varchar({ length: 255 }).$type<AdapterAccount["type"]>().notNull(),
     provider: d.varchar({ length: 255 }).notNull(),
     providerAccountId: d.varchar({ length: 255 }).notNull(),
-    refresh_token: d.text(),
-    access_token: d.text(),
-    expires_at: d.integer(),
-    token_type: d.varchar({ length: 255 }),
+    refreshToken: d.text(),
+    accessToken: d.text(),
+    expiresAt: d.integer(),
+    tokenType: d.varchar({ length: 255 }),
     scope: d.varchar({ length: 255 }),
-    id_token: d.text(),
-    session_state: d.varchar({ length: 255 }),
+    idToken: d.text(),
+    sessionState: d.varchar({ length: 255 }),
   }),
   (t) => [
     primaryKey({ columns: [t.provider, t.providerAccountId] }),
