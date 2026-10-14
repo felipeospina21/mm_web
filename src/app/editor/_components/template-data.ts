@@ -1,5 +1,6 @@
 import type { PageData, Product, QuotationData, TemplateElement } from './types'
 import { PAGE_WIDTH } from './types'
+import { proxiedImageUrl } from '@/lib/product-image'
 
 /**
  * Shared header band + title used on the first page only.
@@ -410,9 +411,11 @@ export function buildPagesFromQuotation(
         }
       }
       // Fill the product image element's src from the product (image src
-      // can't be interpolated via {{...}} text placeholders).
+      // can't be interpolated via {{...}} text placeholders). Route external
+      // URLs through our same-origin proxy so they load despite missing CORS
+      // headers and keep the canvas exportable to PDF.
       if (next.type === 'image' && next.id.startsWith('product-image-')) {
-        next.src = product.imageUrl ?? ''
+        next.src = proxiedImageUrl(product.imageUrl)
       }
       return next
     })
