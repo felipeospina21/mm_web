@@ -24,6 +24,24 @@ export const env = createEnv({
      * pgBouncer pooler is unreliable, so set this in any Supabase environment.
      */
     DIRECT_URL: z.string().url().optional(),
+    /**
+     * Base URL of the external product aggregator API (no trailing slash),
+     * e.g. `https://api.example.com/v1`. The SKU lookup issues
+     * `GET {EXTERNAL_API_BASE_URL}/products?skus=a,b,c`.
+     */
+    EXTERNAL_API_BASE_URL:
+      process.env.NODE_ENV === "production"
+        ? z.string().url()
+        : z.string().url().optional(),
+    /**
+     * Bearer token / API key for the external product API, sent as
+     * `Authorization: Bearer <token>`. Required in production; optional in
+     * dev/test so the app still boots before the integration is configured.
+     */
+    EXTERNAL_API_TOKEN:
+      process.env.NODE_ENV === "production"
+        ? z.string()
+        : z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -46,6 +64,8 @@ export const env = createEnv({
     AUTH_SECRET: process.env.AUTH_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     DIRECT_URL: process.env.DIRECT_URL,
+    EXTERNAL_API_BASE_URL: process.env.EXTERNAL_API_BASE_URL,
+    EXTERNAL_API_TOKEN: process.env.EXTERNAL_API_TOKEN,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**
