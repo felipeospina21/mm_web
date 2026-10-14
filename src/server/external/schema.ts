@@ -271,6 +271,8 @@ const rawProductSchema = z
     sale_price: z.unknown().optional(),
     packaging_type: z.string().optional(),
     inventory: z.union([z.number(), z.string()]).optional(),
+    local_inventory: z.union([z.number(), z.string()]).optional(),
+    zone_inventory: z.union([z.number(), z.string()]).optional(),
     attributes: z.unknown().optional(),
     variations: z.array(rawVariantSchema).nullish(),
     tags: z.unknown().optional(),
@@ -323,16 +325,20 @@ function normalizeVariant(
 
 /**
  * Build a single inventory row from PRODUCT-level fields, for simple products
- * that have no `variations[]`. Uses the product's own `inventory` for stock
- * and `packaging_type` for packaging, with a dash for color (there is no
- * variant color to show). The row id is derived from the product id/sku.
+ * that have no `variations[]`. Color is a dash (there is no variant color).
+ *
+ * Stock for a simple product is `local_inventory + zone_inventory` (the
+ * on-hand + nearby-zone availability), NOT the plain `inventory` field —
+ * that distinction is specific to the no-variation case. Packaging comes from
+ * the product's `packaging_type`. The row id is derived from the sku.
  */
 function productLevelVariant(
   raw: z.infer<typeof rawProductSchema>,
   packaging: string | null,
 ): QuotationProductVariant {
-  const stockAmount = toAmount(raw.inventory);
-  const stock = stockAmount !== null ? Math.max(0, Math.trunc(stockAmount)) : 0;
+  const local = toAmount(raw.local_inventory) ?? 0;
+  const zone = toAmount(raw.zone_inventory) ?? 0;
+  const stock = Math.max(0, Math.trunc(local + zone));
   return {
     id: `${raw.sku}-default`,
     colorName: "—",

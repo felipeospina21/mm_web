@@ -180,7 +180,10 @@ describe("normalizeProduct — malformed / edge cases", () => {
       sku: "SIMPLE",
       name: "Simple product",
       effective_price: "5000",
-      inventory: 42,
+      // non-variant stock = local + zone (NOT the plain `inventory` field).
+      inventory: 999,
+      local_inventory: 30,
+      zone_inventory: 12,
       packaging_type: "Box of 10",
       // no `variations` field at all
     });
@@ -198,7 +201,8 @@ describe("normalizeProduct — malformed / edge cases", () => {
       id: 7,
       sku: "NULLV",
       effective_price: "5000",
-      inventory: "7",
+      local_inventory: "5",
+      zone_inventory: "2",
       variations: null,
     });
     expect(nullVariations.clean.variants).toHaveLength(1);
@@ -211,11 +215,33 @@ describe("normalizeProduct — malformed / edge cases", () => {
       id: 8,
       sku: "EMPTYV",
       effective_price: "5000",
-      inventory: 3,
+      local_inventory: 3,
+      zone_inventory: 0,
       variations: [],
     });
     expect(emptyVariations.clean.variants).toHaveLength(1);
     expect(emptyVariations.clean.variants[0]!.stock).toBe(3);
+  });
+
+  it("sums local + zone (ignoring plain inventory) and defaults missing parts to 0", () => {
+    // Only local present → zone treated as 0.
+    const onlyLocal = normalizeProduct({
+      id: 10,
+      sku: "LOCALONLY",
+      effective_price: "5000",
+      inventory: 500,
+      local_inventory: 8,
+    });
+    expect(onlyLocal.clean.variants[0]!.stock).toBe(8);
+
+    // Neither present → 0.
+    const neither = normalizeProduct({
+      id: 11,
+      sku: "NONE",
+      effective_price: "5000",
+      inventory: 500,
+    });
+    expect(neither.clean.variants[0]!.stock).toBe(0);
   });
 
   it("defaults product-level stock to 0 when inventory is missing/non-numeric", () => {
