@@ -1,16 +1,16 @@
 import { auth } from "@/server/auth";
-import { api, HydrateClient } from "@/trpc/server";
 
 import { LoginForm } from "./_components/login-form";
-import { ProductCatalog } from "./_components/product-catalog";
-import { QuotationBar } from "./_components/quotation-bar";
+import { ReferenceLookup } from "./_components/reference-lookup";
 
 /**
- * Must match PAGE_SIZE in product-catalog.tsx so the server-prefetched
- * first page and the client's useInfiniteQuery share the same query key.
+ * Home page.
+ *
+ * Signed out → the login form. Signed in → the reference-lookup view: paste a
+ * comma-separated list of SKUs, resolve them against the external product API,
+ * and load the matches into the quotation editor. (The original product
+ * catalog is preserved on the hidden `/catalog` route.)
  */
-const PAGE_SIZE = 12;
-
 export default async function Home() {
   const session = await auth();
 
@@ -23,36 +23,18 @@ export default async function Home() {
     );
   }
 
-  // Server-side fetch of the first page into the QueryClient cache. The
-  // client's useInfiniteQuery hydrates from this and only fetches
-  // subsequent pages on scroll. `pages: 1` limits the server fetch to the
-  // first page; `getNextPageParam` must match the client's so the query
-  // keys line up.
-  void api.product.list.prefetchInfinite(
-    { limit: PAGE_SIZE },
-    {
-      pages: 1,
-      getNextPageParam: (lastPage) =>
-        lastPage.hasMore ? lastPage.nextOffset : undefined,
-    },
-  );
-
   return (
     <main className="min-h-screen bg-neutral-100">
       <header className="flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-6">
         <h1 className="text-lg font-semibold text-neutral-900">
-          Product Catalog
+          New quotation
         </h1>
         <span className="text-sm text-neutral-500">
-          Pick products to build your quotation
+          Look up products by reference to start a quotation
         </span>
       </header>
 
-      <HydrateClient>
-        <ProductCatalog />
-      </HydrateClient>
-
-      <QuotationBar />
+      <ReferenceLookup />
     </main>
   );
 }

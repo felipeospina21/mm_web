@@ -6,7 +6,7 @@ import { signOut } from "next-auth/react";
 
 /** Navigation targets shown in the navbar for a signed-in user. */
 const NAV_LINKS = [
-  { href: "/", label: "Catalog" },
+  { href: "/", label: "New quotation" },
   { href: "/editor", label: "Editor" },
   { href: "/my-quotations", label: "My Quotations" },
 ] as const;
