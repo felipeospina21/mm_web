@@ -4,7 +4,8 @@ import { z } from "zod";
 import { type QuotationDocument } from "@/app/editor/_components/types";
 import { canAccessAllQuotations } from "@/server/auth/access";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { quotations } from "@/server/db/schema";
+import { quotations, users } from "@/server/db/schema";
+import { theme } from "@/lib/theme";
 
 /**
  * The quotation document ({ meta, pages }) is validated structurally: it must
@@ -58,7 +59,122 @@ function deriveTotals(doc: QuotationDocument): {
   return { productCount: products.length, total: total.toFixed(2) };
 }
 
+type RepresentativeProfile = Pick<
+  typeof users.$inferSelect,
+  "name" | "email" | "phone"
+>;
+
+/** Use the authenticated user's current profile as quotation metadata. */
+function setRepresentativeDetails(
+  doc: QuotationDocument,
+  profile: RepresentativeProfile,
+): QuotationDocument {
+  const representativeName = profile.name ?? "";
+  const representativePhone = profile.phone ?? "";
+  const representativeEmail = profile.email;
+  const resolvePlaceholders = (text: string) =>
+    text
+      .replaceAll("{{representativeName}}", representativeName)
+      .replaceAll("{{representativePhone}}", representativePhone)
+      .replaceAll("{{representativeEmail}}", representativeEmail)
+      .replaceAll("{{representative.name}}", representativeName)
+      .replaceAll("{{representative.phone}}", representativePhone)
+      .replaceAll("{{representative.email}}", representativeEmail);
+  const normalizeBrandColor = (color: string) =>
+    color.toLowerCase() === "#1f4e79" ? theme.colors.primary : color;
+
+  return {
+    ...doc,
+    meta: {
+      ...doc.meta,
+      representativeName,
+      representativePhone,
+      representativeEmail,
+    },
+    pages: doc.pages.map((page) => ({
+      ...page,
+      elements: page.elements.map((element) => {
+        let text = resolvePlaceholders(element.text);
+        if (element.id === "representative-info") {
+          const oldName = doc.meta.representativeName;
+          const oldPhone = doc.meta.representativePhone;
+          const oldEmail = doc.meta.representativeEmail;
+          if (oldName) text = text.replace(oldName, representativeName);
+          if (oldPhone) text = text.replace(oldPhone, representativePhone);
+          if (oldEmail) text = text.replace(oldEmail, representativeEmail);
+          if (representativePhone && !text.includes(representativePhone)) {
+            text = `${text.trimEnd()}\n${representativePhone}`;
+          }
+          if (representativeEmail && !text.includes(representativeEmail)) {
+            text = `${text.trimEnd()}\n${representativeEmail}`;
+          }
+        }
+
+        const table = element.table
+          ? {
+              ...element.table,
+              headerFill: normalizeBrandColor(element.table.headerFill),
+              headerColor: normalizeBrandColor(element.table.headerColor),
+              cells: element.table.cells.map((row) =>
+                row.map(resolvePlaceholders),
+              ),
+            }
+          : undefined;
+        return {
+          ...element,
+          fill: normalizeBrandColor(element.fill),
+          text,
+          ...(table ? { table } : {}),
+        };
+      }),
+    })),
+  };
+}
+
+/** Store the database-assigned number in the first-page template element. */
+function setQuotationNumber(
+  doc: QuotationDocument,
+  quotationNumber: number,
+): QuotationDocument {
+  return {
+    ...doc,
+    pages: doc.pages.map((page) => ({
+      ...page,
+      elements: page.elements.map((element) =>
+        element.id === "quotation-number"
+          ? {
+              ...element,
+              text: element.text.includes("{{quotationNumber}}")
+                ? element.text.replace(
+                    /\{\{quotationNumber\}\}/g,
+                    String(quotationNumber),
+                  )
+                : /\d+\s*$/.test(element.text)
+                  ? element.text.replace(/\d+\s*$/, String(quotationNumber))
+                  : `${element.text.trimEnd()} ${quotationNumber}`,
+            }
+          : element,
+      ),
+    })),
+  };
+}
+
 export const quotationRouter = createTRPCRouter({
+  /** Current user's representative details used on new quotation drafts. */
+  representative: protectedProcedure.query(async ({ ctx }) => {
+    const [user] = await ctx.db
+      .select({
+        name: users.name,
+        email: users.email,
+        phone: users.phone,
+      })
+      .from(users)
+      .where(eq(users.id, ctx.session.user.id))
+      .limit(1);
+
+    return user ?? null;
+  }),
+
   /**
    * Save (create or update) a quotation.
    *
@@ -76,51 +192,74 @@ export const quotationRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       const { productCount, total } = deriveTotals(input.data);
+      const [profile] = await ctx.db
+        .select({ name: users.name, email: users.email, phone: users.phone })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (!profile) throw new Error("Current user not found");
+      const document = setRepresentativeDetails(input.data, profile);
 
       // Existing quotation: update in place (keeps its quotation_number).
       if (input.id) {
-        const [updated] = await ctx.db
-          .update(quotations)
-          .set({
+        return ctx.db.transaction(async (tx) => {
+          const [updated] = await tx
+            .update(quotations)
+            .set({
+              clientName: input.clientName,
+              clientId: input.clientId ?? null,
+              references: input.references ?? null,
+              data: document,
+              productCount,
+              total,
+              updatedDate: new Date(),
+            })
+            .where(
+              and(eq(quotations.id, input.id), eq(quotations.userId, userId)),
+            )
+            .returning({
+              id: quotations.id,
+              quotationNumber: quotations.quotationNumber,
+            });
+
+          if (!updated) {
+            throw new Error("Quotation not found or not owned by current user");
+          }
+
+          const data = setQuotationNumber(document, updated.quotationNumber);
+          await tx
+            .update(quotations)
+            .set({ data })
+            .where(eq(quotations.id, updated.id));
+          return { ...updated, data };
+        });
+      }
+
+      // New quotation: INSERT; the DB sequence assigns quotation_number.
+      return ctx.db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(quotations)
+          .values({
             clientName: input.clientName,
             clientId: input.clientId ?? null,
             references: input.references ?? null,
-            data: input.data,
+            userId,
+            data: document,
             productCount,
             total,
-            updatedDate: new Date(),
           })
-          .where(and(eq(quotations.id, input.id), eq(quotations.userId, userId)))
           .returning({
             id: quotations.id,
             quotationNumber: quotations.quotationNumber,
           });
 
-        if (!updated) {
-          // No row matched id + owner → either not found or not theirs.
-          throw new Error("Quotation not found or not owned by current user");
-        }
-        return updated;
-      }
-
-      // New quotation: INSERT; the DB sequence assigns quotation_number.
-      const [created] = await ctx.db
-        .insert(quotations)
-        .values({
-          clientName: input.clientName,
-          clientId: input.clientId ?? null,
-          references: input.references ?? null,
-          userId,
-          data: input.data,
-          productCount,
-          total,
-        })
-        .returning({
-          id: quotations.id,
-          quotationNumber: quotations.quotationNumber,
-        });
-
-      return created!;
+        const data = setQuotationNumber(document, created!.quotationNumber);
+        await tx
+          .update(quotations)
+          .set({ data })
+          .where(eq(quotations.id, created!.id));
+        return { ...created!, data };
+      });
     }),
 
   /**
@@ -186,6 +325,14 @@ export const quotationRouter = createTRPCRouter({
         return null;
       }
 
-      return row;
+      const [profile] = await ctx.db
+        .select({ name: users.name, email: users.email, phone: users.phone })
+        .from(users)
+        .where(eq(users.id, row.userId))
+        .limit(1);
+
+      return profile
+        ? { ...row, data: setRepresentativeDetails(row.data, profile) }
+        : row;
     }),
 });

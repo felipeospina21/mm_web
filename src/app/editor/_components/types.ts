@@ -5,84 +5,83 @@
  * each product gets its own page and PDF export can clip per page.
  */
 
-export type ElementType = 'text' | 'rect' | 'image' | 'table'
+export type ElementType = "text" | "rect" | "image" | "table";
 
 /** A simple table: grid of cells with per-column widths */
 export interface TableData {
   /** Width of each column in px; sum should equal element width */
-  colWidths: number[]
+  colWidths: number[];
   /** Uniform row height in px */
-  rowHeight: number
+  rowHeight: number;
   /** cells[row][col] — text content of each cell */
-  cells: string[][]
+  cells: string[][];
   /** Header row styling */
-  headerFill: string
-  headerColor: string
-  borderColor: string
-  fontSize: number
+  headerFill: string;
+  headerColor: string;
+  borderColor: string;
+  fontSize: number;
 }
 
 export interface TemplateElement {
-  id: string
-  type: ElementType
+  id: string;
+  type: ElementType;
   /** Position relative to the top-left corner of the parent page */
-  x: number
-  y: number
-  width: number
-  height: number
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   /** Text content (only meaningful for type === 'text') */
-  text: string
-  fontSize: number
-  fill: string
+  text: string;
+  fontSize: number;
+  fill: string;
   /** Font weight for text elements ('normal' | 'bold') */
-  fontWeight?: 'normal' | 'bold'
+  fontWeight?: "normal" | "bold";
   /** Italic for text elements */
-  italic?: boolean
+  italic?: boolean;
   /** Underline for text elements */
-  underline?: boolean
+  underline?: boolean;
   /** Font family for text elements */
-  fontFamily?: string
-  isDraggable: boolean
+  fontFamily?: string;
+  isDraggable: boolean;
   /** Table content (only meaningful for type === 'table') */
-  table?: TableData
+  table?: TableData;
   /** Image source as data URL (only meaningful for type === 'image') */
-  src?: string
+  src?: string;
 }
 
 export interface PageData {
-  id: string
-  pageNumber: number
-  elements: TemplateElement[]
+  id: string;
+  pageNumber: number;
+  elements: TemplateElement[];
 }
 
 /** A color variant of a product, used to build the inventory table. */
 export interface ProductVariant {
-  colorName: string
-  colorHex: string
-  stock: number
-  packaging: string | null
+  colorName: string;
+  colorHex: string;
+  stock: number;
+  packaging: string | null;
 }
 
 export interface Product {
-  name: string
+  name: string;
   /** Product reference / catalog code, e.g. "tx-10". */
-  reference: string
-  price: string
-  description: string
+  reference: string;
+  price: string;
+  description: string;
   /** First product image URL (main image), rendered on the product page. */
-  imageUrl?: string | null
+  imageUrl?: string | null;
   /** Color variants (stock + packaging) for the inventory table. */
-  variants?: ProductVariant[]
+  variants?: ProductVariant[];
 }
 
 export interface QuotationData {
-  companyName: string
-  companyAddress: string
-  companyPhone: string
-  customerName: string
-  customerAddress: string
-  customerEmail: string
-  products: Product[]
+  companyName: string;
+  customerName: string;
+  representativeName: string;
+  representativePhone: string;
+  representativeEmail: string;
+  products: Product[];
 }
 
 /**
@@ -92,14 +91,14 @@ export interface QuotationData {
  * restores exactly as it was edited.
  */
 export interface QuotationDocument {
-  meta: QuotationData
-  pages: PageData[]
+  meta: QuotationData;
+  pages: PageData[];
 }
 
 /** A4 at 96 DPI */
-export const PAGE_WIDTH = 794
-export const PAGE_HEIGHT = 1123
+export const PAGE_WIDTH = 794;
+export const PAGE_HEIGHT = 1123;
 /** Vertical gap between stacked pages */
-export const PAGE_GAP = 50
+export const PAGE_GAP = 50;
 /** Dark stage background */
-export const STAGE_BG = '#3a3a3a'
+export const STAGE_BG = "#3a3a3a";

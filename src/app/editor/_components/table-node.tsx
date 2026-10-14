@@ -3,6 +3,7 @@
 import { Group, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
 import type { TableData } from './types'
+import { theme } from '@/lib/theme'
 
 interface TableNodeProps {
   id: string
@@ -63,7 +64,7 @@ export default function TableNode({
           y={-2}
           width={colWidths.reduce((a, b) => a + b, 0) + 4}
           height={rowHeight * cells.length + 4}
-          stroke="#1f4e79"
+          stroke={theme.colors.primary}
           strokeWidth={2}
           dash={[6, 4]}
           listening={false}

@@ -73,7 +73,7 @@ function LoginFormInner() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-2 rounded-lg bg-white px-4 py-2 font-semibold text-[#2e026d] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-2 rounded-lg bg-white px-4 py-2 font-semibold text-[var(--brand-primary)] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? t("login.signingIn") : t("login.signIn")}
       </button>

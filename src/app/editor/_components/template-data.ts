@@ -6,12 +6,26 @@ import type {
 } from "./types";
 import { PAGE_WIDTH } from "./types";
 import { proxiedImageUrl } from "@/lib/product-image";
+import { theme } from "@/lib/theme";
 import { defaultLocale, t, type Locale } from "@/i18n/messages";
 
-/**
- * Shared header band + title used on the first page only.
- * Contains my-company info (left) and client info (right).
- */
+/** Shared logo with fixed geometry across all quotation pages. */
+function makeDocTitle(id: string): TemplateElement {
+  return {
+    id,
+    type: "image",
+    x: 40,
+    y: 20,
+    width: 336,
+    height: 66,
+    text: "",
+    fontSize: 0,
+    fill: "#000000",
+    isDraggable: true,
+    src: "/mmedios_logo.jpg",
+  };
+}
+
 function makeFirstPageHeader(locale: Locale): TemplateElement[] {
   return [
     {
@@ -23,43 +37,77 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       height: 150,
       text: "",
       fontSize: 0,
-      fill: "#1f4e79",
+      fill: "#ffff",
+      isDraggable: true,
+    },
+    makeDocTitle("doc-title"),
+    {
+      id: "customer-name",
+      type: "text",
+      x: 40,
+      y: 100,
+      width: 500,
+      height: 30,
+      text: t("template.customer", { name: "{{customerName}}" }, locale),
+      fontSize: 18,
+      fill: "#333333",
       isDraggable: true,
     },
     {
-      id: "doc-title",
+      id: "company-name",
       type: "text",
       x: 40,
-      y: 20,
+      y: 130,
       width: 300,
-      height: 40,
-      text: t("template.documentTitle", {}, locale),
-      fontSize: 28,
-      fill: "#ffffff",
+      height: 110,
+      text: "{{companyName}}",
+      fontSize: 18,
+      fill: "#000000",
       isDraggable: true,
     },
     {
-      id: "company-info",
-      type: "text",
-      x: 40,
-      y: 60,
-      width: 350,
-      height: 60,
-      text: "{{companyName}}\n{{companyAddress}}\n{{companyPhone}}",
-      fontSize: 11,
-      fill: "#cfe2f3",
-      isDraggable: true,
-    },
-    {
-      id: "client-info",
+      id: "date",
       type: "text",
       x: 460,
       y: 20,
-      width: 300,
-      height: 110,
-      text: `${t("template.preparedFor", {}, locale)}\n{{customerName}}\n{{customerAddress}}\n{{customerEmail}}`,
-      fontSize: 12,
-      fill: "#ffffff",
+      width: 350,
+      height: 60,
+      text: (() => {
+        const parts = new Intl.DateTimeFormat("es-CO", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }).formatToParts(new Date());
+        const part = (type: Intl.DateTimeFormatPartTypes) =>
+          parts.find((item) => item.type === type)?.value ?? "";
+        return `${part("day")} ${part("month")} de ${part("year")}`;
+      })(),
+      fontSize: 18,
+      fill: "#000000",
+      isDraggable: true,
+    },
+    {
+      id: "quotation-number",
+      type: "text",
+      x: 460,
+      y: 50,
+      width: 350,
+      height: 60,
+      text: `${t("template.quotation", { number: "{{quotationNumber}}" }, locale)}`,
+      fontSize: 18,
+      fill: "#000000",
+      isDraggable: true,
+    },
+    {
+      id: "representative-info",
+      type: "text",
+      x: 460,
+      y: 100,
+      width: 350,
+      height: 115,
+      text: `${t("template.representative", {}, locale)} \n{{representativeName}}\n{{representativePhone}}\n{{representativeEmail}}`,
+      fontSize: 14,
+      fill: "#000000",
       isDraggable: true,
     },
   ];
@@ -81,7 +129,7 @@ function makeProductElements(
       height: 40,
       text: "{{productName}}",
       fontSize: 24,
-      fill: "#1f4e79",
+      fill: theme.colors.primary,
       isDraggable: true,
     },
     {
@@ -91,9 +139,13 @@ function makeProductElements(
       y: 262 + verticalOffset,
       width: 400,
       height: 20,
-      text: t("template.reference", { reference: "{{productReference}}" }, locale),
+      text: t(
+        "template.reference",
+        { reference: "{{productReference}}" },
+        locale,
+      ),
       fontSize: 12,
-      fill: "#888888",
+      fill: theme.colors.secondary,
       isDraggable: true,
     },
     {
@@ -125,15 +177,15 @@ function makeProductElements(
         cells: [
           [
             t("template.quantity", {}, locale),
-            t("template.product", {}, locale),
+            t("template.marking", {}, locale),
+            t("template.detail", {}, locale),
             t("template.unitPrice", {}, locale),
-            t("template.total", {}, locale),
           ],
-          ["1", "{{productName}}", "{{productPrice}}", "{{productPrice}}"],
+          ["1", "", "", "{{productPrice}}"],
           ["", "", "", ""],
           ["", "", "", ""],
         ],
-        headerFill: "#1f4e79",
+        headerFill: theme.colors.primary,
         headerColor: "#ffffff",
         borderColor: "#cccccc",
         fontSize: 13,
@@ -187,52 +239,29 @@ function makeFirstPageElements(
   return [
     ...makeFirstPageHeader(locale),
     ...(withProduct ? makeProductElements("p1", 0, locale) : []),
-    {
-      id: "customer-name-line",
-      type: "text",
-      x: 40,
-      y: 120,
-      width: 500,
-      height: 30,
-      text: t("template.customer", { name: "{{customerName}}" }, locale),
-      fontSize: 18,
-      fill: "#333333",
-      isDraggable: true,
-    },
+    // {
+    //   id: "customer-name-line",
+    //   type: "text",
+    //   x: 40,
+    //   y: 120,
+    //   width: 500,
+    //   height: 30,
+    //   text: t("template.customer", { name: "{{customerName}}" }, locale),
+    //   fontSize: 18,
+    //   fill: "#333333",
+    //   isDraggable: true,
+    // },
     ...makeFooter(locale),
   ];
 }
 
-/**
- * Middle pages (products 2..n-1): no company/client header,
- * just the product block.
- */
-function makeProductPageElements(suffix: string, locale: Locale): TemplateElement[] {
+/** Middle pages (products 2..n-1): logo, continuation band, and product block. */
+function makeProductPageElements(
+  suffix: string,
+  locale: Locale,
+): TemplateElement[] {
   return [
-    {
-      id: "page-band",
-      type: "rect",
-      x: 0,
-      y: 0,
-      width: PAGE_WIDTH,
-      height: 50,
-      text: "",
-      fontSize: 0,
-      fill: "#1f4e79",
-      isDraggable: true,
-    },
-    {
-      id: "page-title",
-      type: "text",
-      x: 40,
-      y: 12,
-      width: 400,
-      height: 30,
-      text: t("template.continuation", {}, locale),
-      fontSize: 18,
-      fill: "#ffffff",
-      isDraggable: true,
-    },
+    makeDocTitle(`doc-title-${suffix}`),
     // These pages have only a 50px title band, so move the product content
     // up to use the space that the first page's company header occupies.
     ...makeProductElements(suffix, -120, locale),
@@ -245,41 +274,19 @@ function makeProductPageElements(suffix: string, locale: Locale): TemplateElemen
  */
 function makePoliciesPageElements(locale: Locale): TemplateElement[] {
   return [
-    {
-      id: "policies-band",
-      type: "rect",
-      x: 0,
-      y: 0,
-      width: PAGE_WIDTH,
-      height: 50,
-      text: "",
-      fontSize: 0,
-      fill: "#1f4e79",
-      isDraggable: true,
-    },
-    {
-      id: "policies-title",
-      type: "text",
-      x: 40,
-      y: 12,
-      width: 400,
-      height: 30,
-      text: t("template.policiesTitle", {}, locale),
-      fontSize: 18,
-      fill: "#ffffff",
-      isDraggable: true,
-    },
+    makeDocTitle("doc-title-policies"),
     {
       id: "policies-body",
-      type: "text",
+      type: "image",
       x: 40,
       y: 100,
       width: 700,
-      height: 500,
-      text: t("template.policiesBody", {}, locale),
+      height: 736,
+      text: "",
       fontSize: 14,
       fill: "#444444",
       isDraggable: true,
+      src: "/comercial_policy.jpg",
     },
     {
       id: "signature-line",
@@ -301,18 +308,24 @@ function makePoliciesPageElements(locale: Locale): TemplateElement[] {
 function interpolate(
   text: string,
   quotation: QuotationData,
-  product: QuotationData["products"][number],
+  product?: QuotationData["products"][number],
 ): string {
-  return text
-    .replace("{{companyName}}", quotation.companyName)
-    .replace("{{companyAddress}}", quotation.companyAddress)
-    .replace("{{companyPhone}}", quotation.companyPhone)
-    .replace("{{customerName}}", quotation.customerName)
-    .replace("{{customerEmail}}", quotation.customerEmail)
-    .replace("{{productName}}", product.name)
-    .replace("{{productReference}}", product.reference)
-    .replace("{{productPrice}}", product.price)
-    .replace("{{productDescription}}", product.description);
+  let result = text
+    .replaceAll("{{companyName}}", quotation.companyName)
+    .replaceAll("{{customerName}}", quotation.customerName)
+    .replaceAll("{{representativeName}}", quotation.representativeName)
+    .replaceAll("{{representativePhone}}", quotation.representativePhone)
+    .replaceAll("{{representativeEmail}}", quotation.representativeEmail);
+
+  if (product) {
+    result = result
+      .replaceAll("{{productName}}", product.name)
+      .replaceAll("{{productReference}}", product.reference)
+      .replaceAll("{{productPrice}}", product.price)
+      .replaceAll("{{productDescription}}", product.description);
+  }
+
+  return result;
 }
 
 /**
@@ -331,11 +344,13 @@ export function buildInventoryTable(
   const fontSize = 11;
 
   const variants = product.variants ?? [];
-  const cells: string[][] = [[
-    t("template.inventoryColor", {}, locale),
-    t("template.inventoryStock", {}, locale),
-    t("template.inventoryPackaging", {}, locale),
-  ]];
+  const cells: string[][] = [
+    [
+      t("template.inventoryColor", {}, locale),
+      t("template.inventoryStock", {}, locale),
+      t("template.inventoryPackaging", {}, locale),
+    ],
+  ];
 
   if (variants.length === 0) {
     cells.push(["—", "—", "—"]);
@@ -367,7 +382,7 @@ export function buildInventoryTable(
       rowHeight,
       cells,
       headerFill: "#eef2f7",
-      headerColor: "#1f4e79",
+      headerColor: theme.colors.primary,
       borderColor: "#c9d2dc",
       fontSize,
     },
@@ -439,15 +454,19 @@ export function buildPagesFromQuotation(
 
   // Empty quotation: header-only first page
   if (quotation.products.length === 0) {
+    const elements = makeFirstPageElements(false, locale).map((element) => ({
+      ...element,
+      text: interpolate(element.text, quotation),
+    }));
     pages.push({
       id: "page-1",
       pageNumber: 1,
-      elements: makeFirstPageElements(false, locale),
+      elements,
     });
   }
 
   // Final policies page
-  const policiesPageNumber = quotation.products.length + 1;
+  const policiesPageNumber = pages.length + 1;
   pages.push({
     id: `page-${policiesPageNumber}`,
     pageNumber: policiesPageNumber,
@@ -455,6 +474,33 @@ export function buildPagesFromQuotation(
   });
 
   return pages;
+}
+
+/** Add the standard logo to pages in quotations saved before it was repeated. */
+export function ensurePageLogos(pages: PageData[]): PageData[] {
+  return pages.map((page) => {
+    const hasLogo = page.elements.some((element) =>
+      element.id.startsWith("doc-title"),
+    );
+    const elements = page.elements.map((element) => {
+      if (element.id === "page-title" || element.id === "policies-title") {
+        return { ...element, x: 400, y: 38, width: 390 };
+      }
+      if (element.id.startsWith("doc-title")) {
+        return { ...element, x: 40, y: 20, width: 336, height: 66 };
+      }
+      return element;
+    });
+
+    if (!hasLogo) {
+      const id =
+        page.pageNumber === 1
+          ? "doc-title"
+          : `doc-title-page-${page.pageNumber}`;
+      elements.push(makeDocTitle(id));
+    }
+    return { ...page, elements };
+  });
 }
 
 /** Initial quotation: header page + policies page, no products yet */
@@ -475,11 +521,10 @@ export function makeMasterTemplate(locale: Locale = defaultLocale): PageData {
 
 export const DUMMY_QUOTATION: QuotationData = {
   companyName: "My Company Inc.",
-  companyAddress: "123 Business Ave, Suite 400",
-  companyPhone: "+1 (555) 123-4567",
-  customerName: "Acme Corporation",
-  customerAddress: "789 Client Blvd, Suite 200",
-  customerEmail: "contact@acme.com",
+  customerName: "John Doe",
+  representativeName: "sailor",
+  representativePhone: "+1 (555) 123-4567",
+  representativeEmail: "t@x.com",
   products: [
     {
       name: "Enterprise Web Platform",

@@ -18,7 +18,7 @@ export default async function Home() {
   // Not signed in — show the login form.
   if (!session?.user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] px-4">
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[var(--brand-primary)] to-[var(--brand-secondary)] px-4">
         <LoginForm />
       </main>
     );

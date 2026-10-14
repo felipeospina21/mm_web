@@ -442,7 +442,7 @@ export default function QuotationCanvas({
       {editingBox && (
         <textarea
           autoFocus
-          className="fixed z-[100] resize-none border-2 border-dashed border-[#1f4e79] bg-white/95 p-0 m-0 outline-none"
+          className="fixed z-[100] resize-none border-2 border-dashed border-[var(--brand-primary)] bg-white/95 p-0 m-0 outline-none"
           style={{
             left: editingBox.left,
             top: editingBox.top,
