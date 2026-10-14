@@ -6,12 +6,13 @@ import type {
 } from "./types";
 import { PAGE_WIDTH } from "./types";
 import { proxiedImageUrl } from "@/lib/product-image";
+import { defaultLocale, t, type Locale } from "@/i18n/messages";
 
 /**
  * Shared header band + title used on the first page only.
  * Contains my-company info (left) and client info (right).
  */
-function makeFirstPageHeader(): TemplateElement[] {
+function makeFirstPageHeader(locale: Locale): TemplateElement[] {
   return [
     {
       id: "header-band",
@@ -32,7 +33,7 @@ function makeFirstPageHeader(): TemplateElement[] {
       y: 20,
       width: 300,
       height: 40,
-      text: "COTIZACIÓN",
+      text: t("template.documentTitle", {}, locale),
       fontSize: 28,
       fill: "#ffffff",
       isDraggable: true,
@@ -56,7 +57,7 @@ function makeFirstPageHeader(): TemplateElement[] {
       y: 20,
       width: 300,
       height: 110,
-      text: "Cotización para:\n{{customerName}}\n{{customerAddress}}\n{{customerEmail}}",
+      text: `${t("template.preparedFor", {}, locale)}\n{{customerName}}\n{{customerAddress}}\n{{customerEmail}}`,
       fontSize: 12,
       fill: "#ffffff",
       isDraggable: true,
@@ -68,6 +69,7 @@ function makeFirstPageHeader(): TemplateElement[] {
 function makeProductElements(
   suffix: string,
   verticalOffset = 0,
+  locale: Locale = defaultLocale,
 ): TemplateElement[] {
   return [
     {
@@ -89,7 +91,7 @@ function makeProductElements(
       y: 262 + verticalOffset,
       width: 400,
       height: 20,
-      text: "Ref: {{productReference}}",
+      text: t("template.reference", { reference: "{{productReference}}" }, locale),
       fontSize: 12,
       fill: "#888888",
       isDraggable: true,
@@ -121,7 +123,12 @@ function makeProductElements(
         colWidths: [80, 300, 120, 120],
         rowHeight: 36,
         cells: [
-          ["Cant.", "Producto", "Precio unitario", "Total"],
+          [
+            t("template.quantity", {}, locale),
+            t("template.product", {}, locale),
+            t("template.unitPrice", {}, locale),
+            t("template.total", {}, locale),
+          ],
           ["1", "{{productName}}", "{{productPrice}}", "{{productPrice}}"],
           ["", "", "", ""],
           ["", "", "", ""],
@@ -151,7 +158,7 @@ function makeProductElements(
 }
 
 /** Footer used on every page */
-function makeFooter(): TemplateElement[] {
+function makeFooter(locale: Locale): TemplateElement[] {
   return [
     {
       id: "footer",
@@ -160,7 +167,7 @@ function makeFooter(): TemplateElement[] {
       y: 1060,
       width: 500,
       height: 24,
-      text: "Gracias por su preferencia.",
+      text: t("template.footer", {}, locale),
       fontSize: 12,
       fill: "#999999",
       isDraggable: true,
@@ -173,10 +180,13 @@ function makeFooter(): TemplateElement[] {
  * first product block is included (used once products are added);
  * otherwise it is just the header + footer (initial empty quotation).
  */
-function makeFirstPageElements(withProduct: boolean): TemplateElement[] {
+function makeFirstPageElements(
+  withProduct: boolean,
+  locale: Locale,
+): TemplateElement[] {
   return [
-    ...makeFirstPageHeader(),
-    ...(withProduct ? makeProductElements("p1") : []),
+    ...makeFirstPageHeader(locale),
+    ...(withProduct ? makeProductElements("p1", 0, locale) : []),
     {
       id: "customer-name-line",
       type: "text",
@@ -184,12 +194,12 @@ function makeFirstPageElements(withProduct: boolean): TemplateElement[] {
       y: 120,
       width: 500,
       height: 30,
-      text: "Cliente: {{customerName}}",
+      text: t("template.customer", { name: "{{customerName}}" }, locale),
       fontSize: 18,
       fill: "#333333",
       isDraggable: true,
     },
-    ...makeFooter(),
+    ...makeFooter(locale),
   ];
 }
 
@@ -197,7 +207,7 @@ function makeFirstPageElements(withProduct: boolean): TemplateElement[] {
  * Middle pages (products 2..n-1): no company/client header,
  * just the product block.
  */
-function makeProductPageElements(suffix: string): TemplateElement[] {
+function makeProductPageElements(suffix: string, locale: Locale): TemplateElement[] {
   return [
     {
       id: "page-band",
@@ -218,22 +228,22 @@ function makeProductPageElements(suffix: string): TemplateElement[] {
       y: 12,
       width: 400,
       height: 30,
-      text: "COTIZACIÓN (continuación)",
+      text: t("template.continuation", {}, locale),
       fontSize: 18,
       fill: "#ffffff",
       isDraggable: true,
     },
     // These pages have only a 50px title band, so move the product content
     // up to use the space that the first page's company header occupies.
-    ...makeProductElements(suffix, -120),
-    ...makeFooter(),
+    ...makeProductElements(suffix, -120, locale),
+    ...makeFooter(locale),
   ];
 }
 
 /**
  * Last page: fixed commercial policies, no product info.
  */
-function makePoliciesPageElements(): TemplateElement[] {
+function makePoliciesPageElements(locale: Locale): TemplateElement[] {
   return [
     {
       id: "policies-band",
@@ -254,7 +264,7 @@ function makePoliciesPageElements(): TemplateElement[] {
       y: 12,
       width: 400,
       height: 30,
-      text: "CONDICIONES COMERCIALES",
+      text: t("template.policiesTitle", {}, locale),
       fontSize: 18,
       fill: "#ffffff",
       isDraggable: true,
@@ -266,12 +276,7 @@ function makePoliciesPageElements(): TemplateElement[] {
       y: 100,
       width: 700,
       height: 500,
-      text: `1. Los precios están expresados en USD y tienen una vigencia de 30 días a partir de la fecha de cotización.
-2. Forma de pago: 50 % por adelantado y 50 % contra entrega.
-3. Plazo de entrega: de 8 a 12 semanas a partir del inicio del proyecto.
-4. Los precios no incluyen impuestos; los impuestos aplicables se agregarán a la factura final.
-5. Cualquier cambio en el alcance debe acordarse por escrito y puede afectar el precio y el plazo.
-6. Esta cotización no constituye un contrato hasta que ambas partes la firmen.`,
+      text: t("template.policiesBody", {}, locale),
       fontSize: 14,
       fill: "#444444",
       isDraggable: true,
@@ -283,12 +288,12 @@ function makePoliciesPageElements(): TemplateElement[] {
       y: 900,
       width: 300,
       height: 24,
-      text: "Aceptado por: ______________________",
+      text: t("template.acceptedBy", {}, locale),
       fontSize: 14,
       fill: "#333333",
       isDraggable: true,
     },
-    ...makeFooter(),
+    ...makeFooter(locale),
   ];
 }
 
@@ -319,13 +324,18 @@ export function buildInventoryTable(
   product: Product,
   suffix: string,
   verticalOffset = 0,
+  locale: Locale = defaultLocale,
 ): TemplateElement {
   const colWidths = [160, 110, 150];
   const rowHeight = 22;
   const fontSize = 11;
 
   const variants = product.variants ?? [];
-  const cells: string[][] = [["Color", "Existencias", "Presentación"]];
+  const cells: string[][] = [[
+    t("template.inventoryColor", {}, locale),
+    t("template.inventoryStock", {}, locale),
+    t("template.inventoryPackaging", {}, locale),
+  ]];
 
   if (variants.length === 0) {
     cells.push(["—", "—", "—"]);
@@ -333,7 +343,9 @@ export function buildInventoryTable(
     for (const variant of variants) {
       cells.push([
         variant.colorName,
-        variant.stock > 0 ? variant.stock.toLocaleString() : "Agotado",
+        variant.stock > 0
+          ? variant.stock.toLocaleString(locale === "es" ? "es-CO" : "en-US")
+          : t("template.outOfStock", {}, locale),
         variant.packaging ?? "—",
       ]);
     }
@@ -369,7 +381,10 @@ export function buildInventoryTable(
  *  - Pages 2..n: one product per page
  *  - Last page: commercial policies
  */
-export function buildPagesFromQuotation(quotation: QuotationData): PageData[] {
+export function buildPagesFromQuotation(
+  quotation: QuotationData,
+  locale: Locale = defaultLocale,
+): PageData[] {
   const pages: PageData[] = [];
 
   quotation.products.forEach((product, index) => {
@@ -377,8 +392,8 @@ export function buildPagesFromQuotation(quotation: QuotationData): PageData[] {
 
     const baseElements =
       index === 0
-        ? makeFirstPageElements(true)
-        : makeProductPageElements(`p${pageNumber}`);
+        ? makeFirstPageElements(true, locale)
+        : makeProductPageElements(`p${pageNumber}`, locale);
 
     const pageElements = baseElements.map((el) => {
       const next: TemplateElement = {
@@ -407,7 +422,12 @@ export function buildPagesFromQuotation(quotation: QuotationData): PageData[] {
     // Each product page carries its own inventory table (one row per
     // variant) in the bottom-left.
     pageElements.push(
-      buildInventoryTable(product, `p${pageNumber}`, index === 0 ? 0 : -120),
+      buildInventoryTable(
+        product,
+        `p${pageNumber}`,
+        index === 0 ? 0 : -120,
+        locale,
+      ),
     );
 
     pages.push({
@@ -422,7 +442,7 @@ export function buildPagesFromQuotation(quotation: QuotationData): PageData[] {
     pages.push({
       id: "page-1",
       pageNumber: 1,
-      elements: makeFirstPageElements(false),
+      elements: makeFirstPageElements(false, locale),
     });
   }
 
@@ -431,23 +451,25 @@ export function buildPagesFromQuotation(quotation: QuotationData): PageData[] {
   pages.push({
     id: `page-${policiesPageNumber}`,
     pageNumber: policiesPageNumber,
-    elements: makePoliciesPageElements(),
+    elements: makePoliciesPageElements(locale),
   });
 
   return pages;
 }
 
 /** Initial quotation: header page + policies page, no products yet */
-export function makeEmptyQuotationPages(): PageData[] {
-  return buildPagesFromQuotation({ ...DUMMY_QUOTATION, products: [] });
+export function makeEmptyQuotationPages(
+  locale: Locale = defaultLocale,
+): PageData[] {
+  return buildPagesFromQuotation({ ...DUMMY_QUOTATION, products: [] }, locale);
 }
 
 /** Master template shown before products are added */
-export function makeMasterTemplate(): PageData {
+export function makeMasterTemplate(locale: Locale = defaultLocale): PageData {
   return {
     id: "page-template",
     pageNumber: 1,
-    elements: makeFirstPageElements(false),
+    elements: makeFirstPageElements(false, locale),
   };
 }
 

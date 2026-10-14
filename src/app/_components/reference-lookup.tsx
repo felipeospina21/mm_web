@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { api } from '@/trpc/react'
 import { MAX_REFERENCES, parseReferences } from '@/lib/references'
+import { t } from '@/i18n/messages'
 import {
   addQuotationProduct,
   clearQuotationProducts,
@@ -68,18 +69,17 @@ export function ReferenceLookup() {
           htmlFor="references"
           className="text-sm font-semibold text-neutral-800"
         >
-          Product references
+          {t('lookup.label')}
         </label>
         <p className="text-sm text-neutral-500">
-          Paste a comma-separated list of SKUs (up to {MAX_REFERENCES}). We&rsquo;ll
-          look them up and load the matches into the editor.
+          {t('lookup.instructions', { max: MAX_REFERENCES })}
         </p>
         <textarea
           id="references"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           rows={4}
-          placeholder="cp-10, au 20 4, xtron"
+          placeholder={t('lookup.placeholder')}
           className="w-full resize-y rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm outline-none focus:border-[#1f4e79] focus:ring-2 focus:ring-[#1f4e79]/20"
         />
 
@@ -89,8 +89,10 @@ export function ReferenceLookup() {
               overLimit ? 'text-red-600' : 'text-neutral-400'
             }`}
           >
-            {parsed.length} reference{parsed.length === 1 ? '' : 's'}
-            {overLimit ? ` — max ${MAX_REFERENCES}` : ''}
+            {t(parsed.length === 1 ? 'lookup.countOne' : 'lookup.countMany', {
+              count: parsed.length,
+            })}
+            {overLimit ? t('lookup.limit', { max: MAX_REFERENCES }) : ''}
           </span>
           <button
             type="button"
@@ -98,7 +100,7 @@ export function ReferenceLookup() {
             disabled={parsed.length === 0 || overLimit || query.isFetching}
             className="rounded-lg bg-[#1f4e79] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16405f] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {query.isFetching ? 'Resolving…' : 'Resolve references'}
+            {query.isFetching ? t('lookup.resolving') : t('lookup.resolve')}
           </button>
         </div>
       </section>
@@ -106,7 +108,7 @@ export function ReferenceLookup() {
       {/* Error state */}
       {query.isError && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Lookup failed: {query.error.message}
+          {t('lookup.failed', { error: query.error.message })}
         </p>
       )}
 
@@ -115,7 +117,10 @@ export function ReferenceLookup() {
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-neutral-800">
-              {resolved.length} of {submitted.length} resolved
+              {t('lookup.resultCount', {
+                resolved: resolved.length,
+                submitted: submitted.length,
+              })}
             </h2>
             <button
               type="button"
@@ -123,7 +128,7 @@ export function ReferenceLookup() {
               disabled={resolved.length === 0}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Load into editor
+              {t('lookup.load')}
             </button>
           </div>
 
@@ -149,7 +154,10 @@ export function ReferenceLookup() {
                           <span
                             key={variant.id}
                             className="flex items-center gap-1 rounded-full bg-neutral-50 px-2 py-0.5 text-xs text-neutral-600"
-                            title={`${variant.colorName}: ${variant.stock} in stock`}
+                            title={t('lookup.stockTitle', {
+                              color: variant.colorName,
+                              count: variant.stock,
+                            })}
                           >
                             <span
                               className="h-2.5 w-2.5 rounded-full border border-neutral-300"
@@ -173,7 +181,7 @@ export function ReferenceLookup() {
           {unresolved.length > 0 && (
             <div className="flex flex-col gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
               <span className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-                Not found ({unresolved.length})
+                {t('lookup.notFound', { count: unresolved.length })}
               </span>
               <span className="flex flex-wrap gap-1.5">
                 {unresolved.map((ref) => (

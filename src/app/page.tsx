@@ -2,6 +2,7 @@ import { auth } from "@/server/auth";
 
 import { LoginForm } from "./_components/login-form";
 import { ReferenceLookup } from "./_components/reference-lookup";
+import { t } from "@/i18n/messages";
 
 /**
  * Home page.
@@ -27,10 +28,10 @@ export default async function Home() {
     <main className="min-h-screen bg-neutral-100">
       <header className="flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-6">
         <h1 className="text-lg font-semibold text-neutral-900">
-          New quotation
+          {t("home.title")}
         </h1>
         <span className="text-sm text-neutral-500">
-          Look up products by reference to start a quotation
+          {t("home.subtitle")}
         </span>
       </header>
 

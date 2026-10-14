@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-
-/** Navigation targets shown in the navbar for a signed-in user. */
-const NAV_LINKS = [
-  { href: "/", label: "New quotation" },
-  { href: "/editor", label: "Editor" },
-  { href: "/my-quotations", label: "My Quotations" },
-] as const;
+import { t } from "@/i18n/messages";
 
 interface NavBarClientProps {
   /** Display name/email of the signed-in user, shown on the right. */
@@ -24,6 +18,11 @@ interface NavBarClientProps {
 export function NavBarClient({ userLabel }: NavBarClientProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const navLinks = [
+    { href: "/", label: t("nav.newQuotation") },
+    { href: "/editor", label: t("nav.editor") },
+    { href: "/my-quotations", label: t("nav.myQuotations") },
+  ] as const;
 
   const handleSignOut = async () => {
     // redirect:false keeps NextAuth from building an absolute URL from the
@@ -37,7 +36,7 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
   return (
     <nav className="flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-6">
       <div className="flex items-center gap-1">
-        {NAV_LINKS.map(({ href, label }) => {
+        {navLinks.map(({ href, label }) => {
           const isActive =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
@@ -66,7 +65,7 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
           onClick={handleSignOut}
           className="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
         >
-          Sign out
+          {t("nav.signOut")}
         </button>
       </div>
     </nav>

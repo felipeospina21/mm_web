@@ -14,6 +14,7 @@ import {
 import { takePendingQuotationLoad } from '@/lib/quotation-load'
 import { ConfirmModal } from '@/app/_components/confirm-modal'
 import { api } from '@/trpc/react'
+import { t } from '@/i18n/messages'
 
 // Konva touches `window` at import time, so the canvas is loaded
 // client-side only.
@@ -149,7 +150,7 @@ export default function EditorPage() {
     },
     onError: (error) => {
       console.error('Save failed:', error)
-      alert(`Save failed: ${error.message}`)
+      alert(t('editor.saveFailed', { error: error.message }))
     },
   })
 
@@ -167,7 +168,7 @@ export default function EditorPage() {
         ? nameLine
         : metaName.length > 0
           ? metaName
-          : 'Untitled client'
+          : t('editor.untitledClient')
 
     saveMutation.mutate({
       id: saved?.id,
@@ -293,7 +294,7 @@ export default function EditorPage() {
         y: 600,
         width: type === 'rect' ? 200 : 300,
         height: type === 'rect' ? 100 : 40,
-        text: type === 'text' ? 'New text' : '',
+        text: type === 'text' ? t('editor.newText') : '',
         fontSize: 16,
         fill: type === 'rect' ? '#1f4e79' : '#333333',
         isDraggable: true,
@@ -375,10 +376,10 @@ export default function EditorPage() {
     // Let the button state render before the (synchronous) capture work
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
     try {
-      exportPagesToPdf(stage, pages, 'quotation.pdf')
+      exportPagesToPdf(stage, pages, 'cotizacion.pdf')
     } catch (error) {
       console.error('PDF export failed:', error)
-      alert('PDF export failed. See console for details.')
+      alert(t('editor.pdfExportFailed'))
     } finally {
       setIsExporting(false)
     }
@@ -393,15 +394,15 @@ export default function EditorPage() {
           editor-specific actions here — collapsed into a dropdown. */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-base font-semibold">Quotation Editor</h1>
+          <h1 className="text-base font-semibold">{t('editor.title')}</h1>
           {/* Draft until saved; shows the DB-assigned number once persisted. */}
           {saved ? (
             <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
-              Quotation #{saved.quotationNumber}
+              {t('editor.quotationNumber', { number: saved.quotationNumber })}
             </span>
           ) : (
             <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-500">
-              Draft
+              {t('editor.draft')}
             </span>
           )}
           {/* Unsaved-changes indicator. */}
@@ -411,7 +412,7 @@ export default function EditorPage() {
                 className="h-1.5 w-1.5 rounded-full bg-amber-500"
                 aria-hidden="true"
               />
-              Unsaved changes
+              {t('editor.unsaved')}
             </span>
           )}
         </div>
@@ -429,17 +430,17 @@ export default function EditorPage() {
             className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saveMutation.isPending
-              ? 'Saving…'
+              ? t('editor.saving')
               : saved
-                ? 'Save'
-                : 'Save quotation'}
+                ? t('editor.save')
+                : t('editor.saveQuotation')}
           </button>
           <button
             onClick={handleExportPdf}
             disabled={isExporting}
             className="rounded bg-[#1f4e79] px-3 py-1.5 text-sm text-white hover:bg-[#16405f] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isExporting ? 'Exporting…' : 'Export to PDF'}
+            {isExporting ? t('editor.exporting') : t('editor.exportPdf')}
           </button>
         </div>
       </header>
@@ -458,10 +459,10 @@ export default function EditorPage() {
       {/* Guard: loading a saved quotation would discard unsaved changes. */}
       <ConfirmModal
         open={confirmLoad !== null}
-        title="Discard unsaved changes?"
-        message="This quotation has unsaved changes. Loading another quotation will discard them. Do you want to continue?"
-        confirmLabel="Discard and load"
-        cancelLabel="Keep editing"
+        title={t('editor.discardTitle')}
+        message={t('editor.discardMessage')}
+        confirmLabel={t('editor.discardAndLoad')}
+        cancelLabel={t('editor.keepEditing')}
         onConfirm={() => {
           if (confirmLoad) hydrateFromRow(confirmLoad)
           setConfirmLoad(null)

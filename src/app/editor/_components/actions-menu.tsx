@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
+import { t } from '@/i18n/messages'
 
 interface ActionsMenuProps {
   canUndo: boolean
@@ -57,7 +58,7 @@ export function ActionsMenu({
         aria-haspopup="menu"
         className="flex items-center gap-1.5 rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm hover:bg-neutral-200"
       >
-        Actions
+        {t('actions.label')}
         <svg
           className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
           viewBox="0 0 20 20"
@@ -84,7 +85,7 @@ export function ActionsMenu({
             onClick={onUndo}
             disabled={!canUndo}
           >
-            Undo
+            {t('actions.undo')}
           </button>
           <button
             type="button"
@@ -93,7 +94,7 @@ export function ActionsMenu({
             onClick={onRedo}
             disabled={!canRedo}
           >
-            Redo
+            {t('actions.redo')}
           </button>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
@@ -104,7 +105,7 @@ export function ActionsMenu({
             className={ITEM_CLASS}
             onClick={() => onAddElement('text')}
           >
-            + Text
+            {t('actions.addText')}
           </button>
           <button
             type="button"
@@ -112,7 +113,7 @@ export function ActionsMenu({
             className={ITEM_CLASS}
             onClick={() => onAddElement('rect')}
           >
-            + Shape
+            {t('actions.addShape')}
           </button>
           <button
             type="button"
@@ -120,7 +121,7 @@ export function ActionsMenu({
             className={ITEM_CLASS}
             onClick={() => onAddElement('table')}
           >
-            + Table
+            {t('actions.addTable')}
           </button>
           <button
             type="button"
@@ -128,13 +129,13 @@ export function ActionsMenu({
             className={ITEM_CLASS}
             onClick={() => onAddElement('image')}
           >
-            + Image
+            {t('actions.addImage')}
           </button>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
 
           <Link href="/" className={ITEM_CLASS}>
-            + Add products
+            {t('actions.addProducts')}
           </Link>
         </div>
       )}

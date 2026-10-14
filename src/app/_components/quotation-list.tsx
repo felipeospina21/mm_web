@@ -5,18 +5,19 @@ import { useRouter } from 'next/navigation'
 
 import { api } from '@/trpc/react'
 import { setPendingQuotationLoad } from '@/lib/quotation-load'
+import { defaultLocale, intlLocale, t } from '@/i18n/messages'
 
 const PAGE_SIZE = 12
 
 /** COP currency formatter for quotation totals. */
-const copFormatter = new Intl.NumberFormat('es-CO', {
+const copFormatter = new Intl.NumberFormat(intlLocale(defaultLocale), {
   style: 'currency',
   currency: 'COP',
   maximumFractionDigits: 0,
 })
 
 function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString('en-US', {
+  return new Date(date).toLocaleDateString(intlLocale(defaultLocale), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -74,7 +75,7 @@ export function QuotationList() {
   if (quotations.length === 0) {
     return (
       <p className="py-20 text-center text-neutral-500">
-        You don&rsquo;t have any saved quotations yet.
+        {t('quotations.empty')}
       </p>
     )
   }
@@ -82,7 +83,7 @@ export function QuotationList() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="mb-6 text-xl font-semibold text-neutral-900">
-        My Quotations{' '}
+        {t('quotations.title')}{' '}
         <span className="text-sm font-normal text-neutral-400">({total})</span>
       </h1>
 
@@ -103,8 +104,10 @@ export function QuotationList() {
                   </span>
                 </span>
                 <span className="text-xs text-neutral-500">
-                  Created {formatDate(q.createdDate)} · Updated{' '}
-                  {formatDate(q.updatedDate)}
+                  {t('quotations.createdUpdated', {
+                    created: formatDate(q.createdDate),
+                    updated: formatDate(q.updatedDate),
+                  })}
                 </span>
               </div>
               <div className="flex flex-col items-end gap-1">
@@ -112,8 +115,9 @@ export function QuotationList() {
                   {copFormatter.format(Number(q.total))}
                 </span>
                 <span className="text-xs text-neutral-500">
-                  {q.productCount}{' '}
-                  {q.productCount === 1 ? 'product' : 'products'}
+                  {t(q.productCount === 1 ? 'quotations.productOne' : 'quotations.productMany', {
+                    count: q.productCount,
+                  })}
                 </span>
               </div>
             </button>

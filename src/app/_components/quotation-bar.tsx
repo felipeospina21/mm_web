@@ -6,6 +6,7 @@ import {
   getQuotationProducts,
   STORAGE_EVENT,
 } from '@/lib/quotation-selection'
+import { t } from '@/i18n/messages'
 
 /**
  * Floating bar shown on the catalog once the user has picked at least
@@ -30,10 +31,10 @@ export function QuotationBar() {
         className="flex items-center gap-3 rounded-full bg-[#1f4e79] px-6 py-3 text-sm font-semibold text-white shadow-2xl transition hover:bg-[#16405f]"
       >
         <span>
-          {count} {count === 1 ? 'product' : 'products'} selected
+          {t(count === 1 ? 'quotationBar.oneSelected' : 'quotationBar.manySelected', { count })}
         </span>
         <span className="h-4 w-px bg-white/30" aria-hidden="true" />
-        <span>Go to quotation →</span>
+        <span>{t('quotationBar.goToQuotation')}</span>
       </a>
     </div>
   )

@@ -6,6 +6,7 @@ import type Konva from 'konva'
 import TableNode from './table-node'
 import FloatingToolbar from './floating-toolbar'
 import type { PageData, TemplateElement } from './types'
+import { t } from '@/i18n/messages'
 import {
   PAGE_GAP,
   PAGE_HEIGHT,
@@ -504,30 +505,58 @@ export default function QuotationCanvas({
   )
 }
 
-/**
- * Loads an HTMLImageElement from a data URL so Konva can draw it.
- * Returns null until the image has loaded.
- */
-function useLoadedImage(src: string | undefined): HTMLImageElement | null {
-  const [image, setImage] = useState<HTMLImageElement | null>(null)
+type LoadedImageState = {
+  src: string
+  image: HTMLImageElement | null
+  status: 'idle' | 'loading' | 'loaded' | 'error'
+  retry: () => void
+}
+
+/** Loads an image for Konva and exposes its loading state to the canvas. */
+function useLoadedImage(src: string | undefined): LoadedImageState {
+  const [retryCount, setRetryCount] = useState(0)
+  const [state, setState] = useState<LoadedImageState>({
+    src: '',
+    image: null,
+    status: 'idle',
+    retry: () => setRetryCount((count) => count + 1),
+  })
+
+  const retry = useCallback(() => setRetryCount((count) => count + 1), [])
+
   useEffect(() => {
     if (!src) {
-      setImage(null)
+      setState({ src: '', image: null, status: 'idle', retry })
       return
     }
+
+    let active = true
     const img = new window.Image()
+    setState({ src, image: null, status: 'loading', retry })
     // External product images (e.g. S3) must be fetched anonymously so the
     // canvas isn't tainted — otherwise stage.toDataURL() during PDF export
     // throws a security error. Requires the host to send permissive CORS
     // headers (S3 public buckets typically do).
     img.crossOrigin = 'anonymous'
-    img.onload = () => setImage(img)
+    img.onload = () => {
+      if (active) setState({ src, image: img, status: 'loaded', retry })
+    }
+    img.onerror = () => {
+      if (active) setState({ src, image: null, status: 'error', retry })
+    }
     img.src = src
     return () => {
+      active = false
       img.onload = null
+      img.onerror = null
     }
-  }, [src])
-  return image
+  }, [src, retryCount, retry])
+
+  // Show loading immediately when `src` changes, before the effect updates
+  // state, and avoid briefly rendering the previous source's image.
+  if (!src) return { src: '', image: null, status: 'idle', retry }
+  if (state.src !== src) return { src, image: null, status: 'loading', retry }
+  return state
 }
 
 /**
@@ -540,7 +569,7 @@ function ImageElement({
 }: {
   element: TemplateElement
 } & Record<string, unknown>) {
-  const image = useLoadedImage(element.src)
+  const imageState = useLoadedImage(element.src)
   const shapeProps = rest as unknown as Konva.RectConfig & Konva.ImageConfig
   if (!element.src) {
     // Placeholder while no image has been chosen
@@ -556,10 +585,66 @@ function ImageElement({
       />
     )
   }
+  if (imageState.status === 'loading' || imageState.status === 'error') {
+    const x = typeof shapeProps.x === 'number' ? shapeProps.x : element.x
+    const y = typeof shapeProps.y === 'number' ? shapeProps.y : element.y
+    const failed = imageState.status === 'error'
+
+    return (
+      <>
+        <Rect
+          {...shapeProps}
+          width={element.width}
+          height={element.height}
+          fill={failed ? '#fef2f2' : '#f3f4f6'}
+          stroke={failed ? '#fca5a5' : '#d1d5db'}
+          strokeWidth={1}
+        />
+        <Text
+          x={x + 8}
+          y={y + 8}
+          width={Math.max(0, element.width - 16)}
+          height={Math.max(0, element.height - 16)}
+          text={failed ? `${t('image.failed')} · ${t('image.retry')}` : t('image.loading')}
+          fontSize={13}
+          fill={failed ? '#b91c1c' : '#525252'}
+          align="center"
+          verticalAlign="middle"
+          wrap="word"
+          listening={false}
+        />
+        {failed && (
+          <Rect
+            x={x}
+            y={y}
+            width={element.width}
+            height={element.height}
+            fill="rgba(0,0,0,0)"
+            onMouseEnter={(event) => {
+              const container = event.target.getStage()?.container()
+              if (container) container.style.cursor = 'pointer'
+            }}
+            onMouseLeave={(event) => {
+              const container = event.target.getStage()?.container()
+              if (container) container.style.cursor = 'default'
+            }}
+            onClick={(event) => {
+              event.cancelBubble = true
+              imageState.retry()
+            }}
+            onTap={(event) => {
+              event.cancelBubble = true
+              imageState.retry()
+            }}
+          />
+        )}
+      </>
+    )
+  }
   return (
     <KonvaImage
       {...shapeProps}
-      image={image ?? undefined}
+      image={imageState.image ?? undefined}
       width={element.width}
       height={element.height}
     />

@@ -1,6 +1,7 @@
 'use client'
 
 import type { PageData, TemplateElement } from './types'
+import { t } from '@/i18n/messages'
 
 interface FloatingToolbarProps {
   pages: PageData[]
@@ -112,7 +113,7 @@ export default function FloatingToolbar({
       {isText && (
         <>
           <label className="flex items-center gap-1 text-xs text-neutral-700">
-            Font
+            {t('toolbar.font')}
             <select
               value={element.fontFamily ?? 'Arial'}
               onChange={(e) => patch({ fontFamily: e.target.value })}
@@ -126,7 +127,7 @@ export default function FloatingToolbar({
             </select>
           </label>
           <label className="flex items-center gap-1 text-xs text-neutral-700">
-            Size
+            {t('toolbar.size')}
             <select
               value={element.fontSize}
               onChange={(e) => patch({ fontSize: Number(e.target.value) })}
@@ -143,7 +144,7 @@ export default function FloatingToolbar({
             className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
               element.fontWeight === 'bold' ? 'font-extrabold' : 'font-normal'
             }`}
-            title="Bold"
+            title={t('toolbar.bold')}
             onClick={() =>
               patch({
                 fontWeight: element.fontWeight === 'bold' ? 'normal' : 'bold',
@@ -156,7 +157,7 @@ export default function FloatingToolbar({
             className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
               element.italic ? 'italic' : ''
             }`}
-            title="Italic"
+            title={t('toolbar.italic')}
             onClick={() => patch({ italic: !element.italic })}
           >
             I
@@ -165,13 +166,13 @@ export default function FloatingToolbar({
             className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
               element.underline ? 'underline' : ''
             }`}
-            title="Underline"
+            title={t('toolbar.underline')}
             onClick={() => patch({ underline: !element.underline })}
           >
             U
           </button>
           <label className="flex items-center gap-1 text-xs text-neutral-700">
-            Color
+            {t('toolbar.color')}
             <input
               type="color"
               value={element.fill}
@@ -184,7 +185,7 @@ export default function FloatingToolbar({
 
       {isImage && (
         <label className="flex items-center gap-1 text-xs text-neutral-700">
-          Image
+          {t('toolbar.image')}
           <input
             type="file"
             accept="image/*"
@@ -196,34 +197,34 @@ export default function FloatingToolbar({
 
       {isTable && (
         <>
-          <span className="text-xs text-neutral-700">Table</span>
+          <span className="text-xs text-neutral-700">{t('toolbar.table')}</span>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={() => addRow()}
-            title="Add row"
+            title={t('toolbar.addRow')}
           >
-            + Row
+            + {t('toolbar.row')}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={() => removeRow()}
-            title="Remove last row"
+            title={t('toolbar.removeRow')}
           >
-            − Row
+            − {t('toolbar.row')}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={() => addColumn()}
-            title="Add column"
+            title={t('toolbar.addColumn')}
           >
-            + Col
+            + {t('toolbar.column')}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={() => removeColumn()}
-            title="Remove last column"
+            title={t('toolbar.removeColumn')}
           >
-            − Col
+            − {t('toolbar.column')}
           </button>
         </>
       )}
@@ -232,17 +233,17 @@ export default function FloatingToolbar({
 
       <button
         className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-        title="Duplicate (Ctrl+D)"
+        title={t('toolbar.duplicate')}
         onClick={() => onDuplicateElement(element.id)}
       >
-        Duplicate
+        {t('toolbar.duplicateShort')}
       </button>
       <button
         className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs text-red-700"
-        title="Delete (Del)"
+        title={t('toolbar.delete')}
         onClick={() => onDeleteElement(element.id)}
       >
-        Delete
+        {t('toolbar.deleteShort')}
       </button>
     </div>
   )

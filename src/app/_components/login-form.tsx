@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { t } from "@/i18n/messages";
 
 function LoginFormInner() {
   const router = useRouter();
@@ -25,14 +26,14 @@ function LoginFormInner() {
         redirect: false,
       });
       if (result?.error) {
-        setError("Invalid email or password.");
+        setError(t("login.invalidCredentials"));
         return;
       }
       router.push(callbackUrl);
       router.refresh();
     } catch (error) {
       console.error("Sign-in failed:", error);
-      setError("Something went wrong signing in. Please try again.");
+      setError(t("login.failed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -43,9 +44,9 @@ function LoginFormInner() {
       onSubmit={handleSubmit}
       className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white/10 p-8 backdrop-blur"
     >
-      <h1 className="text-2xl font-bold text-white">Sign in</h1>
+      <h1 className="text-2xl font-bold text-white">{t("login.title")}</h1>
       <label className="flex flex-col gap-1 text-sm text-white">
-        Email
+        {t("login.email")}
         <input
           type="email"
           required
@@ -53,11 +54,11 @@ function LoginFormInner() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/40 outline-none focus:border-white/50"
-          placeholder="you@company.com"
+          placeholder={t("login.emailPlaceholder")}
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-white">
-        Password
+        {t("login.password")}
         <input
           type="password"
           required
@@ -74,7 +75,7 @@ function LoginFormInner() {
         disabled={isSubmitting}
         className="mt-2 rounded-lg bg-white px-4 py-2 font-semibold text-[#2e026d] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? "Signing in…" : "Sign in"}
+        {isSubmitting ? t("login.signingIn") : t("login.signIn")}
       </button>
     </form>
   );

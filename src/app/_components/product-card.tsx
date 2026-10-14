@@ -8,6 +8,7 @@ import {
   STORAGE_EVENT,
   type QuotationProduct,
 } from '@/lib/quotation-selection'
+import { t } from '@/i18n/messages'
 
 export interface ProductVariantView {
   id: string
@@ -103,7 +104,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
 
         <div className="mt-auto space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-            Color variants
+            {t('product.colorVariants')}
           </p>
           <ul className="flex flex-col gap-1.5">
             {product.variants.map((variant) => (
@@ -123,11 +124,11 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
                 <span className="ml-auto text-neutral-500">
                   {variant.stock > 0 ? (
                     <>
-                      {variant.stock} in stock
+                      {t('product.stockAvailable', { count: variant.stock })}
                       {variant.packaging ? ` · ${variant.packaging}` : ''}
                     </>
                   ) : (
-                    <span className="text-red-500">Out of stock</span>
+                    <span className="text-red-500">{t('product.outOfStock')}</span>
                   )}
                 </span>
               </li>
@@ -143,7 +144,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
               : 'mt-auto rounded-lg bg-[#1f4e79] px-4 py-2 text-sm font-semibold text-white hover:bg-[#16405f]'
           }
         >
-          {isAdded ? 'Added ✓' : 'Add'}
+          {isAdded ? t('product.added') : t('product.add')}
         </button>
       </div>
     </article>
