@@ -1,6 +1,7 @@
 import "server-only";
 
 import { env } from "@/env";
+import { log } from "@/server/observability/logger";
 
 /**
  * Typed fetch wrapper for the external product aggregator API.
@@ -112,6 +113,7 @@ export async function externalGet<T>(
     headers.Authorization = `Bearer ${env.EXTERNAL_API_TOKEN}`;
   }
 
+  const startedAt = Date.now();
   let lastError: ExternalApiError | undefined;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -125,6 +127,12 @@ export async function externalGet<T>(
       });
 
       if (res.ok) {
+        log.info("external_api.request", {
+          path,
+          status: res.status,
+          attempts: attempt,
+          durationMs: Date.now() - startedAt,
+        });
         return (await res.json()) as T;
       }
 
@@ -137,7 +145,16 @@ export async function externalGet<T>(
       );
 
       // Deterministic client errors (except 429) are not worth retrying.
-      if (!isRetryableStatus(res.status)) throw err;
+      if (!isRetryableStatus(res.status)) {
+        log.error("external_api.request", {
+          path,
+          status: res.status,
+          attempts: attempt,
+          durationMs: Date.now() - startedAt,
+          retryable: false,
+        });
+        throw err;
+      }
       lastError = err;
     } catch (cause) {
       // Re-throw non-retryable ExternalApiErrors immediately.
@@ -157,11 +174,27 @@ export async function externalGet<T>(
       clearTimeout(timer);
     }
 
+    // A retryable failure happened on this attempt.
+    log.warn("external_api.retry", {
+      path,
+      status: lastError?.status ?? 0,
+      attempt,
+      maxAttempts,
+    });
+
     // Back off before the next attempt (skip the wait after the last one).
     if (attempt < maxAttempts) {
       await sleep(baseDelayMs * 2 ** (attempt - 1));
     }
   }
+
+  log.error("external_api.request", {
+    path,
+    status: lastError?.status ?? 0,
+    attempts: maxAttempts,
+    durationMs: Date.now() - startedAt,
+    exhausted: true,
+  });
 
   throw (
     lastError ??

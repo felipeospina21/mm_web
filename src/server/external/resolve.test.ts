@@ -25,6 +25,9 @@ function rawProduct(sku: string): RawExternalProduct {
 
 beforeEach(() => {
   fetchProductsBySkus.mockReset();
+  // Silence the structured logger emitted by resolveSkus.
+  vi.spyOn(console, "info").mockImplementation(() => undefined);
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 describe("resolveSkus", () => {

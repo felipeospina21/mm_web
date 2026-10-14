@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildUrl,
@@ -21,6 +21,13 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+beforeEach(() => {
+  // Silence the structured logger emitted by externalGet during these tests.
+  vi.spyOn(console, "info").mockImplementation(() => undefined);
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 describe("buildUrl", () => {

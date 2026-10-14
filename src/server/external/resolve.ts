@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { QuotationProduct } from "@/lib/quotation-selection";
+import { errorFields, log } from "@/server/observability/logger";
 
 import { fetchProductsBySkus } from "./products";
 import { normalizeProduct } from "./schema";
@@ -30,7 +31,19 @@ export async function resolveSkus(
 ): Promise<ResolveResult> {
   if (references.length === 0) return { resolved: [], unresolved: [] };
 
-  const rawBySku = await fetchProductsBySkus(references);
+  const startedAt = Date.now();
+  let rawBySku: Map<string, unknown>;
+  try {
+    rawBySku = await fetchProductsBySkus(references);
+  } catch (cause) {
+    log.error("lookup.resolve", {
+      requested: references.length,
+      durationMs: Date.now() - startedAt,
+      ok: false,
+      ...errorFields(cause),
+    });
+    throw cause;
+  }
 
   // Case-insensitive index so "kit002" matches an API "KIT002".
   const rawByLowerSku = new Map<string, unknown>();
@@ -58,6 +71,14 @@ export async function resolveSkus(
       unresolved.push(sku);
     }
   }
+
+  log.info("lookup.resolve", {
+    requested: references.length,
+    resolved: resolved.length,
+    unresolved: unresolved.length,
+    durationMs: Date.now() - startedAt,
+    ok: true,
+  });
 
   return { resolved, unresolved };
 }
