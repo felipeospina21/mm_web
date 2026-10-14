@@ -77,6 +77,88 @@ function parseMaybeJson(value: unknown): unknown {
   }
 }
 
+/** Minimal HTML entity decode for the entities common in these descriptions. */
+function decodeEntities(text: string): string {
+  const named: Record<string, string> = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'",
+    "&apos;": "'",
+    "&nbsp;": " ",
+  };
+  return text
+    .replace(/&amp;|&lt;|&gt;|&quot;|&#39;|&apos;|&nbsp;/g, (m) => named[m] ?? m)
+    .replace(/&#(\d+);/g, (_, dec: string) =>
+      String.fromCodePoint(Number(dec)),
+    )
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
+      String.fromCodePoint(parseInt(hex, 16)),
+    );
+}
+
+/**
+ * Strip HTML markup from a rich-text string into clean plain text.
+ *
+ * The API returns `description` as HTML (e.g. `<p>Lorem…</p><ul><li>…</li>`).
+ * The editor renders descriptions as Konva canvas text, which has no HTML
+ * support, so the tags would show literally. We convert block-level breaks
+ * (`</p>`, `<br>`, `</li>`, …) into newlines, drop every other tag, decode
+ * entities, and collapse runs of whitespace — preserving paragraph structure
+ * as `\n` which Konva text honors.
+ */
+export function stripHtml(input: string): string {
+  if (!input) return "";
+  let text = input;
+
+  // List items → "• item"; block closers → newline; <br> → newline.
+  text = text
+    .replace(/<\s*li[^>]*>/gi, "• ")
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\s*\/\s*(p|div|li|ul|ol|h[1-6]|tr|table)\s*>/gi, "\n");
+
+  // Remove any remaining tags.
+  text = text.replace(/<[^>]+>/g, "");
+
+  // Decode entities, normalize whitespace, trim per-line, collapse blank runs.
+  text = decodeEntities(text)
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t\f\v]+/g, " ")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return text;
+}
+
+/**
+ * Extract the first product image URL from the stringified `images` field.
+ * The payload looks like `{"main_image":["https://…"],"gallery_images":[…]}`
+ * (JSON encoded as a string). Prefers the first `main_image`, falling back to
+ * the first `gallery_images`. Returns `null` when nothing usable is present.
+ */
+export function firstImageUrl(images: unknown): string | null {
+  const parsed = parseMaybeJson(images);
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const obj = parsed as Record<string, unknown>;
+  const pick = (key: string): string | null => {
+    const arr = obj[key];
+    if (Array.isArray(arr)) {
+      const first = arr.find(
+        (u): u is string => typeof u === "string" && u.trim().length > 0,
+      );
+      return first ? first.trim() : null;
+    }
+    return null;
+  };
+
+  return pick("main_image") ?? pick("gallery_images") ?? null;
+}
+
 /**
  * Coerce a mixed number|string price to a finite number of pesos, or null.
  * Accepts 0, "0.00", "19990.00", 19990, etc. Non-numeric → null.
@@ -190,7 +272,7 @@ const rawProductSchema = z
     packaging_type: z.string().optional(),
     inventory: z.union([z.number(), z.string()]).optional(),
     attributes: z.unknown().optional(),
-    variations: z.array(rawVariantSchema).optional(),
+    variations: z.array(rawVariantSchema).nullish(),
     tags: z.unknown().optional(),
     images: z.unknown().optional(),
     printing_methods: z.unknown().optional(),
@@ -240,6 +322,27 @@ function normalizeVariant(
 }
 
 /**
+ * Build a single inventory row from PRODUCT-level fields, for simple products
+ * that have no `variations[]`. Uses the product's own `inventory` for stock
+ * and `packaging_type` for packaging, with a dash for color (there is no
+ * variant color to show). The row id is derived from the product id/sku.
+ */
+function productLevelVariant(
+  raw: z.infer<typeof rawProductSchema>,
+  packaging: string | null,
+): QuotationProductVariant {
+  const stockAmount = toAmount(raw.inventory);
+  const stock = stockAmount !== null ? Math.max(0, Math.trunc(stockAmount)) : 0;
+  return {
+    id: `${raw.sku}-default`,
+    colorName: "—",
+    colorHex: DEFAULT_HEX,
+    stock,
+    packaging,
+  };
+}
+
+/**
  * Normalize a raw external product into a clean {@link QuotationProduct}.
  *
  * Returns `{ clean, warnings }`. Throws only when the input is so malformed it
@@ -257,8 +360,10 @@ export function normalizeProduct(input: unknown): NormalizedProduct {
     warnings.push(`product ${reference} had no name — fell back to sku`);
   }
 
-  const description =
+  const rawDescription =
     raw.description?.trim() ?? raw.short_description?.trim() ?? "";
+  // Descriptions arrive as HTML; the editor renders plain Konva text.
+  const description = stripHtml(rawDescription);
 
   const { price, found } = pickPrice(raw);
   if (!found) {
@@ -269,9 +374,16 @@ export function normalizeProduct(input: unknown): NormalizedProduct {
 
   const packaging = raw.packaging_type?.trim() ?? null;
 
-  const variants: QuotationProductVariant[] = (raw.variations ?? []).map(
-    (v, i) => normalizeVariant(v, packaging, i, warnings),
-  );
+  const imageUrl = firstImageUrl(raw.images);
+
+  // Variable products carry `variations[]`; simple products do not — for those
+  // we synthesize a single inventory row from the product-level `inventory`
+  // and `packaging_type`, with a dash for color.
+  const rawVariations = raw.variations ?? [];
+  const variants: QuotationProductVariant[] =
+    rawVariations.length > 0
+      ? rawVariations.map((v, i) => normalizeVariant(v, packaging, i, warnings))
+      : [productLevelVariant(raw, packaging)];
 
   const clean: QuotationProduct = {
     id: String(raw.id),
@@ -279,6 +391,7 @@ export function normalizeProduct(input: unknown): NormalizedProduct {
     reference,
     price,
     description,
+    imageUrl,
     variants,
   };
 
@@ -320,5 +433,7 @@ export const __test = {
   pickPrice,
   colorToHex,
   variantColorName,
+  stripHtml,
+  firstImageUrl,
   rawProductSchema,
 };

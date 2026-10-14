@@ -103,6 +103,7 @@ export default function EditorPage() {
         reference: product.reference,
         price: product.price,
         description: product.description,
+        imageUrl: product.imageUrl ?? null,
         variants: product.variants.map((variant) => ({
           colorName: variant.colorName,
           colorHex: variant.colorHex,

@@ -516,6 +516,11 @@ function useLoadedImage(src: string | undefined): HTMLImageElement | null {
       return
     }
     const img = new window.Image()
+    // External product images (e.g. S3) must be fetched anonymously so the
+    // canvas isn't tainted — otherwise stage.toDataURL() during PDF export
+    // throws a security error. Requires the host to send permissive CORS
+    // headers (S3 public buckets typically do).
+    img.crossOrigin = 'anonymous'
     img.onload = () => setImage(img)
     img.src = src
     return () => {

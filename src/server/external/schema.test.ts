@@ -68,6 +68,8 @@ describe("normalizeProduct — sample payload", () => {
     expect(clean.description).toContain("Combo práctico");
     // effective_price (19990) wins over the 0/"0.00" placeholders.
     expect(clean.price).toContain("19.990");
+    // Image parsed from the stringified images field (first main_image).
+    expect(clean.imageUrl).toBe("https://example.test/a.jpg");
     expect(warnings).toHaveLength(0);
   });
 
@@ -97,6 +99,7 @@ describe("normalizeProduct — sample payload", () => {
     expect(keys).toEqual([
       "description",
       "id",
+      "imageUrl",
       "name",
       "price",
       "reference",
@@ -171,6 +174,64 @@ describe("normalizeProduct — malformed / edge cases", () => {
     expect(clean.variants[0]!.colorHex).toBe("#1e88e5");
   });
 
+  it("synthesizes one inventory row from product-level fields when there are no variations", () => {
+    const { clean } = normalizeProduct({
+      id: 6,
+      sku: "SIMPLE",
+      name: "Simple product",
+      effective_price: "5000",
+      inventory: 42,
+      packaging_type: "Box of 10",
+      // no `variations` field at all
+    });
+    expect(clean.variants).toHaveLength(1);
+    expect(clean.variants[0]).toMatchObject({
+      id: "SIMPLE-default",
+      colorName: "—",
+      stock: 42,
+      packaging: "Box of 10",
+    });
+  });
+
+  it("falls back to product-level inventory for a null/empty variations field", () => {
+    const nullVariations = normalizeProduct({
+      id: 7,
+      sku: "NULLV",
+      effective_price: "5000",
+      inventory: "7",
+      variations: null,
+    });
+    expect(nullVariations.clean.variants).toHaveLength(1);
+    expect(nullVariations.clean.variants[0]).toMatchObject({
+      colorName: "—",
+      stock: 7,
+    });
+
+    const emptyVariations = normalizeProduct({
+      id: 8,
+      sku: "EMPTYV",
+      effective_price: "5000",
+      inventory: 3,
+      variations: [],
+    });
+    expect(emptyVariations.clean.variants).toHaveLength(1);
+    expect(emptyVariations.clean.variants[0]!.stock).toBe(3);
+  });
+
+  it("defaults product-level stock to 0 when inventory is missing/non-numeric", () => {
+    const { clean } = normalizeProduct({
+      id: 9,
+      sku: "NOINV",
+      effective_price: "5000",
+    });
+    expect(clean.variants).toHaveLength(1);
+    expect(clean.variants[0]).toMatchObject({
+      colorName: "—",
+      stock: 0,
+      packaging: null,
+    });
+  });
+
   it("throws when the required id/sku keys are missing", () => {
     expect(() => normalizeProduct({ name: "no keys" })).toThrow();
   });
@@ -211,5 +272,39 @@ describe("helpers", () => {
     expect(
       __test.pickPrice({ regular_price: 0, sale_price: "0.00" }).found,
     ).toBe(false);
+  });
+
+  it("stripHtml converts markup to clean text with preserved breaks", () => {
+    expect(__test.stripHtml("<p>Hello <b>world</b></p>")).toBe("Hello world");
+    // Block closers and <br> become newlines.
+    expect(__test.stripHtml("<p>One</p><p>Two</p>")).toBe("One\nTwo");
+    expect(__test.stripHtml("A<br>B")).toBe("A\nB");
+    // List items get a bullet.
+    expect(__test.stripHtml("<ul><li>a</li><li>b</li></ul>")).toBe(
+      "• a\n• b",
+    );
+    // Entities are decoded and whitespace collapsed.
+    expect(__test.stripHtml("<p>Tom &amp;   Jerry&nbsp;&#39;s</p>")).toBe(
+      "Tom & Jerry 's",
+    );
+    expect(__test.stripHtml("")).toBe("");
+  });
+
+  it("firstImageUrl extracts the first main image from the stringified field", () => {
+    const images =
+      '{"main_image":["https://x.test/a.jpg","https://x.test/b.jpg"],"gallery_images":["https://x.test/g.jpg"]}';
+    expect(__test.firstImageUrl(images)).toBe("https://x.test/a.jpg");
+    // Falls back to gallery when no main image.
+    expect(
+      __test.firstImageUrl('{"main_image":[],"gallery_images":["https://x.test/g.jpg"]}'),
+    ).toBe("https://x.test/g.jpg");
+    // Already-parsed object works too.
+    expect(
+      __test.firstImageUrl({ main_image: ["https://x.test/c.jpg"] }),
+    ).toBe("https://x.test/c.jpg");
+    // Nothing usable → null.
+    expect(__test.firstImageUrl("not json")).toBeNull();
+    expect(__test.firstImageUrl(undefined)).toBeNull();
+    expect(__test.firstImageUrl('{"main_image":[]}')).toBeNull();
   });
 });

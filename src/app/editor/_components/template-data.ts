@@ -111,6 +111,21 @@ function makeProductElements(suffix: string): TemplateElement[] {
       isDraggable: true,
     },
     {
+      // Product image (top-right of the product block). `src` is filled in
+      // per-product by buildPagesFromQuotation; empty renders a placeholder.
+      id: `product-image-${suffix}`,
+      type: 'image',
+      x: 560,
+      y: 180,
+      width: 194,
+      height: 194,
+      text: '',
+      fontSize: 0,
+      fill: '#000000',
+      isDraggable: true,
+      src: '',
+    },
+    {
       id: `line-items-${suffix}`,
       type: 'table',
       x: 40,
@@ -393,6 +408,11 @@ export function buildPagesFromQuotation(
             row.map((cell) => interpolate(cell, quotation, product)),
           ),
         }
+      }
+      // Fill the product image element's src from the product (image src
+      // can't be interpolated via {{...}} text placeholders).
+      if (next.type === 'image' && next.id.startsWith('product-image-')) {
+        next.src = product.imageUrl ?? ''
       }
       return next
     })

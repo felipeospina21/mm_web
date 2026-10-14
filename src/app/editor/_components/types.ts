@@ -69,6 +69,8 @@ export interface Product {
   reference: string
   price: string
   description: string
+  /** First product image URL (main image), rendered on the product page. */
+  imageUrl?: string | null
   /** Color variants (stock + packaging) for the inventory table. */
   variants?: ProductVariant[]
 }

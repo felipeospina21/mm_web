@@ -20,6 +20,8 @@ export interface QuotationProduct {
   reference: string
   price: string
   description: string
+  /** First product image URL (main image), when the source provides one. */
+  imageUrl?: string | null
   /** Color variants (stock + packaging) captured when the product was picked. */
   variants: QuotationProductVariant[]
 }
