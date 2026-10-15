@@ -27,6 +27,7 @@ import { api } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
 import { formatQuotationFooter } from "@/lib/company-profile";
+import { MAX_REFERENCES, parseReferences } from "@/lib/references";
 
 // Konva touches `window` at import time, so the canvas is loaded
 // client-side only.
@@ -40,6 +41,10 @@ export default function EditorPage() {
   const [canRedo, setCanRedo] = useState(false);
   // Unsaved-changes flag: true after any edit, cleared on successful save.
   const [isDirty, setIsDirty] = useState(false);
+  const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
+  const [productReferenceInput, setProductReferenceInput] = useState("");
+  const [submittedProductReferences, setSubmittedProductReferences] =
+    useState<string[]>([]);
 
   /** Push a new state snapshot onto the history stack */
   const commitHistory = useCallback((next: PageData[]) => {
@@ -173,6 +178,80 @@ export default function EditorPage() {
   });
 
   const representativeQuery = api.quotation.representative.useQuery();
+  const productLookup = api.product.resolveReferences.useQuery(
+    { references: submittedProductReferences },
+    { enabled: submittedProductReferences.length > 0, staleTime: 0 },
+  );
+  const parsedProductReferences = parseReferences(productReferenceInput);
+  const hasCurrentProductResults =
+    parsedProductReferences.length === submittedProductReferences.length &&
+    parsedProductReferences.every(
+      (reference, index) => reference === submittedProductReferences[index],
+    ) &&
+    submittedProductReferences.length > 0 &&
+    productLookup.isSuccess;
+
+  const handleAddProducts = useCallback(() => {
+    setProductReferenceInput("");
+    setSubmittedProductReferences([]);
+    setIsAddProductsOpen(true);
+  }, []);
+
+  const handleAppendProducts = useCallback(() => {
+    const resolved = productLookup.data?.resolved ?? [];
+    const existingReferences = new Set(
+      metaRef.current.products.map((product) => product.reference.toLowerCase()),
+    );
+    const additions = resolved.filter(
+      (product) => !existingReferences.has(product.reference.toLowerCase()),
+    );
+    if (additions.length === 0) return;
+
+    const addedProducts = additions.map((product) => ({
+      name: product.name,
+      reference: product.reference,
+      price: product.price,
+      description: product.description,
+      imageUrl: product.imageUrl ?? null,
+      variants: product.variants.map((variant) => ({
+        colorName: variant.colorName,
+        colorHex: variant.colorHex,
+        stock: variant.stock,
+        packaging: variant.packaging,
+      })),
+    }));
+    const existingProducts = metaRef.current.products;
+    const baseProductCount = Math.max(existingProducts.length, 1);
+    const filler = existingProducts[0] ?? DUMMY_QUOTATION.products[0]!;
+    const generatedPages = buildPagesFromQuotation({
+      ...metaRef.current,
+      products: [
+        ...Array.from({ length: baseProductCount }, () => filler),
+        ...addedProducts,
+      ],
+    }).slice(baseProductCount, baseProductCount + addedProducts.length);
+
+    metaRef.current = {
+      ...metaRef.current,
+      products: [...existingProducts, ...addedProducts],
+    };
+    setPagesWithHistory((previous) => {
+      const policiesIndex = previous.findIndex((page) =>
+        page.elements.some((element) => element.id === "policies-body"),
+      );
+      const insertAt = policiesIndex < 0 ? previous.length : policiesIndex;
+      const next = [...previous];
+      next.splice(insertAt, 0, ...generatedPages);
+      return next.map((page, index) => ({
+        ...page,
+        id: `page-${index + 1}`,
+        pageNumber: index + 1,
+      }));
+    });
+    setIsAddProductsOpen(false);
+    setProductReferenceInput("");
+    setSubmittedProductReferences([]);
+  }, [productLookup.data, setPagesWithHistory]);
 
   const handleSave = useCallback(() => {
     const meta = metaRef.current;
@@ -595,6 +674,7 @@ export default function EditorPage() {
             onRedo={handleRedo}
             onAddElement={handleAddElement}
             onAddPage={handleAddPage}
+            onAddProducts={handleAddProducts}
           />
           <button
             onClick={handleSave}
@@ -627,6 +707,81 @@ export default function EditorPage() {
           onSelectionChange={handleSelectionChange}
         />
       </div>
+
+      {isAddProductsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-products-title"
+            className="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl"
+          >
+            <h2 id="add-products-title" className="mb-2 text-lg font-semibold">
+              {t("actions.addProducts")}
+            </h2>
+            <p className="mb-4 text-sm text-neutral-600">
+              {t("lookup.instructions", { max: MAX_REFERENCES })}
+            </p>
+            <textarea
+              value={productReferenceInput}
+              onChange={(event) => setProductReferenceInput(event.target.value)}
+              rows={3}
+              placeholder={t("lookup.placeholder")}
+              className="w-full resize-y rounded-lg border border-neutral-300 p-3 text-sm outline-none focus:border-[var(--brand-primary)]"
+            />
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-xs text-neutral-500">
+                {hasCurrentProductResults && productLookup.data &&
+                  t("lookup.resultCount", {
+                    resolved: productLookup.data.resolved.length,
+                    submitted: submittedProductReferences.length,
+                  })}
+                {productLookup.isError && (
+                  <span className="text-red-600">
+                    {t("lookup.failed", { error: productLookup.error.message })}
+                  </span>
+                )}
+              </span>
+              <button
+                type="button"
+                disabled={
+                  parsedProductReferences.length === 0 ||
+                  parsedProductReferences.length > MAX_REFERENCES ||
+                  productLookup.isFetching
+                }
+                onClick={() =>
+                  setSubmittedProductReferences(parsedProductReferences)
+                }
+                className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {productLookup.isFetching
+                  ? t("lookup.resolving")
+                  : t("lookup.resolve")}
+              </button>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAddProductsOpen(false)}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={
+                  !hasCurrentProductResults ||
+                  !productLookup.data?.resolved.length
+                }
+                onClick={handleAppendProducts}
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {t("lookup.load")}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Guard: loading a saved quotation would discard unsaved changes. */}
       <ConfirmModal

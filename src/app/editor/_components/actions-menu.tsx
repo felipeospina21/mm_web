@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { t } from '@/i18n/messages'
 
@@ -11,6 +10,7 @@ interface ActionsMenuProps {
   onRedo: () => void
   onAddElement: (type: 'text' | 'rect' | 'table' | 'image') => void
   onAddPage: () => void
+  onAddProducts: () => void
 }
 
 const ITEM_CLASS =
@@ -28,6 +28,7 @@ export function ActionsMenu({
   onRedo,
   onAddElement,
   onAddPage,
+  onAddProducts,
 }: ActionsMenuProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -147,9 +148,17 @@ export function ActionsMenu({
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
 
-          <Link href="/" className={ITEM_CLASS}>
+          <button
+            type="button"
+            role="menuitem"
+            className={ITEM_CLASS}
+            onClick={() => {
+              onAddProducts()
+              setOpen(false)
+            }}
+          >
             {t('actions.addProducts')}
-          </Link>
+          </button>
         </div>
       )}
     </div>
