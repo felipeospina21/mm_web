@@ -45,6 +45,8 @@ export interface TemplateElement {
   /** Font family for text elements */
   fontFamily?: string;
   isDraggable: boolean;
+  /** Whether text or table cells can be edited inline. */
+  isEditable?: boolean;
   /** Table content (only meaningful for type === 'table') */
   table?: TableData;
   /** Image source as data URL (only meaningful for type === 'image') */

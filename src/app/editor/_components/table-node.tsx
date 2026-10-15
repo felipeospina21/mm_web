@@ -10,6 +10,7 @@ interface TableNodeProps {
   x: number
   y: number
   table: TableData
+  isDraggable: boolean
   isSelected: boolean
   onSelect: () => void
   onDblClickCell: (row: number, col: number) => void
@@ -28,6 +29,7 @@ export default function TableNode({
   x,
   y,
   table,
+  isDraggable,
   isSelected,
   onSelect,
   onDblClickCell,
@@ -42,7 +44,7 @@ export default function TableNode({
       id={id}
       x={x}
       y={y}
-      draggable
+      draggable={isDraggable}
       dragBoundFunc={dragBoundFunc}
       onMouseDown={onSelect}
       onDblClick={(e) => {

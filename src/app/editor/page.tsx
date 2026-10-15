@@ -145,7 +145,6 @@ export default function EditorPage() {
   // Initial quotation pages: header page + policies page, plus one page
   // per product picked on the home page.
   const [pages, setPages] = useState<PageData[]>(makeInitialPages);
-  console.log(pages);
   const [isExporting, setIsExporting] = useState(false);
   const stageRef = useRef<Konva.Stage | null>(null);
 
@@ -343,13 +342,7 @@ export default function EditorPage() {
     historyIndexRef.current = 0;
     setCanUndo(false);
     setCanRedo(false);
-  }, [
-    representativeQuery.data,
-    saved,
-    isDirty,
-    pendingLoadId,
-    pages,
-  ]);
+  }, [representativeQuery.data, saved, isDirty, pendingLoadId, pages]);
 
   /** Persist any element edit (drag, resize, text, formatting) */
   const handleElementChange = useCallback(
@@ -410,6 +403,15 @@ export default function EditorPage() {
   /** Delete the selected element */
   const handleDeleteElement = useCallback(
     (elementId: string) => {
+      if (
+        !pages.some((page) =>
+          page.elements.some(
+            (element) => element.id === elementId && element.isEditable,
+          ),
+        )
+      ) {
+        return;
+      }
       setPagesWithHistory((prev) =>
         prev.map((page) => ({
           ...page,
@@ -417,12 +419,21 @@ export default function EditorPage() {
         })),
       );
     },
-    [setPagesWithHistory],
+    [pages, setPagesWithHistory],
   );
 
   /** Duplicate the selected element, offset slightly below the original */
   const handleDuplicateElement = useCallback(
     (elementId: string) => {
+      if (
+        !pages.some((page) =>
+          page.elements.some(
+            (element) => element.id === elementId && element.isEditable,
+          ),
+        )
+      ) {
+        return;
+      }
       setPagesWithHistory((prev) =>
         prev.map((page) => {
           const source = page.elements.find((el) => el.id === elementId);
@@ -436,7 +447,7 @@ export default function EditorPage() {
         }),
       );
     },
-    [setPagesWithHistory],
+    [pages, setPagesWithHistory],
   );
 
   /** Add a new element to the first page */
@@ -451,11 +462,9 @@ export default function EditorPage() {
         height: type === "rect" ? 100 : 40,
         text: type === "text" ? t("editor.newText") : "",
         fontSize: 16,
-        fill:
-          type === "rect"
-            ? theme.colors.primary
-            : theme.colors.secondary,
+        fill: type === "rect" ? theme.colors.primary : theme.colors.secondary,
         isDraggable: true,
+        isEditable: true,
       };
       const element: TemplateElement =
         type === "table"

@@ -4,7 +4,6 @@ import type {
   QuotationData,
   TemplateElement,
 } from "./types";
-import { PAGE_WIDTH } from "./types";
 import { proxiedImageUrl } from "@/lib/product-image";
 import { theme } from "@/lib/theme";
 import { formatQuotationFooter } from "@/lib/company-profile";
@@ -22,25 +21,13 @@ function makeDocTitle(id: string): TemplateElement {
     text: "",
     fontSize: 0,
     fill: "#000000",
-    isDraggable: true,
+    isDraggable: false,
     src: "/mmedios_logo.jpg",
   };
 }
 
 function makeFirstPageHeader(locale: Locale): TemplateElement[] {
   return [
-    {
-      id: "header-band",
-      type: "rect",
-      x: 0,
-      y: 0,
-      width: PAGE_WIDTH,
-      height: 150,
-      text: "",
-      fontSize: 0,
-      fill: "#ffff",
-      isDraggable: true,
-    },
     makeDocTitle("doc-title"),
     {
       id: "customer-name",
@@ -53,6 +40,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       fontSize: 18,
       fill: "#333333",
       isDraggable: true,
+      isEditable: true,
     },
     {
       id: "company-name",
@@ -65,6 +53,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       fontSize: 18,
       fill: "#000000",
       isDraggable: true,
+      isEditable: true,
     },
     {
       id: "date",
@@ -85,7 +74,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       })(),
       fontSize: 18,
       fill: "#000000",
-      isDraggable: true,
+      isDraggable: false,
     },
     {
       id: "quotation-number",
@@ -97,7 +86,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       text: `${t("template.quotation", { number: "{{quotationNumber}}" }, locale)}`,
       fontSize: 18,
       fill: "#000000",
-      isDraggable: true,
+      isDraggable: false,
     },
     {
       id: "representative-info",
@@ -109,7 +98,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       text: `${t("template.representative", {}, locale)} \n{{representativeName}}\n{{representativePhone}}\n{{representativeEmail}}`,
       fontSize: 14,
       fill: "#000000",
-      isDraggable: true,
+      isDraggable: false,
     },
   ];
 }
@@ -132,6 +121,7 @@ function makeProductElements(
       fontSize: 24,
       fill: theme.colors.primary,
       isDraggable: true,
+      isEditable: true,
     },
     {
       id: `product-reference-${suffix}`,
@@ -160,6 +150,7 @@ function makeProductElements(
       fontSize: 16,
       fill: "#555555",
       isDraggable: true,
+      isEditable: true,
     },
     {
       id: `line-items-${suffix}`,
@@ -172,6 +163,7 @@ function makeProductElements(
       fontSize: 0,
       fill: "#000000",
       isDraggable: true,
+      isEditable: true,
       table: {
         colWidths: [80, 300, 120, 120],
         rowHeight: 36,
@@ -205,6 +197,7 @@ function makeProductElements(
       fontSize: 0,
       fill: "#000000",
       isDraggable: true,
+      isEditable: true,
       src: "",
     },
   ];
@@ -224,7 +217,7 @@ function makeFooter(): TemplateElement[] {
       fontSize: 10,
       lineHeight: 1.8,
       fill: "#999999",
-      isDraggable: true,
+      isDraggable: false,
     },
   ];
 }
@@ -386,7 +379,7 @@ export function buildInventoryTable(
     text: "",
     fontSize,
     fill: "#333333",
-    isDraggable: true,
+    isDraggable: false,
     table: {
       colWidths,
       rowHeight,
@@ -396,6 +389,7 @@ export function buildInventoryTable(
       borderColor: "#c9d2dc",
       fontSize,
     },
+    isEditable: false,
   };
 }
 

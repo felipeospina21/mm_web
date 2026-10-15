@@ -42,7 +42,7 @@ export default function FloatingToolbar({
 }: FloatingToolbarProps) {
   const page = pages.find((p) => p.elements.some((el) => el.id === selectedId))
   const element = page?.elements.find((el) => el.id === selectedId)
-  if (!page || !element) return null
+  if (!page || !element?.isEditable) return null
 
   const patch = (p: Partial<TemplateElement>) =>
     onElementChange(page.id, element.id, p)
