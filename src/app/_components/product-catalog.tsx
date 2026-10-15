@@ -50,7 +50,7 @@ export function ProductCatalog() {
   if (status === "pending") {
     return (
       <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-[var(--brand-primary)]" />
+        <div className="border-t-primary h-8 w-8 animate-spin rounded-full border-2 border-neutral-300" />
       </div>
     );
   }
@@ -68,7 +68,7 @@ export function ProductCatalog() {
 
       {isFetchingNextPage && (
         <div className="flex justify-center pb-10">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-[var(--brand-primary)]" />
+          <div className="border-t-primary h-8 w-8 animate-spin rounded-full border-2 border-neutral-300" />
         </div>
       )}
 

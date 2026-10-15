@@ -11,8 +11,6 @@ const es = {
   "nav.editor": "Editor",
   "nav.myQuotations": "Mis cotizaciones",
   "nav.signOut": "Cerrar sesión",
-  "home.title": "Nueva cotización",
-  "home.subtitle": "Busca productos por referencia para crear una cotización",
   "lookup.label": "Referencias de productos",
   "lookup.instructions":
     "Pega una lista de referencias separadas por comas. Buscaremos los productos para agregarlos a la cotización.",
@@ -145,8 +143,6 @@ const en: Record<MessageKey, string> = {
   "nav.editor": "Editor",
   "nav.myQuotations": "My quotations",
   "nav.signOut": "Sign out",
-  "home.title": "New quotation",
-  "home.subtitle": "Look up products by reference to start a quotation",
   "lookup.label": "Product references",
   "lookup.instructions":
     "Paste a comma-separated list of references. We’ll look up the products so you can add them to the quotation.",

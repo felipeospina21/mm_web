@@ -60,7 +60,7 @@ export function QuotationList() {
   if (status === "pending") {
     return (
       <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-[var(--brand-primary)]" />
+        <div className="border-t-primary h-8 w-8 animate-spin rounded-full border-2 border-neutral-300" />
       </div>
     );
   }
@@ -85,11 +85,11 @@ export function QuotationList() {
           <li key={q.id}>
             <button
               // onClick={() => handleOpen(q.id)}
-              className="flex w-full items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-[var(--brand-primary)] hover:shadow"
+              className="hover:border-primary flex w-full items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-5 py-4 text-left shadow-sm transition hover:shadow"
             >
               <div className="flex flex-col gap-1">
                 <span className="flex items-center gap-2">
-                  <span className="rounded-full bg-[var(--brand-primary)] px-2 py-0.5 text-xs font-semibold text-white">
+                  <span className="bg-primary rounded-full px-2 py-0.5 text-xs font-semibold text-white">
                     #{q.quotationNumber}
                   </span>
                   <span className="font-semibold text-neutral-900">
@@ -127,7 +127,7 @@ export function QuotationList() {
 
       {isFetchingNextPage && (
         <div className="flex justify-center py-6">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-[var(--brand-primary)]" />
+          <div className="border-t-primary h-6 w-6 animate-spin rounded-full border-2 border-neutral-300" />
         </div>
       )}
     </div>

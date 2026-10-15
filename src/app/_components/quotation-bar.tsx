@@ -24,7 +24,7 @@ export function QuotationBar() {
     <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
       <a
         href="/editor"
-        className="flex items-center gap-3 rounded-full bg-[var(--brand-primary)] px-6 py-3 text-sm font-semibold text-white shadow-2xl transition hover:opacity-90"
+        className="bg-primary flex items-center gap-3 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-2xl transition hover:opacity-90"
       >
         <span>
           {t(

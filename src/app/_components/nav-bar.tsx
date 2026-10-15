@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { t } from "@/i18n/messages";
+import Image from "next/image";
 
 interface NavBarClientProps {
   /** Display name/email of the signed-in user, shown on the right. */
@@ -21,7 +22,6 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
   const navLinks = [
     { href: "/", label: t("nav.newQuotation") },
     { href: "/editor", label: t("nav.editor") },
-    { href: "/my-quotations", label: t("nav.myQuotations") },
   ] as const;
 
   const handleSignOut = async () => {
@@ -36,6 +36,13 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
   return (
     <nav className="flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-6">
       <div className="flex items-center gap-1">
+        <Image
+          src="/x.png"
+          alt="magic medios logo"
+          width={50}
+          height={50}
+          className="mr-2.5"
+        />
         {navLinks.map(({ href, label }) => {
           const isActive =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -44,10 +51,10 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
               key={href}
               href={href}
               aria-current={isActive ? "page" : undefined}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+              className={`px-3 py-1.5 text-sm font-medium transition ${
                 isActive
-                  ? "bg-neutral-900 text-white"
-                  : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                  ? "border-primary border-b-2"
+                  : "hover:text-primary text-neutral-600"
               }`}
             >
               {label}
@@ -58,12 +65,12 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
 
       <div className="flex items-center gap-4">
         {userLabel && (
-          <span className="text-sm text-neutral-500">{userLabel}</span>
+          <span className="text-secondary text-sm">{userLabel}</span>
         )}
         <button
           type="button"
           onClick={handleSignOut}
-          className="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
+          className="border-black-200 text-primary rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-neutral-100"
         >
           {t("nav.signOut")}
         </button>

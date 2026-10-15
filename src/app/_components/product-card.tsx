@@ -91,7 +91,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
           <h3 className="text-lg font-semibold text-neutral-900">
             {product.name}
           </h3>
-          <span className="shrink-0 text-lg font-bold text-[var(--brand-primary)]">
+          <span className="text-primary shrink-0 text-lg font-bold">
             {product.price}
           </span>
         </div>
@@ -141,7 +141,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
           className={
             isAdded
               ? "mt-auto rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
-              : "mt-auto rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              : "bg-primary mt-auto rounded-lg px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
           }
         >
           {isAdded ? t("product.added") : t("product.add")}

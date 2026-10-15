@@ -15,7 +15,7 @@ function LoginFormInner() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
@@ -53,7 +53,7 @@ function LoginFormInner() {
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/40 outline-none focus:border-white/50"
+          className="rounded-lg border bg-white/10 px-3 py-2 placeholder-white/40 outline-none focus:border-white/50"
           placeholder={t("login.emailPlaceholder")}
         />
       </label>
@@ -65,7 +65,7 @@ function LoginFormInner() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/40 outline-none focus:border-white/50"
+          className="rounded-lg border bg-white/10 px-3 py-2 placeholder-white/40 outline-none focus:border-white/50"
           placeholder="••••••••"
         />
       </label>
@@ -73,7 +73,7 @@ function LoginFormInner() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-2 rounded-lg bg-white px-4 py-2 font-semibold text-[var(--brand-primary)] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="text-primary mt-2 rounded-lg bg-white px-4 py-2 font-semibold transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? t("login.signingIn") : t("login.signIn")}
       </button>

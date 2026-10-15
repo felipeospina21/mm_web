@@ -448,7 +448,7 @@ export default function QuotationCanvas({
         <textarea
           key={`${editingId}-${editingCell ? `${editingCell.row}-${editingCell.col}` : "text"}`}
           autoFocus
-          className="fixed z-[100] m-0 resize-none border-2 border-dashed border-[var(--brand-primary)] bg-white/95 p-0 outline-none"
+          className="border-primary fixed z-[100] m-0 resize-none border-2 border-dashed bg-white/95 p-0 outline-none"
           style={{
             left: editingBox.left,
             top: editingBox.top,

@@ -7,8 +7,11 @@ import { QuotationList } from "../_components/quotation-list";
 
 /** Must match PAGE_SIZE in quotation-list.tsx so query keys line up. */
 const PAGE_SIZE = 12;
+const ENABLE_QUOTATIONS_PAGE = false;
 
 export default async function MyQuotationsPage() {
+  if (!ENABLE_QUOTATIONS_PAGE) redirect("/");
+
   const session = await auth();
   if (!session?.user) redirect("/");
 

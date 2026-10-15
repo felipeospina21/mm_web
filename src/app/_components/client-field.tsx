@@ -61,7 +61,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
           );
           onChange(selected ?? null);
         }}
-        className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]"
+        className="focus:ring-primary w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-white focus:ring-1"
       >
         <option value="">{t("client.select")}</option>
         {clientsQuery.data?.map((client) => (
@@ -110,7 +110,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
                     type={field === "contactEmail" ? "email" : "text"}
                     value={form[field]}
                     onChange={(event) => updateField(field, event.target.value)}
-                    className="rounded-lg border border-neutral-300 px-3 py-2 outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]"
+                    className="focus:ring-primary rounded-lg border border-neutral-300 px-3 py-2 outline-none focus:border-white focus:ring-1"
                   />
                 </label>
               ))}

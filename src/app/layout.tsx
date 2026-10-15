@@ -2,11 +2,9 @@ import "@/styles/globals.css";
 
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
-import type { CSSProperties } from "react";
 
 import { TRPCReactProvider } from "@/trpc/react";
 import { defaultLocale, t } from "@/i18n/messages";
-import { theme } from "@/lib/theme";
 import { NavBar } from "./_components/nav-bar-server";
 
 export const metadata: Metadata = {
@@ -25,14 +23,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang={defaultLocale} className={`${geist.variable}`}>
-      <body
-        style={
-          {
-            "--brand-primary": theme.colors.primary,
-            "--brand-secondary": theme.colors.secondary,
-          } as CSSProperties
-        }
-      >
+      <body>
         <TRPCReactProvider>
           <NavBar />
           {children}
