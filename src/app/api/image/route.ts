@@ -85,7 +85,10 @@ export async function GET(req: NextRequest) {
       host: target.hostname,
       errorMessage: cause instanceof Error ? cause.message : String(cause),
     });
-    return NextResponse.json({ error: "failed to fetch image" }, { status: 502 });
+    return NextResponse.json(
+      { error: "failed to fetch image" },
+      { status: 502 },
+    );
   } finally {
     clearTimeout(timer);
   }

@@ -53,7 +53,7 @@ const COLOR_HEX: Record<string, string> = {
   rosa: "#ec407a",
   rosado: "#ec407a",
   cafe: "#6d4c41",
-  "café": "#6d4c41",
+  café: "#6d4c41",
   marron: "#6d4c41",
   beige: "#d7ccc8",
   dorado: "#c9a227",
@@ -107,9 +107,7 @@ function decodeEntities(text: string): string {
       /&amp;|&lt;|&gt;|&quot;|&#39;|&apos;|&nbsp;|&aacute;|&eacute;|&iacute;|&oacute;|&uacute;|&ntilde;|&uuml;|&Aacute;|&Eacute;|&Iacute;|&Oacute;|&Uacute;|&Ntilde;|&Uuml;/g,
       (m) => named[m] ?? m,
     )
-    .replace(/&#(\d+);/g, (_, dec: string) =>
-      String.fromCodePoint(Number(dec)),
-    )
+    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
     .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
       String.fromCodePoint(parseInt(hex, 16)),
     );
@@ -210,11 +208,7 @@ function pickPrice(raw: {
   regular_price?: unknown;
   sale_price?: unknown;
 }): { price: string; found: boolean } {
-  const candidates = [
-    raw.effective_price,
-    raw.regular_price,
-    raw.sale_price,
-  ];
+  const candidates = [raw.effective_price, raw.regular_price, raw.sale_price];
   for (const c of candidates) {
     const amount = toAmount(c);
     // Treat a real, positive amount as the price. 0 / "0.00" are placeholders

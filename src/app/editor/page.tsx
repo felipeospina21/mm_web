@@ -25,9 +25,10 @@ import {
 import {
   takePendingQuotationClient,
   takePendingQuotationLoad,
+  clearPendingQuotationLoad,
 } from "@/lib/quotation-load";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
-import { api } from "@/trpc/react";
+import { api, type RouterOutputs } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
 import { formatQuotationFooter } from "@/lib/company-profile";
@@ -39,6 +40,8 @@ const QuotationCanvas = dynamic(
   () => import("./_components/quotation-canvas"),
   { ssr: false },
 );
+
+type QuotationRow = NonNullable<RouterOutputs["quotation"]["byId"]>;
 
 export default function EditorPage() {
   const [canUndo, setCanUndo] = useState(false);
@@ -114,7 +117,9 @@ export default function EditorPage() {
   // Initial quotation pages: header page + policies page, plus one page
   // per product picked on the home page.
   const [pages, setPages] = useState<PageData[]>(makeInitialPages);
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(() =>
+    takePendingQuotationClient(),
+  );
   const pagesRef = useRef(pages);
   const replacePages = useCallback((next: PageData[]) => {
     pagesRef.current = next;
@@ -333,14 +338,10 @@ export default function EditorPage() {
   // ---- Load a saved quotation (handed off from the My Quotations page) ----
 
   // Pending quotation id to load, read once from sessionStorage on mount.
-  const [pendingLoadId, setPendingLoadId] = useState<string | null>(null);
-  const pendingHomeClientIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    setPendingLoadId(takePendingQuotationLoad());
-    const homeClientId = takePendingQuotationClient();
-    pendingHomeClientIdRef.current = homeClientId;
-    setSelectedClientId(homeClientId);
-  }, []);
+  const [pendingLoadId] = useState<string | null>(() =>
+    takePendingQuotationLoad(),
+  );
+  const pendingHomeClientIdRef = useRef(selectedClientId);
 
   useEffect(() => {
     const pendingHomeClientId = pendingHomeClientIdRef.current;
@@ -367,8 +368,8 @@ export default function EditorPage() {
                       text: t("template.customer", {
                         name: client.contactName ?? "",
                       }),
-                  }
-                : element,
+                    }
+                  : element,
             ),
           },
     );
@@ -391,13 +392,15 @@ export default function EditorPage() {
 
   // When a dirty editor would be overwritten by a load, hold the row here
   // and show the confirm modal before applying it.
-  const [confirmLoad, setConfirmLoad] = useState<NonNullable<
-    typeof loadQuery.data
-  > | null>(null);
+  const [dismissedLoadId, setDismissedLoadId] = useState<string | null>(null);
+  const confirmLoad =
+    isDirty && loadQuery.data && loadQuery.data.id !== dismissedLoadId
+      ? loadQuery.data
+      : null;
 
   /** Replace the editor contents with a loaded quotation and mark it saved. */
   const hydrateFromRow = useCallback(
-    (row: NonNullable<typeof loadQuery.data>) => {
+    (row: QuotationRow) => {
       const pagesWithLogos = ensurePageLogos(row.data).map((page) => ({
         ...page,
         elements: page.elements.map((element) =>
@@ -427,20 +430,23 @@ export default function EditorPage() {
     [replacePages],
   );
 
-  // Apply the loaded quotation: hydrate immediately when the editor has no
-  // unsaved work; otherwise defer to the confirm modal.
+  // Apply the loaded quotation when clean. The dirty case is represented
+  // directly by `confirmLoad`, so this effect does not mirror query state.
+  const hydratedLoadIdRef = useRef<string | null>(null);
   useEffect(() => {
     const row = loadQuery.data;
     if (!row) return;
-    if (isDirty) {
-      setConfirmLoad(row);
-    } else {
-      hydrateFromRow(row);
+    clearPendingQuotationLoad(row.id);
+    if (
+      isDirty ||
+      row.id === dismissedLoadId ||
+      hydratedLoadIdRef.current === row.id
+    ) {
+      return;
     }
-    // Consume the pending id so the query doesn't re-trigger.
-    setPendingLoadId(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadQuery.data]);
+    hydratedLoadIdRef.current = row.id;
+    hydrateFromRow(row);
+  }, [loadQuery.data, isDirty, dismissedLoadId, hydrateFromRow]);
 
   // ---- Undo/redo history ----
   const representativeAppliedRef = useRef(false);
@@ -509,13 +515,7 @@ export default function EditorPage() {
     historyIndexRef.current = 0;
     setCanUndo(false);
     setCanRedo(false);
-  }, [
-    representativeQuery.data,
-    saved,
-    isDirty,
-    pendingLoadId,
-    replacePages,
-  ]);
+  }, [representativeQuery.data, saved, isDirty, pendingLoadId, replacePages]);
 
   /** Persist any element edit (drag, resize, text, formatting) */
   const handleElementChange = useCallback(
@@ -899,10 +899,15 @@ export default function EditorPage() {
         confirmLabel={t("editor.discardAndLoad")}
         cancelLabel={t("editor.keepEditing")}
         onConfirm={() => {
-          if (confirmLoad) hydrateFromRow(confirmLoad);
-          setConfirmLoad(null);
+          if (confirmLoad) {
+            hydratedLoadIdRef.current = confirmLoad.id;
+            hydrateFromRow(confirmLoad);
+            setDismissedLoadId(confirmLoad.id);
+          }
         }}
-        onCancel={() => setConfirmLoad(null)}
+        onCancel={() => {
+          if (confirmLoad) setDismissedLoadId(confirmLoad.id);
+        }}
       />
     </div>
   );

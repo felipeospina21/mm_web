@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import { useEffect, useRef, useState } from 'react'
-import { t } from '@/i18n/messages'
+import { useEffect, useRef, useState } from "react";
+import { t } from "@/i18n/messages";
 
 interface ActionsMenuProps {
-  canUndo: boolean
-  canRedo: boolean
-  onUndo: () => void
-  onRedo: () => void
-  onAddElement: (type: 'text' | 'rect' | 'table' | 'image') => void
-  onAddPage: () => void
-  onAddProducts: () => void
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onAddElement: (type: "text" | "rect" | "table" | "image") => void;
+  onAddPage: () => void;
+  onAddProducts: () => void;
 }
 
 const ITEM_CLASS =
-  'block w-full rounded px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50'
+  "block w-full rounded px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * Collapsible "Actions" dropdown for the editor toolbar. Groups the
@@ -30,27 +30,30 @@ export function ActionsMenu({
   onAddPage,
   onAddProducts,
 }: ActionsMenuProps) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Close on outside click or Escape.
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const onDocClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false)
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
       }
-    }
+    };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDocClick)
-    document.addEventListener('keydown', onKey)
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener('mousedown', onDocClick)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -61,9 +64,9 @@ export function ActionsMenu({
         aria-haspopup="menu"
         className="flex items-center gap-1.5 rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm hover:bg-neutral-200"
       >
-        {t('actions.label')}
+        {t("actions.label")}
         <svg
-          className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
           viewBox="0 0 20 20"
           fill="currentColor"
           aria-hidden="true"
@@ -88,7 +91,7 @@ export function ActionsMenu({
             onClick={onUndo}
             disabled={!canUndo}
           >
-            {t('actions.undo')}
+            {t("actions.undo")}
           </button>
           <button
             type="button"
@@ -97,7 +100,7 @@ export function ActionsMenu({
             onClick={onRedo}
             disabled={!canRedo}
           >
-            {t('actions.redo')}
+            {t("actions.redo")}
           </button>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
@@ -108,7 +111,7 @@ export function ActionsMenu({
             className={ITEM_CLASS}
             onClick={onAddPage}
           >
-            {t('actions.addPage')}
+            {t("actions.addPage")}
           </button>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
@@ -117,33 +120,33 @@ export function ActionsMenu({
             type="button"
             role="menuitem"
             className={ITEM_CLASS}
-            onClick={() => onAddElement('text')}
+            onClick={() => onAddElement("text")}
           >
-            {t('actions.addText')}
+            {t("actions.addText")}
           </button>
           <button
             type="button"
             role="menuitem"
             className={ITEM_CLASS}
-            onClick={() => onAddElement('rect')}
+            onClick={() => onAddElement("rect")}
           >
-            {t('actions.addShape')}
+            {t("actions.addShape")}
           </button>
           <button
             type="button"
             role="menuitem"
             className={ITEM_CLASS}
-            onClick={() => onAddElement('table')}
+            onClick={() => onAddElement("table")}
           >
-            {t('actions.addTable')}
+            {t("actions.addTable")}
           </button>
           <button
             type="button"
             role="menuitem"
             className={ITEM_CLASS}
-            onClick={() => onAddElement('image')}
+            onClick={() => onAddElement("image")}
           >
-            {t('actions.addImage')}
+            {t("actions.addImage")}
           </button>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
@@ -153,14 +156,14 @@ export function ActionsMenu({
             role="menuitem"
             className={ITEM_CLASS}
             onClick={() => {
-              onAddProducts()
-              setOpen(false)
+              onAddProducts();
+              setOpen(false);
             }}
           >
-            {t('actions.addProducts')}
+            {t("actions.addProducts")}
           </button>
         </div>
       )}
     </div>
-  )
+  );
 }

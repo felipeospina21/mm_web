@@ -1,22 +1,22 @@
-'use client'
+"use client";
 
-import { Group, Rect, Text } from 'react-konva'
-import type Konva from 'konva'
-import type { TableData } from './types'
-import { theme } from '@/lib/theme'
+import { Group, Rect, Text } from "react-konva";
+import type Konva from "konva";
+import type { TableData } from "./types";
+import { theme } from "@/lib/theme";
 
 interface TableNodeProps {
-  id: string
-  x: number
-  y: number
-  table: TableData
-  isDraggable: boolean
-  isSelected: boolean
-  onSelect: () => void
-  onDblClickCell: (row: number, col: number) => void
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void
-  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void
-  dragBoundFunc: (pos: Konva.Vector2d) => Konva.Vector2d
+  id: string;
+  x: number;
+  y: number;
+  table: TableData;
+  isDraggable: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
+  onDblClickCell: (row: number, col: number) => void;
+  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
+  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
+  dragBoundFunc: (pos: Konva.Vector2d) => Konva.Vector2d;
 }
 
 /**
@@ -37,7 +37,15 @@ export default function TableNode({
   onTransformEnd,
   dragBoundFunc,
 }: TableNodeProps) {
-  const { colWidths, rowHeight, cells, headerFill, headerColor, borderColor, fontSize } = table
+  const {
+    colWidths,
+    rowHeight,
+    cells,
+    headerFill,
+    headerColor,
+    borderColor,
+    fontSize,
+  } = table;
 
   return (
     <Group
@@ -49,11 +57,11 @@ export default function TableNode({
       onMouseDown={onSelect}
       onDblClick={(e) => {
         // Find which cell was double-clicked from the event target's cell index
-        const target = e.target as Konva.Shape
-        const row = target.getAttr('data-row') as number | undefined
-        const col = target.getAttr('data-col') as number | undefined
-        if (typeof row === 'number' && typeof col === 'number') {
-          onDblClickCell(row, col)
+        const target = e.target as Konva.Shape;
+        const row = target.getAttr("data-row") as number | undefined;
+        const col = target.getAttr("data-col") as number | undefined;
+        if (typeof row === "number" && typeof col === "number") {
+          onDblClickCell(row, col);
         }
       }}
       onDragEnd={onDragEnd}
@@ -74,9 +82,9 @@ export default function TableNode({
       )}
       {cells.map((rowCells, rowIndex) =>
         rowCells.map((cellText, colIndex) => {
-          const cellX = colWidths.slice(0, colIndex).reduce((a, b) => a + b, 0)
-          const cellWidth = colWidths[colIndex] ?? 0
-          const isHeader = rowIndex === 0
+          const cellX = colWidths.slice(0, colIndex).reduce((a, b) => a + b, 0);
+          const cellWidth = colWidths[colIndex] ?? 0;
+          const isHeader = rowIndex === 0;
           return (
             <Group key={`${rowIndex}-${colIndex}`}>
               <Rect
@@ -84,7 +92,7 @@ export default function TableNode({
                 y={rowIndex * rowHeight}
                 width={cellWidth}
                 height={rowHeight}
-                fill={isHeader ? headerFill : '#ffffff'}
+                fill={isHeader ? headerFill : "#ffffff"}
                 stroke={borderColor}
                 strokeWidth={1}
                 data-row={rowIndex}
@@ -97,14 +105,14 @@ export default function TableNode({
                 height={rowHeight}
                 text={cellText}
                 fontSize={fontSize}
-                fill={isHeader ? headerColor : '#333333'}
+                fill={isHeader ? headerColor : "#333333"}
                 verticalAlign="middle"
                 listening={false}
               />
             </Group>
-          )
+          );
         }),
       )}
     </Group>
-  )
+  );
 }

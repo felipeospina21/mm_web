@@ -1,54 +1,52 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 import {
   addQuotationProduct,
   getQuotationProducts,
   removeQuotationProduct,
   STORAGE_EVENT,
   type QuotationProduct,
-} from '@/lib/quotation-selection'
-import { t } from '@/i18n/messages'
+} from "@/lib/quotation-selection";
+import { t } from "@/i18n/messages";
 
 export interface ProductVariantView {
-  id: string
-  colorName: string
-  colorHex: string
-  stock: number
-  packaging: string | null
+  id: string;
+  colorName: string;
+  colorHex: string;
+  stock: number;
+  packaging: string | null;
 }
 
 export interface CatalogProduct {
-  id: string
-  name: string
-  reference: string
-  description: string | null
-  price: string
-  imageUrl: string | null
+  id: string;
+  name: string;
+  reference: string;
+  description: string | null;
+  price: string;
+  imageUrl: string | null;
   variants: {
-    id: string
-    colorName: string
-    colorHex: string
-    stock: number
-    packaging: string | null
-  }[]
+    id: string;
+    colorName: string;
+    colorHex: string;
+    stock: number;
+    packaging: string | null;
+  }[];
 }
 
 export function ProductCard({ product }: { product: CatalogProduct }) {
-  const [isAdded, setIsAdded] = useState(false)
+  const [isAdded, setIsAdded] = useState(false);
 
   // Keep the toggle in sync with the shared selection (e.g. after
   // navigating back from the editor).
   useEffect(() => {
     const sync = () => {
-      setIsAdded(
-        getQuotationProducts().some((p) => p.id === product.id),
-      )
-    }
-    sync()
-    window.addEventListener(STORAGE_EVENT, sync)
-    return () => window.removeEventListener(STORAGE_EVENT, sync)
-  }, [product.id])
+      setIsAdded(getQuotationProducts().some((p) => p.id === product.id));
+    };
+    sync();
+    window.addEventListener(STORAGE_EVENT, sync);
+    return () => window.removeEventListener(STORAGE_EVENT, sync);
+  }, [product.id]);
 
   const handleToggle = () => {
     const quotationProduct: QuotationProduct = {
@@ -56,7 +54,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
       name: product.name,
       reference: product.reference,
       price: product.price,
-      description: product.description ?? '',
+      description: product.description ?? "",
       imageUrl: product.imageUrl,
       variants: product.variants.map((variant) => ({
         id: variant.id,
@@ -65,15 +63,15 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
         stock: variant.stock,
         packaging: variant.packaging,
       })),
-    }
+    };
     if (isAdded) {
-      removeQuotationProduct(product.id)
-      setIsAdded(false)
+      removeQuotationProduct(product.id);
+      setIsAdded(false);
     } else {
-      addQuotationProduct(quotationProduct)
-      setIsAdded(true)
+      addQuotationProduct(quotationProduct);
+      setIsAdded(true);
     }
-  }
+  };
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-lg">
@@ -103,8 +101,8 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
         </p>
 
         <div className="mt-auto space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-            {t('product.colorVariants')}
+          <p className="text-xs font-semibold tracking-wide text-neutral-400 uppercase">
+            {t("product.colorVariants")}
           </p>
           <ul className="flex flex-col gap-1.5">
             {product.variants.map((variant) => (
@@ -124,11 +122,13 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
                 <span className="ml-auto text-neutral-500">
                   {variant.stock > 0 ? (
                     <>
-                      {t('product.stockAvailable', { count: variant.stock })}
-                      {variant.packaging ? ` · ${variant.packaging}` : ''}
+                      {t("product.stockAvailable", { count: variant.stock })}
+                      {variant.packaging ? ` · ${variant.packaging}` : ""}
                     </>
                   ) : (
-                    <span className="text-red-500">{t('product.outOfStock')}</span>
+                    <span className="text-red-500">
+                      {t("product.outOfStock")}
+                    </span>
                   )}
                 </span>
               </li>
@@ -140,13 +140,13 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
           onClick={handleToggle}
           className={
             isAdded
-              ? 'mt-auto rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700'
-              : 'mt-auto rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90'
+              ? "mt-auto rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+              : "mt-auto rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
           }
         >
-          {isAdded ? t('product.added') : t('product.add')}
+          {isAdded ? t("product.added") : t("product.add")}
         </button>
       </div>
     </article>
-  )
+  );
 }

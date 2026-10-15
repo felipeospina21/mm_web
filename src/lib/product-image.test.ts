@@ -36,9 +36,7 @@ describe("parseAllowedImageUrl", () => {
   it("rejects non-https protocols (SSRF / scheme abuse)", () => {
     expect(parseAllowedImageUrl("http://x.amazonaws.com/a.jpg")).toBeNull();
     expect(parseAllowedImageUrl("file:///etc/passwd")).toBeNull();
-    expect(
-      parseAllowedImageUrl("data:image/png;base64,AAAA"),
-    ).toBeNull();
+    expect(parseAllowedImageUrl("data:image/png;base64,AAAA")).toBeNull();
   });
 
   it("rejects disallowed hosts and malformed URLs", () => {

@@ -1,30 +1,30 @@
-'use client'
+"use client";
 
-import type { PageData, TemplateElement } from './types'
-import { t } from '@/i18n/messages'
+import type { PageData, TemplateElement } from "./types";
+import { t } from "@/i18n/messages";
 
 interface FloatingToolbarProps {
-  pages: PageData[]
-  selectedId: string
+  pages: PageData[];
+  selectedId: string;
   onElementChange: (
     pageId: string,
     elementId: string,
     patch: Partial<TemplateElement>,
-  ) => void
-  onDeleteElement: (elementId: string) => void
-  onDuplicateElement: (elementId: string) => void
+  ) => void;
+  onDeleteElement: (elementId: string) => void;
+  onDuplicateElement: (elementId: string) => void;
 }
 
-const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48]
+const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48];
 const FONT_FAMILIES = [
-  'Arial',
-  'Helvetica',
-  'Times New Roman',
-  'Georgia',
-  'Courier New',
-  'Verdana',
-  'system-ui',
-]
+  "Arial",
+  "Helvetica",
+  "Times New Roman",
+  "Georgia",
+  "Courier New",
+  "Verdana",
+  "system-ui",
+];
 
 /**
  * Floating toolbar shown when an element is selected.
@@ -40,82 +40,82 @@ export default function FloatingToolbar({
   onDeleteElement,
   onDuplicateElement,
 }: FloatingToolbarProps) {
-  const page = pages.find((p) => p.elements.some((el) => el.id === selectedId))
-  const element = page?.elements.find((el) => el.id === selectedId)
-  if (!page || !element?.isEditable) return null
+  const page = pages.find((p) => p.elements.some((el) => el.id === selectedId));
+  const element = page?.elements.find((el) => el.id === selectedId);
+  if (!page || !element?.isEditable) return null;
 
   const patch = (p: Partial<TemplateElement>) =>
-    onElementChange(page.id, element.id, p)
+    onElementChange(page.id, element.id, p);
 
-  const isText = element.type === 'text'
-  const isTable = element.type === 'table' && element.table
-  const isImage = element.type === 'image'
+  const isText = element.type === "text";
+  const isTable = element.type === "table" && element.table;
+  const isImage = element.type === "image";
 
   const handleImageUpload = (file: File | undefined) => {
-    if (!file) return
-    const reader = new FileReader()
+    if (!file) return;
+    const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        patch({ src: reader.result })
+      if (typeof reader.result === "string") {
+        patch({ src: reader.result });
       }
-    }
-    reader.readAsDataURL(file)
-  }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const addRow = () => {
-    if (!element.table) return
-    const cols = element.table.cells[0]?.length ?? 0
+    if (!element.table) return;
+    const cols = element.table.cells[0]?.length ?? 0;
     patch({
       table: {
         ...element.table,
-        cells: [...element.table.cells, Array.from({ length: cols }, () => '')],
+        cells: [...element.table.cells, Array.from({ length: cols }, () => "")],
       },
-    })
-  }
+    });
+  };
 
   const removeRow = () => {
-    if (!element.table || element.table.cells.length <= 1) return
+    if (!element.table || element.table.cells.length <= 1) return;
     patch({
       table: {
         ...element.table,
         cells: element.table.cells.slice(0, -1),
       },
-    })
-  }
+    });
+  };
 
   const addColumn = () => {
-    if (!element.table) return
+    if (!element.table) return;
     patch({
       table: {
         ...element.table,
         colWidths: [...element.table.colWidths, 120],
-        cells: element.table.cells.map((row) => [...row, '']),
+        cells: element.table.cells.map((row) => [...row, ""]),
       },
-    })
-  }
+    });
+  };
 
   const removeColumn = () => {
-    if (!element.table || element.table.colWidths.length <= 1) return
+    if (!element.table || element.table.colWidths.length <= 1) return;
     patch({
       table: {
         ...element.table,
         colWidths: element.table.colWidths.slice(0, -1),
         cells: element.table.cells.map((row) => row.slice(0, -1)),
       },
-    })
-  }
+    });
+  };
 
   return (
     <div
-      className="fixed left-1/2 top-16 z-40 flex -translate-x-1/2 items-center gap-2 rounded-md bg-white px-2.5 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
+      className="fixed top-16 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-md bg-white px-2.5 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
       onMouseDown={(e) => e.stopPropagation()}
     >
       {isText && (
         <>
           <label className="flex items-center gap-1 text-xs text-neutral-700">
-            {t('toolbar.font')}
+            {t("toolbar.font")}
             <select
-              value={element.fontFamily ?? 'Arial'}
+              value={element.fontFamily ?? "Arial"}
               onChange={(e) => patch({ fontFamily: e.target.value })}
               className="ml-1 rounded border border-neutral-300 px-1 py-0.5"
             >
@@ -127,7 +127,7 @@ export default function FloatingToolbar({
             </select>
           </label>
           <label className="flex items-center gap-1 text-xs text-neutral-700">
-            {t('toolbar.size')}
+            {t("toolbar.size")}
             <select
               value={element.fontSize}
               onChange={(e) => patch({ fontSize: Number(e.target.value) })}
@@ -142,12 +142,12 @@ export default function FloatingToolbar({
           </label>
           <button
             className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
-              element.fontWeight === 'bold' ? 'font-extrabold' : 'font-normal'
+              element.fontWeight === "bold" ? "font-extrabold" : "font-normal"
             }`}
-            title={t('toolbar.bold')}
+            title={t("toolbar.bold")}
             onClick={() =>
               patch({
-                fontWeight: element.fontWeight === 'bold' ? 'normal' : 'bold',
+                fontWeight: element.fontWeight === "bold" ? "normal" : "bold",
               })
             }
           >
@@ -155,24 +155,24 @@ export default function FloatingToolbar({
           </button>
           <button
             className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
-              element.italic ? 'italic' : ''
+              element.italic ? "italic" : ""
             }`}
-            title={t('toolbar.italic')}
+            title={t("toolbar.italic")}
             onClick={() => patch({ italic: !element.italic })}
           >
             I
           </button>
           <button
             className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
-              element.underline ? 'underline' : ''
+              element.underline ? "underline" : ""
             }`}
-            title={t('toolbar.underline')}
+            title={t("toolbar.underline")}
             onClick={() => patch({ underline: !element.underline })}
           >
             U
           </button>
           <label className="flex items-center gap-1 text-xs text-neutral-700">
-            {t('toolbar.color')}
+            {t("toolbar.color")}
             <input
               type="color"
               value={element.fill}
@@ -185,7 +185,7 @@ export default function FloatingToolbar({
 
       {isImage && (
         <label className="flex items-center gap-1 text-xs text-neutral-700">
-          {t('toolbar.image')}
+          {t("toolbar.image")}
           <input
             type="file"
             accept="image/*"
@@ -197,34 +197,34 @@ export default function FloatingToolbar({
 
       {isTable && (
         <>
-          <span className="text-xs text-neutral-700">{t('toolbar.table')}</span>
+          <span className="text-xs text-neutral-700">{t("toolbar.table")}</span>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={() => addRow()}
-            title={t('toolbar.addRow')}
+            title={t("toolbar.addRow")}
           >
-            + {t('toolbar.row')}
+            + {t("toolbar.row")}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={() => removeRow()}
-            title={t('toolbar.removeRow')}
+            title={t("toolbar.removeRow")}
           >
-            − {t('toolbar.row')}
+            − {t("toolbar.row")}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={() => addColumn()}
-            title={t('toolbar.addColumn')}
+            title={t("toolbar.addColumn")}
           >
-            + {t('toolbar.column')}
+            + {t("toolbar.column")}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={() => removeColumn()}
-            title={t('toolbar.removeColumn')}
+            title={t("toolbar.removeColumn")}
           >
-            − {t('toolbar.column')}
+            − {t("toolbar.column")}
           </button>
         </>
       )}
@@ -233,18 +233,18 @@ export default function FloatingToolbar({
 
       <button
         className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-        title={t('toolbar.duplicate')}
+        title={t("toolbar.duplicate")}
         onClick={() => onDuplicateElement(element.id)}
       >
-        {t('toolbar.duplicateShort')}
+        {t("toolbar.duplicateShort")}
       </button>
       <button
         className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs text-red-700"
-        title={t('toolbar.delete')}
+        title={t("toolbar.delete")}
         onClick={() => onDeleteElement(element.id)}
       >
-        {t('toolbar.deleteShort')}
+        {t("toolbar.deleteShort")}
       </button>
     </div>
-  )
+  );
 }

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  __test,
-  normalizeProduct,
-  normalizeProducts,
-} from "./schema";
+import { __test, normalizeProduct, normalizeProducts } from "./schema";
 
 /**
  * The real sample product from docs/api_example.md (trimmed to the fields the
@@ -24,8 +20,7 @@ const SAMPLE_PRODUCT = {
   categories: ["Morrales Neveras y Bolsas"],
   tags: '["Novedades 2026-II"]',
   printing_methods: '[{"label":"Validar con la ejecutiva"}]',
-  images:
-    '{"main_image":["https://example.test/a.jpg"],"gallery_images":[]}',
+  images: '{"main_image":["https://example.test/a.jpg"],"gallery_images":[]}',
   packaging_type: "Bolsa de polietileno",
   inventory: 1000,
   connector_id: 59,
@@ -140,7 +135,12 @@ describe("normalizeProduct — malformed / edge cases", () => {
       sku: "ODD",
       effective_price: "100",
       variations: [
-        { id: 31, sku: "ODD-1", attributes: { Color: "Chartreuse" }, inventory: 5 },
+        {
+          id: 31,
+          sku: "ODD-1",
+          attributes: { Color: "Chartreuse" },
+          inventory: 5,
+        },
       ],
     });
     expect(clean.variants[0]!.colorHex).toBe("#9e9e9e");
@@ -306,9 +306,7 @@ describe("helpers", () => {
     expect(__test.stripHtml("<p>One</p><p>Two</p>")).toBe("One\nTwo");
     expect(__test.stripHtml("A<br>B")).toBe("A\nB");
     // List items get a bullet.
-    expect(__test.stripHtml("<ul><li>a</li><li>b</li></ul>")).toBe(
-      "• a\n• b",
-    );
+    expect(__test.stripHtml("<ul><li>a</li><li>b</li></ul>")).toBe("• a\n• b");
     // Entities are decoded and whitespace collapsed.
     expect(__test.stripHtml("<p>Tom &amp;   Jerry&nbsp;&#39;s</p>")).toBe(
       "Tom & Jerry 's",
@@ -322,12 +320,14 @@ describe("helpers", () => {
     expect(__test.firstImageUrl(images)).toBe("https://x.test/a.jpg");
     // Falls back to gallery when no main image.
     expect(
-      __test.firstImageUrl('{"main_image":[],"gallery_images":["https://x.test/g.jpg"]}'),
+      __test.firstImageUrl(
+        '{"main_image":[],"gallery_images":["https://x.test/g.jpg"]}',
+      ),
     ).toBe("https://x.test/g.jpg");
     // Already-parsed object works too.
-    expect(
-      __test.firstImageUrl({ main_image: ["https://x.test/c.jpg"] }),
-    ).toBe("https://x.test/c.jpg");
+    expect(__test.firstImageUrl({ main_image: ["https://x.test/c.jpg"] })).toBe(
+      "https://x.test/c.jpg",
+    );
     // Nothing usable → null.
     expect(__test.firstImageUrl("not json")).toBeNull();
     expect(__test.firstImageUrl(undefined)).toBeNull();

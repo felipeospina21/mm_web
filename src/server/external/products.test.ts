@@ -25,14 +25,12 @@ describe("fetchProductsBySkus", () => {
   });
 
   it("issues ONE request for <= 20 SKUs and keys the result by sku", async () => {
-    const spy = vi
-      .spyOn(client, "externalGet")
-      .mockResolvedValue(
-        envelope([
-          { id: 1, sku: "KIT002" },
-          { id: 2, sku: "MP-4410" },
-        ]),
-      );
+    const spy = vi.spyOn(client, "externalGet").mockResolvedValue(
+      envelope([
+        { id: 1, sku: "KIT002" },
+        { id: 2, sku: "MP-4410" },
+      ]),
+    );
 
     const out = await fetchProductsBySkus(["KIT002", "MP-4410", "GHOST"]);
 
@@ -65,9 +63,7 @@ describe("fetchProductsBySkus", () => {
       .mockResolvedValueOnce(
         envelope(skus.slice(0, 20).map((sku, i) => ({ id: i + 1, sku }))),
       )
-      .mockResolvedValueOnce(
-        envelope([{ id: 21, sku: "S21" }]),
-      );
+      .mockResolvedValueOnce(envelope([{ id: 21, sku: "S21" }]));
 
     const out = await fetchProductsBySkus(skus);
 

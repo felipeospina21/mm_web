@@ -17,12 +17,18 @@ export function setPendingQuotationLoad(id: string): void {
   window.sessionStorage.setItem(PENDING_LOAD_KEY, id);
 }
 
-/** Read and clear the pending-load id (consume-once). */
+/** Read the pending-load id; clear it after its quotation row loads. */
 export function takePendingQuotationLoad(): string | null {
   if (typeof window === "undefined") return null;
-  const id = window.sessionStorage.getItem(PENDING_LOAD_KEY);
-  if (id) window.sessionStorage.removeItem(PENDING_LOAD_KEY);
-  return id;
+  return window.sessionStorage.getItem(PENDING_LOAD_KEY);
+}
+
+/** Clear the saved-quotation handoff once its row has loaded. */
+export function clearPendingQuotationLoad(id: string): void {
+  if (typeof window === "undefined") return;
+  if (window.sessionStorage.getItem(PENDING_LOAD_KEY) === id) {
+    window.sessionStorage.removeItem(PENDING_LOAD_KEY);
+  }
 }
 
 /** Keep the home-selected client available while the draft is being edited. */

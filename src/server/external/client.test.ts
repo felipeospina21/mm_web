@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  buildUrl,
-  ExternalApiError,
-  externalGet,
-} from "./client";
+import { buildUrl, ExternalApiError, externalGet } from "./client";
 
 /** A no-op sleep so retry/backoff tests don't wait on real timers. */
 const noSleep = () => Promise.resolve();

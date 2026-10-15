@@ -6,65 +6,65 @@
 
 /** A color variant of a product, with the stock shown in the inventory table. */
 export interface QuotationProductVariant {
-  id: string
-  colorName: string
-  colorHex: string
-  stock: number
-  packaging: string | null
+  id: string;
+  colorName: string;
+  colorHex: string;
+  stock: number;
+  packaging: string | null;
 }
 
 export interface QuotationProduct {
-  id: string
-  name: string
+  id: string;
+  name: string;
   /** Product reference / catalog code, e.g. "tx-10". */
-  reference: string
-  price: string
-  description: string
+  reference: string;
+  price: string;
+  description: string;
   /** First product image URL (main image), when the source provides one. */
-  imageUrl?: string | null
+  imageUrl?: string | null;
   /** Color variants (stock + packaging) captured when the product was picked. */
-  variants: QuotationProductVariant[]
+  variants: QuotationProductVariant[];
 }
 
 const STORAGE_KEY = "mm_quotation_products";
 export const STORAGE_EVENT = "mm_quotation_products_changed";
 
 function readAll(): QuotationProduct[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as QuotationProduct[]
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as QuotationProduct[];
     // Selections saved before variants existed have no `variants` field;
     // normalize so consumers can always rely on it being an array.
     return parsed.map((product) => ({
       ...product,
       variants: product.variants ?? [],
-    }))
+    }));
   } catch {
-    return []
+    return [];
   }
 }
 
 function writeAll(products: QuotationProduct[]) {
-  window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(products))
-  window.dispatchEvent(new Event(STORAGE_EVENT))
+  window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+  window.dispatchEvent(new Event(STORAGE_EVENT));
 }
 
 export function getQuotationProducts(): QuotationProduct[] {
-  return readAll()
+  return readAll();
 }
 
 export function addQuotationProduct(product: QuotationProduct): void {
-  const products = readAll()
-  if (products.some((p) => p.id === product.id)) return
-  writeAll([...products, product])
+  const products = readAll();
+  if (products.some((p) => p.id === product.id)) return;
+  writeAll([...products, product]);
 }
 
 export function removeQuotationProduct(id: string): void {
-  writeAll(readAll().filter((p) => p.id !== id))
+  writeAll(readAll().filter((p) => p.id !== id));
 }
 
 export function clearQuotationProducts(): void {
-  writeAll([])
+  writeAll([]);
 }

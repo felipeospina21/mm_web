@@ -30,9 +30,7 @@ export default async function Home() {
         <h1 className="text-lg font-semibold text-neutral-900">
           {t("home.title")}
         </h1>
-        <span className="text-sm text-neutral-500">
-          {t("home.subtitle")}
-        </span>
+        <span className="text-sm text-neutral-500">{t("home.subtitle")}</span>
       </header>
 
       <ReferenceLookup />

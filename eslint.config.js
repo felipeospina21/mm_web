@@ -5,7 +5,7 @@ import drizzle from "eslint-plugin-drizzle";
 
 export default tseslint.config(
   {
-    ignores: [".next"],
+    ignores: [".next", "*.config.js", "*.config.mjs", "*.config.cjs"],
   },
   // eslint-config-next 16 ships a native flat config array.
   ...nextPlugin,

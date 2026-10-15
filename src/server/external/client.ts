@@ -70,10 +70,7 @@ export function buildUrl(
   query?: ExternalFetchOptions["query"],
 ): string {
   if (!env.EXTERNAL_API_BASE_URL) {
-    throw new ExternalApiError(
-      "EXTERNAL_API_BASE_URL is not configured",
-      0,
-    );
+    throw new ExternalApiError("EXTERNAL_API_BASE_URL is not configured", 0);
   }
   // Join base + path with exactly one slash.
   const base = env.EXTERNAL_API_BASE_URL.replace(/\/+$/, "");
@@ -158,7 +155,10 @@ export async function externalGet<T>(
       lastError = err;
     } catch (cause) {
       // Re-throw non-retryable ExternalApiErrors immediately.
-      if (cause instanceof ExternalApiError && !isRetryableStatus(cause.status)) {
+      if (
+        cause instanceof ExternalApiError &&
+        !isRetryableStatus(cause.status)
+      ) {
         throw cause;
       }
       lastError =
@@ -196,8 +196,5 @@ export async function externalGet<T>(
     exhausted: true,
   });
 
-  throw (
-    lastError ??
-    new ExternalApiError(`External API GET ${path} failed`, 0)
-  );
+  throw lastError ?? new ExternalApiError(`External API GET ${path} failed`, 0);
 }

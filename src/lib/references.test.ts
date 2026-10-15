@@ -28,10 +28,7 @@ describe("parseReferences", () => {
   });
 
   it("de-duplicates case-insensitively, keeping the first-seen casing", () => {
-    expect(parseReferences("CP-10, cp-10, Cp-10, AB")).toEqual([
-      "CP-10",
-      "AB",
-    ]);
+    expect(parseReferences("CP-10, cp-10, Cp-10, AB")).toEqual(["CP-10", "AB"]);
   });
 
   it("preserves the order the user typed them in", () => {

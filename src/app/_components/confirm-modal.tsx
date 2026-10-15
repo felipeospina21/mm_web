@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import { useEffect, useRef } from 'react'
-import { t } from '@/i18n/messages'
+import { useEffect, useRef } from "react";
+import { t } from "@/i18n/messages";
 
 export interface ConfirmModalProps {
   /** Whether the modal is visible. */
-  open: boolean
-  title: string
-  message: string
-  confirmLabel?: string
-  cancelLabel?: string
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
   /** Called when the user confirms the action. */
-  onConfirm: () => void
+  onConfirm: () => void;
   /** Called when the user cancels or dismisses (Esc / backdrop / Cancel). */
-  onCancel: () => void
+  onCancel: () => void;
 }
 
 /**
@@ -27,25 +27,25 @@ export function ConfirmModal({
   open,
   title,
   message,
-  confirmLabel = t('common.confirm'),
-  cancelLabel = t('common.cancel'),
+  confirmLabel = t("common.confirm"),
+  cancelLabel = t("common.cancel"),
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
-  const cancelRef = useRef<HTMLButtonElement | null>(null)
+  const cancelRef = useRef<HTMLButtonElement | null>(null);
 
   // Focus the cancel (safe default) button and wire Escape-to-cancel.
   useEffect(() => {
-    if (!open) return
-    cancelRef.current?.focus()
+    if (!open) return;
+    cancelRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onCancel])
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div
@@ -76,18 +76,18 @@ export function ConfirmModal({
           <button
             ref={cancelRef}
             onClick={onCancel}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus:ring-2 focus:ring-neutral-400 focus:outline-none"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400"
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 focus:ring-2 focus:ring-red-400 focus:outline-none"
           >
             {confirmLabel}
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }

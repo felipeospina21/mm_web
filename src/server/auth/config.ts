@@ -37,7 +37,10 @@ const adapter = {
       tokenType: account.token_type ?? null,
       scope: account.scope ?? null,
       idToken: account.id_token ?? null,
-      sessionState: account.session_state ?? null,
+      sessionState:
+        typeof account.session_state === "string"
+          ? account.session_state
+          : null,
     });
   },
 };
@@ -80,7 +83,9 @@ export const authConfig = {
         const email =
           typeof credentials?.email === "string" ? credentials.email : null;
         const password =
-          typeof credentials?.password === "string" ? credentials.password : null;
+          typeof credentials?.password === "string"
+            ? credentials.password
+            : null;
         if (!email || !password) return null;
 
         const [user] = await db
@@ -95,7 +100,12 @@ export const authConfig = {
         const passwordMatches = await verify(user.passwordHash, password);
         if (!passwordMatches) return null;
 
-        return { id: user.id, name: user.name, email: user.email, image: user.image };
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+        };
       },
     }),
   ],
