@@ -33,6 +33,8 @@ export interface TemplateElement {
   /** Text content (only meaningful for type === 'text') */
   text: string;
   fontSize: number;
+  /** Line spacing multiplier for multiline text elements. */
+  lineHeight?: number;
   fill: string;
   /** Font weight for text elements ('normal' | 'bold') */
   fontWeight?: "normal" | "bold";
@@ -80,6 +82,8 @@ export interface QuotationData {
   customerName: string;
   representativeName: string;
   representativePhone: string;
+  representativePhoneExtension: string;
+  representativeCellphone: string;
   representativeEmail: string;
   products: Product[];
 }

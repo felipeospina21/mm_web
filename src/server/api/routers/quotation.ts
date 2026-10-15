@@ -6,6 +6,7 @@ import { canAccessAllQuotations } from "@/server/auth/access";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { quotations, users } from "@/server/db/schema";
 import { theme } from "@/lib/theme";
+import { formatQuotationFooter } from "@/lib/company-profile";
 
 /**
  * The quotation document ({ meta, pages }) is validated structurally: it must
@@ -61,7 +62,7 @@ function deriveTotals(doc: QuotationDocument): {
 
 type RepresentativeProfile = Pick<
   typeof users.$inferSelect,
-  "name" | "email" | "phone"
+  "name" | "email" | "phone" | "phoneExt" | "cellphone"
 >;
 
 /** Use the authenticated user's current profile as quotation metadata. */
@@ -71,6 +72,9 @@ function setRepresentativeDetails(
 ): QuotationDocument {
   const representativeName = profile.name ?? "";
   const representativePhone = profile.phone ?? "";
+  const representativePhoneExtension =
+    profile.phoneExt == null ? "" : String(profile.phoneExt);
+  const representativeCellphone = profile.cellphone ?? "";
   const representativeEmail = profile.email;
   const resolvePlaceholders = (text: string) =>
     text
@@ -89,12 +93,28 @@ function setRepresentativeDetails(
       ...doc.meta,
       representativeName,
       representativePhone,
+      representativePhoneExtension,
+      representativeCellphone,
       representativeEmail,
     },
     pages: doc.pages.map((page) => ({
       ...page,
       elements: page.elements.map((element) => {
-        let text = resolvePlaceholders(element.text);
+        if (element.id === "footer") {
+          return {
+            ...element,
+            text: formatQuotationFooter({
+              representativeCellphone,
+              representativePhone,
+              representativePhoneExtension,
+              representativeEmail,
+            }),
+          };
+        }
+
+        let text = element.id.startsWith("product-name-")
+          ? `${page.pageNumber}. ${element.text.replace(/^\d+\.\s*/, "")}`
+          : resolvePlaceholders(element.text);
         if (element.id === "representative-info") {
           const oldName = doc.meta.representativeName;
           const oldPhone = doc.meta.representativePhone;
@@ -167,6 +187,8 @@ export const quotationRouter = createTRPCRouter({
         name: users.name,
         email: users.email,
         phone: users.phone,
+        phoneExt: users.phoneExt,
+        cellphone: users.cellphone,
       })
       .from(users)
       .where(eq(users.id, ctx.session.user.id))
@@ -193,7 +215,13 @@ export const quotationRouter = createTRPCRouter({
       const userId = ctx.session.user.id;
       const { productCount, total } = deriveTotals(input.data);
       const [profile] = await ctx.db
-        .select({ name: users.name, email: users.email, phone: users.phone })
+        .select({
+          name: users.name,
+          email: users.email,
+          phone: users.phone,
+          phoneExt: users.phoneExt,
+          cellphone: users.cellphone,
+        })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
@@ -326,7 +354,13 @@ export const quotationRouter = createTRPCRouter({
       }
 
       const [profile] = await ctx.db
-        .select({ name: users.name, email: users.email, phone: users.phone })
+        .select({
+          name: users.name,
+          email: users.email,
+          phone: users.phone,
+          phoneExt: users.phoneExt,
+          cellphone: users.cellphone,
+        })
         .from(users)
         .where(eq(users.id, row.userId))
         .limit(1);

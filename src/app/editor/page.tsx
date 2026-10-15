@@ -25,6 +25,7 @@ import { ConfirmModal } from "@/app/_components/confirm-modal";
 import { api } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
+import { formatQuotationFooter } from "@/lib/company-profile";
 
 // Konva touches `window` at import time, so the canvas is loaded
 // client-side only.
@@ -272,6 +273,9 @@ export default function EditorPage() {
 
     const representativeName = representative.name ?? "";
     const representativePhone = representative.phone ?? "";
+    const representativePhoneExtension =
+      representative.phoneExt == null ? "" : String(representative.phoneExt);
+    const representativeCellphone = representative.cellphone ?? "";
     const representativeEmail = representative.email;
     const previousMeta = metaRef.current;
 
@@ -307,16 +311,30 @@ export default function EditorPage() {
 
     const nextPages = pages.map((page) => ({
       ...page,
-      elements: page.elements.map((element) =>
-        element.id === "representative-info"
-          ? { ...element, text: interpolateRepresentative(element.text) }
-          : element,
-      ),
+      elements: page.elements.map((element) => {
+        if (element.id === "representative-info") {
+          return { ...element, text: interpolateRepresentative(element.text) };
+        }
+        if (element.id === "footer") {
+          return {
+            ...element,
+            text: formatQuotationFooter({
+              representativeCellphone,
+              representativePhone,
+              representativePhoneExtension,
+              representativeEmail,
+            }),
+          };
+        }
+        return element;
+      }),
     }));
     metaRef.current = {
       ...previousMeta,
       representativeName,
       representativePhone,
+      representativePhoneExtension,
+      representativeCellphone,
       representativeEmail,
     };
     setPages(nextPages);

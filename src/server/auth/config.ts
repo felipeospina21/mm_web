@@ -23,7 +23,9 @@ const drizzleAdapter = DrizzleAdapter(db, {
 
 const adapter = {
   ...drizzleAdapter,
-  async linkAccount(account: Parameters<NonNullable<typeof drizzleAdapter.linkAccount>>[0]) {
+  async linkAccount(
+    account: Parameters<NonNullable<typeof drizzleAdapter.linkAccount>>[0],
+  ) {
     await db.insert(accounts).values({
       userId: account.userId,
       type: account.type,

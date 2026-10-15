@@ -7,6 +7,7 @@ import type {
 import { PAGE_WIDTH } from "./types";
 import { proxiedImageUrl } from "@/lib/product-image";
 import { theme } from "@/lib/theme";
+import { formatQuotationFooter } from "@/lib/company-profile";
 import { defaultLocale, t, type Locale } from "@/i18n/messages";
 
 /** Shared logo with fixed geometry across all quotation pages. */
@@ -196,10 +197,10 @@ function makeProductElements(
       // per-product by buildPagesFromQuotation; empty renders a placeholder.
       id: `product-image-${suffix}`,
       type: "image",
-      x: 560,
-      y: 700 + verticalOffset,
-      width: 194,
-      height: 194,
+      x: 360,
+      y: 650 + verticalOffset,
+      width: 400,
+      height: 400,
       text: "",
       fontSize: 0,
       fill: "#000000",
@@ -210,17 +211,18 @@ function makeProductElements(
 }
 
 /** Footer used on every page */
-function makeFooter(locale: Locale): TemplateElement[] {
+function makeFooter(): TemplateElement[] {
   return [
     {
       id: "footer",
       type: "text",
       x: 40,
-      y: 1060,
-      width: 500,
-      height: 24,
-      text: t("template.footer", {}, locale),
-      fontSize: 12,
+      y: 1040,
+      width: 714,
+      height: 64,
+      text: "{{quotationFooter}}",
+      fontSize: 10,
+      lineHeight: 1.8,
       fill: "#999999",
       isDraggable: true,
     },
@@ -251,7 +253,7 @@ function makeFirstPageElements(
     //   fill: "#333333",
     //   isDraggable: true,
     // },
-    ...makeFooter(locale),
+    ...makeFooter(),
   ];
 }
 
@@ -265,7 +267,7 @@ function makeProductPageElements(
     // These pages have only a 50px title band, so move the product content
     // up to use the space that the first page's company header occupies.
     ...makeProductElements(suffix, -120, locale),
-    ...makeFooter(locale),
+    ...makeFooter(),
   ];
 }
 
@@ -300,7 +302,7 @@ function makePoliciesPageElements(locale: Locale): TemplateElement[] {
       fill: "#333333",
       isDraggable: true,
     },
-    ...makeFooter(locale),
+    ...makeFooter(),
   ];
 }
 
@@ -309,6 +311,8 @@ function interpolate(
   text: string,
   quotation: QuotationData,
   product?: QuotationData["products"][number],
+  locale: Locale = defaultLocale,
+  productNumber?: number,
 ): string {
   let result = text
     .replaceAll("{{companyName}}", quotation.companyName)
@@ -317,9 +321,17 @@ function interpolate(
     .replaceAll("{{representativePhone}}", quotation.representativePhone)
     .replaceAll("{{representativeEmail}}", quotation.representativeEmail);
 
+  result = result.replaceAll(
+    "{{quotationFooter}}",
+    formatQuotationFooter(quotation, locale),
+  );
+
   if (product) {
     result = result
-      .replaceAll("{{productName}}", product.name)
+      .replaceAll(
+        "{{productName}}",
+        `${productNumber ?? ""}${productNumber ? ". " : ""}${product.name}`,
+      )
       .replaceAll("{{productReference}}", product.reference)
       .replaceAll("{{productPrice}}", product.price)
       .replaceAll("{{productDescription}}", product.description);
@@ -339,21 +351,20 @@ export function buildInventoryTable(
   verticalOffset = 0,
   locale: Locale = defaultLocale,
 ): TemplateElement {
-  const colWidths = [160, 110, 150];
+  const colWidths = [140, 70];
   const rowHeight = 22;
-  const fontSize = 11;
+  const fontSize = 10;
 
   const variants = product.variants ?? [];
   const cells: string[][] = [
     [
       t("template.inventoryColor", {}, locale),
       t("template.inventoryStock", {}, locale),
-      t("template.inventoryPackaging", {}, locale),
     ],
   ];
 
   if (variants.length === 0) {
-    cells.push(["—", "—", "—"]);
+    cells.push(["—", "—"]);
   } else {
     for (const variant of variants) {
       cells.push([
@@ -361,7 +372,6 @@ export function buildInventoryTable(
         variant.stock > 0
           ? variant.stock.toLocaleString(locale === "es" ? "es-CO" : "en-US")
           : t("template.outOfStock", {}, locale),
-        variant.packaging ?? "—",
       ]);
     }
   }
@@ -413,14 +423,16 @@ export function buildPagesFromQuotation(
     const pageElements = baseElements.map((el) => {
       const next: TemplateElement = {
         ...el,
-        text: interpolate(el.text, quotation, product),
+        text: interpolate(el.text, quotation, product, locale, index + 1),
       };
       // Placeholders inside table cells too
       if (next.table) {
         next.table = {
           ...next.table,
           cells: next.table.cells.map((row) =>
-            row.map((cell) => interpolate(cell, quotation, product)),
+            row.map((cell) =>
+              interpolate(cell, quotation, product, locale, index + 1),
+            ),
           ),
         };
       }
@@ -456,7 +468,7 @@ export function buildPagesFromQuotation(
   if (quotation.products.length === 0) {
     const elements = makeFirstPageElements(false, locale).map((element) => ({
       ...element,
-      text: interpolate(element.text, quotation),
+      text: interpolate(element.text, quotation, undefined, locale),
     }));
     pages.push({
       id: "page-1",
@@ -483,6 +495,9 @@ export function ensurePageLogos(pages: PageData[]): PageData[] {
       element.id.startsWith("doc-title"),
     );
     const elements = page.elements.map((element) => {
+      if (element.id === "footer") {
+        return { ...element, lineHeight: 1.5 };
+      }
       if (element.id === "page-title" || element.id === "policies-title") {
         return { ...element, x: 400, y: 38, width: 390 };
       }
@@ -524,6 +539,8 @@ export const DUMMY_QUOTATION: QuotationData = {
   customerName: "John Doe",
   representativeName: "sailor",
   representativePhone: "+1 (555) 123-4567",
+  representativePhoneExtension: "",
+  representativeCellphone: "",
   representativeEmail: "t@x.com",
   products: [
     {

@@ -403,6 +403,7 @@ export default function QuotationCanvas({
                       height={element.height}
                       text={element.text}
                       fontSize={element.fontSize}
+                      lineHeight={element.lineHeight}
                       fill={element.fill}
                       fontFamily={element.fontFamily ?? 'Arial'}
                       fontStyle={
