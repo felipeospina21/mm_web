@@ -97,9 +97,18 @@ function setRepresentativeDetails(
       representativeCellphone,
       representativeEmail,
     },
-    pages: doc.pages.map((page) => ({
-      ...page,
-      elements: page.elements.map((element) => {
+    pages: doc.pages.map((page, pageIndex) => {
+      const productNumber = doc.pages
+        .slice(0, pageIndex + 1)
+        .filter((candidate) =>
+          candidate.elements.some((element) =>
+            element.id.startsWith("product-name-"),
+          ),
+        ).length;
+
+      return {
+        ...page,
+        elements: page.elements.map((element) => {
         if (element.id === "footer") {
           return {
             ...element,
@@ -112,8 +121,11 @@ function setRepresentativeDetails(
           };
         }
 
+        const name = element.text.replace(/^\d+\.\s*/, "").trim();
         let text = element.id.startsWith("product-name-")
-          ? `${page.pageNumber}. ${element.text.replace(/^\d+\.\s*/, "")}`
+          ? name
+            ? `${productNumber}. ${name}`
+            : ""
           : resolvePlaceholders(element.text);
         if (element.id === "representative-info") {
           const oldName = doc.meta.representativeName;
@@ -146,8 +158,9 @@ function setRepresentativeDetails(
           text,
           ...(table ? { table } : {}),
         };
-      }),
-    })),
+        }),
+      };
+    }),
   };
 }
 

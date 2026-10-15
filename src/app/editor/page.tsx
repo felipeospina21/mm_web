@@ -7,6 +7,7 @@ import { exportPagesToPdf } from "./_components/pdf-export";
 import {
   buildPagesFromQuotation,
   ensurePageLogos,
+  makeEmptyProductPage,
   makeEmptyQuotationPages,
   DUMMY_QUOTATION,
 } from "./_components/template-data";
@@ -354,12 +355,30 @@ export default function EditorPage() {
   const handleElementChange = useCallback(
     (pageId: string, elementId: string, patch: Partial<TemplateElement>) => {
       setPagesWithHistory((prev) =>
-        prev.map((page) => {
+        prev.map((page, pageIndex) => {
           if (page.id !== pageId) return page;
+          let elementPatch = patch;
+          if (
+            elementId.startsWith("product-name-") &&
+            typeof patch.text === "string"
+          ) {
+            const productNumber = prev
+              .slice(0, pageIndex + 1)
+              .filter((candidate) =>
+                candidate.elements.some((element) =>
+                  element.id.startsWith("product-name-"),
+                ),
+              ).length;
+            const name = patch.text.replace(/^\d+\.\s*/, "").trim();
+            elementPatch = {
+              ...patch,
+              text: name ? `${productNumber}. ${name}` : "",
+            };
+          }
           return {
             ...page,
             elements: page.elements.map((el) =>
-              el.id === elementId ? { ...el, ...patch } : el,
+              el.id === elementId ? { ...el, ...elementPatch } : el,
             ),
           };
         }),
@@ -367,6 +386,26 @@ export default function EditorPage() {
     },
     [setPagesWithHistory],
   );
+
+  /** Insert a blank product page immediately before the final policies page. */
+  const handleAddPage = useCallback(() => {
+    setPagesWithHistory((prev) => {
+      const policiesIndex = prev.findIndex((page) =>
+        page.elements.some((element) => element.id === "policies-body"),
+      );
+      const insertAt =
+        policiesIndex < 0 ? Math.max(prev.length - 1, 0) : policiesIndex;
+      const pageNumber = insertAt + 1;
+      const newPage = makeEmptyProductPage(pageNumber, metaRef.current);
+      const next = [...prev];
+      next.splice(insertAt, 0, newPage);
+      return next.map((page, index) => ({
+        ...page,
+        id: `page-${index + 1}`,
+        pageNumber: index + 1,
+      }));
+    });
+  }, [setPagesWithHistory]);
 
   /** Delete the selected element */
   const handleDeleteElement = useCallback(
@@ -544,6 +583,7 @@ export default function EditorPage() {
             onUndo={handleUndo}
             onRedo={handleRedo}
             onAddElement={handleAddElement}
+            onAddPage={handleAddPage}
           />
           <button
             onClick={handleSave}

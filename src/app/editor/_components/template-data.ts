@@ -399,6 +399,56 @@ export function buildInventoryTable(
   };
 }
 
+/** Build a blank product page while keeping each product field editable. */
+export function makeEmptyProductPage(
+  pageNumber: number,
+  quotation: QuotationData,
+  locale: Locale = defaultLocale,
+): PageData {
+  const suffix = `p${pageNumber}`;
+  const productElements = makeProductElements(suffix, -120, locale).map(
+    (element) => ({
+      ...element,
+      text: "",
+      ...(element.table
+        ? {
+            table: {
+              ...element.table,
+              cells: element.table.cells.map((row) => row.map(() => "")),
+            },
+          }
+        : {}),
+    }),
+  );
+
+  const inventory = buildInventoryTable(
+    { name: "", reference: "", price: "", description: "", variants: [] },
+    suffix,
+    -120,
+    locale,
+  );
+  if (inventory.table) {
+    inventory.table = {
+      ...inventory.table,
+      cells: inventory.table.cells.map((row) => row.map(() => "")),
+    };
+  }
+
+  return {
+    id: `page-${pageNumber}`,
+    pageNumber,
+    elements: [
+      makeDocTitle(`doc-title-${suffix}`),
+      ...productElements,
+      inventory,
+      ...makeFooter().map((footer) => ({
+        ...footer,
+        text: formatQuotationFooter(quotation, locale),
+      })),
+    ],
+  };
+}
+
 /**
  * Builds the full page set from a quotation:
  *  - Page 1: header (company + client) + first product (header only if

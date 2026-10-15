@@ -10,6 +10,7 @@ interface ActionsMenuProps {
   onUndo: () => void
   onRedo: () => void
   onAddElement: (type: 'text' | 'rect' | 'table' | 'image') => void
+  onAddPage: () => void
 }
 
 const ITEM_CLASS =
@@ -26,6 +27,7 @@ export function ActionsMenu({
   onUndo,
   onRedo,
   onAddElement,
+  onAddPage,
 }: ActionsMenuProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -95,6 +97,17 @@ export function ActionsMenu({
             disabled={!canRedo}
           >
             {t('actions.redo')}
+          </button>
+
+          <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
+
+          <button
+            type="button"
+            role="menuitem"
+            className={ITEM_CLASS}
+            onClick={onAddPage}
+          >
+            {t('actions.addPage')}
           </button>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
