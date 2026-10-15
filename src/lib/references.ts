@@ -15,8 +15,8 @@
  * input view and the server procedure can share it.
  */
 
-/** Maximum SKUs accepted from a single input (defensive upper bound). */
-export const MAX_REFERENCES = 100;
+/** Quiet safety cap; batching allows large lookups without exposing a UI limit. */
+export const MAX_REFERENCES = 1000;
 
 export function parseReferences(raw: string): string[] {
   if (!raw) return [];

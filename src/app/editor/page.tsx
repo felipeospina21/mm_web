@@ -689,7 +689,7 @@ export default function EditorPage() {
           </button>
           <button
             onClick={handleExportPdf}
-            disabled={isExporting}
+            disabled={!saved || isExporting}
             className="rounded bg-[var(--brand-primary)] px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isExporting ? t("editor.exporting") : t("editor.exportPdf")}
@@ -720,7 +720,7 @@ export default function EditorPage() {
               {t("actions.addProducts")}
             </h2>
             <p className="mb-4 text-sm text-neutral-600">
-              {t("lookup.instructions", { max: MAX_REFERENCES })}
+              {t("lookup.instructions")}
             </p>
             <textarea
               value={productReferenceInput}

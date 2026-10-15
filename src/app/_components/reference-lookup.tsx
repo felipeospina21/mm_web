@@ -72,7 +72,7 @@ export function ReferenceLookup() {
           {t("lookup.label")}
         </label>
         <p className="text-sm text-neutral-500">
-          {t("lookup.instructions", { max: MAX_REFERENCES })}
+          {t("lookup.instructions")}
         </p>
         <textarea
           id="references"
@@ -92,7 +92,6 @@ export function ReferenceLookup() {
             {t(parsed.length === 1 ? "lookup.countOne" : "lookup.countMany", {
               count: parsed.length,
             })}
-            {overLimit ? t("lookup.limit", { max: MAX_REFERENCES }) : ""}
           </span>
           <button
             type="button"
