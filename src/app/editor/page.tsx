@@ -13,6 +13,7 @@ import {
 } from "./_components/template-data";
 import type {
   PageData,
+  Product,
   QuotationData,
   TemplateElement,
 } from "./_components/types";
@@ -21,7 +22,10 @@ import {
   getQuotationProducts,
   type QuotationProduct,
 } from "@/lib/quotation-selection";
-import { takePendingQuotationLoad } from "@/lib/quotation-load";
+import {
+  takePendingQuotationClient,
+  takePendingQuotationLoad,
+} from "@/lib/quotation-load";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
 import { api } from "@/trpc/react";
 import { t } from "@/i18n/messages";
@@ -41,53 +45,13 @@ export default function EditorPage() {
   const [canRedo, setCanRedo] = useState(false);
   // Unsaved-changes flag: true after any edit, cleared on successful save.
   const [isDirty, setIsDirty] = useState(false);
+  const editRevisionRef = useRef(0);
+  const saveRevisionRef = useRef(0);
   const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
   const [productReferenceInput, setProductReferenceInput] = useState("");
-  const [submittedProductReferences, setSubmittedProductReferences] =
-    useState<string[]>([]);
-
-  /** Push a new state snapshot onto the history stack */
-  const commitHistory = useCallback((next: PageData[]) => {
-    // Drop any redo tail, then append
-    historyIndexRef.current += 1;
-    historyRef.current = historyRef.current.slice(0, historyIndexRef.current);
-    historyRef.current.push(next);
-    setCanUndo(true);
-    setCanRedo(false);
-  }, []);
-
-  const setPagesWithHistory = useCallback(
-    (updater: PageData[] | ((prev: PageData[]) => PageData[])) => {
-      setPages((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
-        commitHistory(next);
-        return next;
-      });
-      // Any edit leaves the quotation with unsaved changes.
-      setIsDirty(true);
-    },
-    [commitHistory],
-  );
-
-  const handleUndo = useCallback(() => {
-    if (historyIndexRef.current <= 0) return;
-    historyIndexRef.current -= 1;
-    const snapshot = historyRef.current[historyIndexRef.current];
-    if (!snapshot) return;
-    setPages(snapshot);
-    setCanUndo(historyIndexRef.current > 0);
-    setCanRedo(true);
-  }, []);
-
-  const handleRedo = useCallback(() => {
-    if (historyIndexRef.current >= historyRef.current.length - 1) return;
-    historyIndexRef.current += 1;
-    const snapshot = historyRef.current[historyIndexRef.current];
-    if (!snapshot) return;
-    setPages(snapshot);
-    setCanUndo(true);
-    setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
-  }, []);
+  const [submittedProductReferences, setSubmittedProductReferences] = useState<
+    string[]
+  >([]);
 
   const handleStageReady = useCallback((stage: Konva.Stage | null) => {
     stageRef.current = stage;
@@ -150,6 +114,63 @@ export default function EditorPage() {
   // Initial quotation pages: header page + policies page, plus one page
   // per product picked on the home page.
   const [pages, setPages] = useState<PageData[]>(makeInitialPages);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const homeClientAppliedRef = useRef(false);
+  const pagesRef = useRef(pages);
+  const replacePages = useCallback((next: PageData[]) => {
+    pagesRef.current = next;
+    setPages(next);
+  }, []);
+  const historyRef = useRef<PageData[][]>([pages]);
+  const historyIndexRef = useRef(0);
+
+  /** Push a new state snapshot onto the history stack */
+  const commitHistory = useCallback((next: PageData[]) => {
+    historyIndexRef.current += 1;
+    historyRef.current = historyRef.current.slice(0, historyIndexRef.current);
+    historyRef.current.push(next);
+    setCanUndo(true);
+    setCanRedo(false);
+  }, []);
+
+  const setPagesWithHistory = useCallback(
+    (updater: PageData[] | ((prev: PageData[]) => PageData[])) => {
+      editRevisionRef.current += 1;
+      const next =
+        typeof updater === "function" ? updater(pagesRef.current) : updater;
+      pagesRef.current = next;
+      setPages(next);
+      commitHistory(next);
+      setIsDirty(true);
+    },
+    [commitHistory],
+  );
+
+  const handleUndo = useCallback(() => {
+    if (historyIndexRef.current <= 0) return;
+    historyIndexRef.current -= 1;
+    const snapshot = historyRef.current[historyIndexRef.current];
+    if (!snapshot) return;
+    editRevisionRef.current += 1;
+    pagesRef.current = snapshot;
+    setPages(snapshot);
+    setIsDirty(true);
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(true);
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndexRef.current >= historyRef.current.length - 1) return;
+    historyIndexRef.current += 1;
+    const snapshot = historyRef.current[historyIndexRef.current];
+    if (!snapshot) return;
+    editRevisionRef.current += 1;
+    pagesRef.current = snapshot;
+    setPages(snapshot);
+    setIsDirty(true);
+    setCanUndo(true);
+    setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+  }, []);
   const [isExporting, setIsExporting] = useState(false);
   const stageRef = useRef<Konva.Stage | null>(null);
 
@@ -162,10 +183,13 @@ export default function EditorPage() {
   const saveMutation = api.quotation.save.useMutation({
     onSuccess: (result) => {
       setSaved(result);
+      // Keep edits made while this request was in flight; the response only
+      // contains the earlier snapshot that was submitted.
+      if (editRevisionRef.current !== saveRevisionRef.current) return;
       // The server returns the saved document with the number assigned by
       // the database. Keep the canvas and its undo baseline in sync with it.
-      setPages(result.data.pages);
-      historyRef.current = [result.data.pages];
+      replacePages(result.data);
+      historyRef.current = [result.data];
       historyIndexRef.current = 0;
       setCanUndo(false);
       setCanRedo(false);
@@ -178,6 +202,7 @@ export default function EditorPage() {
   });
 
   const representativeQuery = api.quotation.representative.useQuery();
+  const clientsQuery = api.customer.list.useQuery();
   const productLookup = api.product.resolveReferences.useQuery(
     { references: submittedProductReferences },
     { enabled: submittedProductReferences.length > 0, staleTime: 0 },
@@ -199,8 +224,16 @@ export default function EditorPage() {
 
   const handleAppendProducts = useCallback(() => {
     const resolved = productLookup.data?.resolved ?? [];
+    const currentPages = pagesRef.current;
     const existingReferences = new Set(
-      metaRef.current.products.map((product) => product.reference.toLowerCase()),
+      currentPages.flatMap((page) =>
+        page.elements
+          .filter((element) => element.id.startsWith("product-reference-"))
+          .map((element) =>
+            element.text.split(":").at(-1)?.trim().toLowerCase(),
+          )
+          .filter((reference): reference is string => Boolean(reference)),
+      ),
     );
     const additions = resolved.filter(
       (product) => !existingReferences.has(product.reference.toLowerCase()),
@@ -220,20 +253,54 @@ export default function EditorPage() {
         packaging: variant.packaging,
       })),
     }));
-    const existingProducts = metaRef.current.products;
-    const baseProductCount = Math.max(existingProducts.length, 1);
-    const filler = existingProducts[0] ?? DUMMY_QUOTATION.products[0]!;
-    const generatedPages = buildPagesFromQuotation({
+    const existingProductCount = currentPages.filter((page) =>
+      page.elements.some((element) => element.id.startsWith("product-name-")),
+    ).length;
+    const firstPage = currentPages[0];
+    const representativeText = firstPage?.elements.find(
+      (element) => element.id === "representative-info",
+    )?.text;
+    const representativeLines = representativeText?.split("\n") ?? [];
+    const footerText = firstPage?.elements.find(
+      (element) => element.id === "footer",
+    )?.text;
+    const currentMeta: QuotationData = {
       ...metaRef.current,
+      representativeName:
+        representativeLines[1]?.trim() ?? metaRef.current.representativeName,
+      representativePhone:
+        representativeLines[2]?.trim() ?? metaRef.current.representativePhone,
+      representativeEmail:
+        representativeLines[3]?.trim() ?? metaRef.current.representativeEmail,
+    };
+    const baseProductCount = Math.max(existingProductCount, 1);
+    const generatedPages = buildPagesFromQuotation({
+      ...currentMeta,
       products: [
-        ...Array.from({ length: baseProductCount }, () => filler),
+        ...Array.from<Product>({ length: baseProductCount }),
         ...addedProducts,
       ],
-    }).slice(baseProductCount, baseProductCount + addedProducts.length);
+    })
+      .slice(baseProductCount, baseProductCount + addedProducts.length)
+      .map((page) => ({
+        ...page,
+        elements: page.elements.map((element) => {
+          if (element.id === "representative-info" && representativeText) {
+            return { ...element, text: representativeText };
+          }
+          if (element.id === "footer" && footerText) {
+            return { ...element, text: footerText };
+          }
+          return element;
+        }),
+      }));
 
     metaRef.current = {
-      ...metaRef.current,
-      products: [...existingProducts, ...addedProducts],
+      ...currentMeta,
+      products: [
+        ...Array.from<Product>({ length: existingProductCount }),
+        ...addedProducts,
+      ],
     };
     setPagesWithHistory((previous) => {
       const policiesIndex = previous.findIndex((page) =>
@@ -254,37 +321,59 @@ export default function EditorPage() {
   }, [productLookup.data, setPagesWithHistory]);
 
   const handleSave = useCallback(() => {
-    const meta = metaRef.current;
-
-    // The client name is edited on the canvas in the first page's
-    // "Cotización para:" block (element id `client-info`), which reads
-    // "Cotización para:\n<name>\n<address>\n<email>". Take the name line.
-    const clientInfo = pages[0]?.elements.find((el) => el.id === "client-info");
-    const nameLine = clientInfo?.text.split("\n")[1]?.trim();
-    const metaName = metaRef.current.customerName.trim();
-    const clientName =
-      nameLine && nameLine.length > 0
-        ? nameLine
-        : metaName.length > 0
-          ? metaName
-          : t("editor.untitledClient");
+    saveRevisionRef.current = editRevisionRef.current;
+    const currentPages = pagesRef.current;
 
     saveMutation.mutate({
       id: saved?.id,
-      clientName,
-      // Snapshot of the product reference codes in this quotation.
-      references: meta.products.map((p) => p.reference),
-      data: { meta, pages },
+      clientId: selectedClientId,
+      data: currentPages,
     });
-  }, [saveMutation, saved?.id, pages]);
+  }, [saveMutation, saved?.id, selectedClientId]);
 
   // ---- Load a saved quotation (handed off from the My Quotations page) ----
 
   // Pending quotation id to load, read once from sessionStorage on mount.
   const [pendingLoadId, setPendingLoadId] = useState<string | null>(null);
+  const pendingHomeClientIdRef = useRef<string | null>(null);
   useEffect(() => {
     setPendingLoadId(takePendingQuotationLoad());
+    const homeClientId = takePendingQuotationClient();
+    pendingHomeClientIdRef.current = homeClientId;
+    setSelectedClientId(homeClientId);
   }, []);
+
+  useEffect(() => {
+    const pendingHomeClientId = pendingHomeClientIdRef.current;
+    if (!pendingHomeClientId || !clientsQuery.data) return;
+    const client = clientsQuery.data.find(
+      (item) => item.id === pendingHomeClientId,
+    );
+    if (!client) return;
+    if (pendingLoadId) return;
+    const initialPages = pagesRef.current.map((page, index) =>
+      index !== 0
+        ? page
+        : {
+            ...page,
+            elements: page.elements.map((element) =>
+              element.id === "customer-name"
+                ? {
+                    ...element,
+                    text: t("template.customer", { name: client.name }),
+                  }
+                : element,
+            ),
+          },
+    );
+    pagesRef.current = initialPages;
+    setPages(initialPages);
+    historyRef.current = [initialPages];
+    historyIndexRef.current = 0;
+    metaRef.current = { ...metaRef.current, customerName: client.name };
+    homeClientAppliedRef.current = true;
+    pendingHomeClientIdRef.current = null;
+  }, [clientsQuery.data, pendingLoadId]);
 
   const loadQuery = api.quotation.byId.useQuery(
     { id: pendingLoadId ?? "" },
@@ -300,10 +389,25 @@ export default function EditorPage() {
   /** Replace the editor contents with a loaded quotation and mark it saved. */
   const hydrateFromRow = useCallback(
     (row: NonNullable<typeof loadQuery.data>) => {
-      const doc = row.data;
-      const pagesWithLogos = ensurePageLogos(doc.pages);
-      metaRef.current = doc.meta;
-      setPages(pagesWithLogos);
+      const pagesWithLogos = ensurePageLogos(row.data).map((page) => ({
+        ...page,
+        elements: page.elements.map((element) =>
+          element.id === "customer-name"
+            ? { ...element, isDraggable: false, isEditable: false }
+            : element,
+        ),
+      }));
+      const productCount = pagesWithLogos.filter((page) =>
+        page.elements.some((element) => element.id.startsWith("product-name-")),
+      ).length;
+      metaRef.current = {
+        ...DUMMY_QUOTATION,
+        products: Array.from<Product>({ length: productCount }),
+      };
+      setSelectedClientId(row.clientId);
+      pendingHomeClientIdRef.current = null;
+      homeClientAppliedRef.current = false;
+      replacePages(pagesWithLogos);
       // Reset history to the loaded state.
       historyRef.current = [pagesWithLogos];
       historyIndexRef.current = 0;
@@ -312,7 +416,7 @@ export default function EditorPage() {
       setSaved({ id: row.id, quotationNumber: row.quotationNumber });
       setIsDirty(false);
     },
-    [],
+    [replacePages],
   );
 
   // Apply the loaded quotation: hydrate immediately when the editor has no
@@ -331,8 +435,6 @@ export default function EditorPage() {
   }, [loadQuery.data]);
 
   // ---- Undo/redo history ----
-  const historyRef = useRef<PageData[][]>([makeInitialPages()]);
-  const historyIndexRef = useRef(0);
   const representativeAppliedRef = useRef(false);
 
   // Populate a new draft from the signed-in user's database profile. Saved
@@ -416,12 +518,19 @@ export default function EditorPage() {
       representativeCellphone,
       representativeEmail,
     };
-    setPages(nextPages);
+    replacePages(nextPages);
     historyRef.current = [nextPages];
     historyIndexRef.current = 0;
     setCanUndo(false);
     setCanRedo(false);
-  }, [representativeQuery.data, saved, isDirty, pendingLoadId, pages]);
+  }, [
+    representativeQuery.data,
+    saved,
+    isDirty,
+    pendingLoadId,
+    pages,
+    replacePages,
+  ]);
 
   /** Persist any element edit (drag, resize, text, formatting) */
   const handleElementChange = useCallback(
@@ -469,8 +578,21 @@ export default function EditorPage() {
         policiesIndex < 0 ? Math.max(prev.length - 1, 0) : policiesIndex;
       const pageNumber = insertAt + 1;
       const newPage = makeEmptyProductPage(pageNumber, metaRef.current);
+      const footerText = prev[0]?.elements.find(
+        (element) => element.id === "footer",
+      )?.text;
+      const pageWithCurrentFooter = footerText
+        ? {
+            ...newPage,
+            elements: newPage.elements.map((element) =>
+              element.id === "footer"
+                ? { ...element, text: footerText }
+                : element,
+            ),
+          }
+        : newPage;
       const next = [...prev];
-      next.splice(insertAt, 0, newPage);
+      next.splice(insertAt, 0, pageWithCurrentFooter);
       return next.map((page, index) => ({
         ...page,
         id: `page-${index + 1}`,
@@ -731,7 +853,8 @@ export default function EditorPage() {
             />
             <div className="mt-3 flex items-center justify-between gap-3">
               <span className="text-xs text-neutral-500">
-                {hasCurrentProductResults && productLookup.data &&
+                {hasCurrentProductResults &&
+                  productLookup.data &&
                   t("lookup.resultCount", {
                     resolved: productLookup.data.resolved.length,
                     submitted: submittedProductReferences.length,

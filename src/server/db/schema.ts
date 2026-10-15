@@ -4,7 +4,7 @@ import { type AdapterAccount } from "@auth/core/adapters";
 // Source of truth for the quotation document shape lives with the editor.
 // `types.ts` is pure types + consts (no "use client", no runtime imports),
 // so it is safe to import from this server-only module.
-import { type QuotationDocument } from "@/app/editor/_components/types";
+import { type PageData } from "@/app/editor/_components/types";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -30,10 +30,7 @@ export const products = createTable(
     price: d.numeric({ precision: 14, scale: 2 }).notNull(),
     /** Image URL (eventually a CDN / object-storage link). */
     imageUrl: d.text(),
-    createdAt: d
-      .timestamp({ withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: d.timestamp({ withTimezone: true }).defaultNow().notNull(),
     updatedAt: d
       .timestamp({ withTimezone: true })
       .defaultNow()
@@ -85,11 +82,36 @@ export const productVariantsRelations = relations(
   }),
 );
 
+/** Customer records selected for quotations. */
+export const clients = createTable(
+  "client",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    name: d.varchar({ length: 256 }).notNull(),
+    /** External company identifier, when supplied by the source system. */
+    companyId: d.varchar({ length: 255 }),
+    address: d.text(),
+    phone: d.varchar({ length: 32 }),
+    contactName: d.varchar({ length: 256 }),
+    contactPhone: d.varchar({ length: 32 }),
+    contactEmail: d.varchar({ length: 255 }),
+    userId: d
+      .uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdDate: d.timestamp({ withTimezone: true }).defaultNow().notNull(),
+    updatedDate: d
+      .timestamp({ withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => /* @__PURE__ */ new Date()),
+  }),
+  (t) => [index("clients_user_id_idx").on(t.userId)],
+);
+
 /**
- * A saved quotation. The full quotation document (pages, elements, client
- * details, etc.) is stored as JSONB in `data`; the scalar columns hold the
- * fields used for listing/searching. `references` is an array of related
- * document ids (e.g. linked orders or source quotations).
+ * A saved quotation. The editable canvas pages are stored in `data` JSONB;
+ * the selected client and listing fields are relational columns.
  */
 export const quotations = createTable(
   "quotation",
@@ -97,32 +119,22 @@ export const quotations = createTable(
     id: d.uuid().primaryKey().defaultRandom(),
     /** Auto-incrementing sequential quotation number (1, 2, 3, ...). */
     quotationNumber: d.serial().notNull().unique(),
-    clientName: d.varchar({ length: 256 }).notNull(),
-    /**
-     * External CRM client identifier. No local FK by design — the CRM is the
-     * system of record; `clientName` is a point-in-time snapshot on the quote.
-     */
-    clientId: d.varchar({ length: 255 }),
+    clientId: d.uuid().references(() => clients.id, { onDelete: "set null" }),
     /** Owner of the quotation (the user who created it). */
     userId: d
       .uuid()
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** Number of products in the quotation (denormalized from data for listing). */
+    /** Number of product pages, derived from the canvas pages on save. */
     productCount: d.integer().notNull().default(0),
-    /** Total amount in COP (denormalized from data for listing/sorting). */
-    total: d.numeric({ precision: 14, scale: 2 }).notNull().default("0"),
     /**
      * Snapshot of the product reference codes included in this quotation,
      * e.g. ["tx-10", "ser 001", "j8"]. Captured at quote time.
      */
     references: d.text().array(),
-    /** Full quotation document: { meta, pages }. See QuotationDocument. */
-    data: d.jsonb().$type<QuotationDocument>().notNull(),
-    createdDate: d
-      .timestamp({ withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    /** Editable canvas pages. */
+    data: d.jsonb().$type<PageData[]>().notNull(),
+    createdDate: d.timestamp({ withTimezone: true }).defaultNow().notNull(),
     updatedDate: d
       .timestamp({ withTimezone: true })
       .defaultNow()
@@ -134,6 +146,15 @@ export const quotations = createTable(
 
 export const quotationsRelations = relations(quotations, ({ one }) => ({
   user: one(users, { fields: [quotations.userId], references: [users.id] }),
+  client: one(clients, {
+    fields: [quotations.clientId],
+    references: [clients.id],
+  }),
+}));
+
+export const clientsRelations = relations(clients, ({ one, many }) => ({
+  user: one(users, { fields: [clients.userId], references: [users.id] }),
+  quotations: many(quotations),
 }));
 
 export const users = createTable("user", (d) => ({

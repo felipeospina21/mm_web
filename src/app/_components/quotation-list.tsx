@@ -1,27 +1,20 @@
-'use client'
+"use client";
 
-import { useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
-import { api } from '@/trpc/react'
-import { setPendingQuotationLoad } from '@/lib/quotation-load'
-import { defaultLocale, intlLocale, t } from '@/i18n/messages'
+import { api } from "@/trpc/react";
+import { setPendingQuotationLoad } from "@/lib/quotation-load";
+import { defaultLocale, intlLocale, t } from "@/i18n/messages";
 
-const PAGE_SIZE = 12
-
-/** COP currency formatter for quotation totals. */
-const copFormatter = new Intl.NumberFormat(intlLocale(defaultLocale), {
-  style: 'currency',
-  currency: 'COP',
-  maximumFractionDigits: 0,
-})
+const PAGE_SIZE = 12;
 
 function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString(intlLocale(defaultLocale), {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 /**
@@ -30,7 +23,7 @@ function formatDate(date: Date): string {
  * id for the editor and navigates there.
  */
 export function QuotationList() {
-  const router = useRouter()
+  const router = useRouter();
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     api.quotation.list.useInfiniteQuery(
       { limit: PAGE_SIZE },
@@ -38,52 +31,52 @@ export function QuotationList() {
         getNextPageParam: (lastPage) =>
           lastPage.hasMore ? lastPage.nextOffset : undefined,
       },
-    )
+    );
 
-  const quotations = data?.pages.flatMap((page) => page.items) ?? []
-  const total = data?.pages[0]?.total ?? 0
+  const quotations = data?.pages.flatMap((page) => page.items) ?? [];
+  const total = data?.pages[0]?.total ?? 0;
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel || !hasNextPage) return
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasNextPage) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting && !isFetchingNextPage) {
-          void fetchNextPage()
+          void fetchNextPage();
         }
       },
-      { rootMargin: '200px' },
-    )
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleOpen = (id: string) => {
-    setPendingQuotationLoad(id)
-    router.push('/editor')
-  }
+    setPendingQuotationLoad(id);
+    router.push("/editor");
+  };
 
-  if (status === 'pending') {
+  if (status === "pending") {
     return (
       <div className="flex justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-[var(--brand-primary)]" />
       </div>
-    )
+    );
   }
 
   if (quotations.length === 0) {
     return (
       <p className="py-20 text-center text-neutral-500">
-        {t('quotations.empty')}
+        {t("quotations.empty")}
       </p>
-    )
+    );
   }
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="mb-6 text-xl font-semibold text-neutral-900">
-        {t('quotations.title')}{' '}
+        {t("quotations.title")}{" "}
         <span className="text-sm font-normal text-neutral-400">({total})</span>
       </h1>
 
@@ -100,24 +93,26 @@ export function QuotationList() {
                     #{q.quotationNumber}
                   </span>
                   <span className="font-semibold text-neutral-900">
-                    {q.clientName}
+                    {q.clientName ?? t("client.none")}
                   </span>
                 </span>
                 <span className="text-xs text-neutral-500">
-                  {t('quotations.createdUpdated', {
+                  {t("quotations.createdUpdated", {
                     created: formatDate(q.createdDate),
                     updated: formatDate(q.updatedDate),
                   })}
                 </span>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <span className="font-semibold text-neutral-900">
-                  {copFormatter.format(Number(q.total))}
-                </span>
                 <span className="text-xs text-neutral-500">
-                  {t(q.productCount === 1 ? 'quotations.productOne' : 'quotations.productMany', {
-                    count: q.productCount,
-                  })}
+                  {t(
+                    q.productCount === 1
+                      ? "quotations.productOne"
+                      : "quotations.productMany",
+                    {
+                      count: q.productCount,
+                    },
+                  )}
                 </span>
               </div>
             </button>
@@ -133,5 +128,5 @@ export function QuotationList() {
         </div>
       )}
     </div>
-  )
+  );
 }

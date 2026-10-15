@@ -39,8 +39,8 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       text: t("template.customer", { name: "{{customerName}}" }, locale),
       fontSize: 18,
       fill: "#333333",
-      isDraggable: true,
-      isEditable: true,
+      isDraggable: false,
+      isEditable: false,
     },
     {
       id: "company-name",
@@ -582,35 +582,12 @@ export function makeMasterTemplate(locale: Locale = defaultLocale): PageData {
   };
 }
 
-export const DUMMY_QUOTATION: QuotationData = {
-  companyName: "My Company Inc.",
-  customerName: "John Doe",
-  representativeName: "sailor",
-  representativePhone: "+1 (555) 123-4567",
+export const DUMMY_QUOTATION: Omit<QuotationData, "products"> = {
+  companyName: "",
+  customerName: "",
+  representativeName: "",
+  representativePhone: "",
   representativePhoneExtension: "",
   representativeCellphone: "",
-  representativeEmail: "t@x.com",
-  products: [
-    {
-      name: "Enterprise Web Platform",
-      reference: "ref-enterprise-web-platform",
-      price: "$12,500.00",
-      description:
-        "A full-featured web platform including CMS, user management, and analytics dashboard. Includes 12 months of support and hosting.",
-    },
-    {
-      name: "Mobile App Development",
-      reference: "ref-mobile-app-development",
-      price: "$8,900.00",
-      description:
-        "Native iOS and Android application with offline sync, push notifications, and app store deployment assistance.",
-    },
-    {
-      name: "UI/UX Design Sprint",
-      reference: "ref-ui-ux-design-sprint",
-      price: "$4,200.00",
-      description:
-        "A two-week design sprint covering user research, wireframes, high-fidelity mockups, and an interactive prototype.",
-    },
-  ],
+  representativeEmail: "",
 };

@@ -92,16 +92,8 @@ export interface QuotationData {
   products: Product[];
 }
 
-/**
- * The full persisted quotation document: the source `meta` (client/company
- * details + products) plus the rendered `pages` (canvas layout, positions,
- * added elements). Stored as JSONB in `quotations.data` so a saved quote
- * restores exactly as it was edited.
- */
-export interface QuotationDocument {
-  meta: QuotationData;
-  pages: PageData[];
-}
+/** The JSONB quotation payload contains only editable canvas pages. */
+export type QuotationDocument = PageData[];
 
 /** A4 at 96 DPI */
 export const PAGE_WIDTH = 794;

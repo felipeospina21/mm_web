@@ -10,6 +10,8 @@ import {
   addQuotationProduct,
   clearQuotationProducts,
 } from "@/lib/quotation-selection";
+import { setPendingQuotationClient } from "@/lib/quotation-load";
+import { ClientField } from "./client-field";
 
 /**
  * Home-page reference-lookup view.
@@ -26,6 +28,7 @@ export function ReferenceLookup() {
   // The SKUs the user actually submitted (drives the query). Empty until the
   // first "Resolve" so nothing runs on mount.
   const [submitted, setSubmitted] = useState<string[]>([]);
+  const [clientId, setClientId] = useState<string | null>(null);
 
   // Live preview of how the current textarea parses (for the counter + the
   // disabled/over-limit state), without triggering a fetch.
@@ -55,6 +58,7 @@ export function ReferenceLookup() {
     for (const product of resolved) {
       addQuotationProduct(product);
     }
+    setPendingQuotationClient(clientId);
     router.push("/editor");
   };
 
@@ -64,6 +68,12 @@ export function ReferenceLookup() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
+      <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+        <ClientField
+          value={clientId}
+          onChange={(client) => setClientId(client?.id ?? null)}
+        />
+      </section>
       <section className="flex flex-col gap-3">
         <label
           htmlFor="references"
@@ -71,9 +81,7 @@ export function ReferenceLookup() {
         >
           {t("lookup.label")}
         </label>
-        <p className="text-sm text-neutral-500">
-          {t("lookup.instructions")}
-        </p>
+        <p className="text-sm text-neutral-500">{t("lookup.instructions")}</p>
         <textarea
           id="references"
           value={input}
