@@ -84,7 +84,7 @@ export function QuotationList() {
         {quotations.map((q) => (
           <li key={q.id}>
             <button
-              onClick={() => handleOpen(q.id)}
+              // onClick={() => handleOpen(q.id)}
               className="flex w-full items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-[var(--brand-primary)] hover:shadow"
             >
               <div className="flex flex-col gap-1">
@@ -102,6 +102,9 @@ export function QuotationList() {
                     updated: formatDate(q.updatedDate),
                   })}
                 </span>
+                {q.userName && (
+                  <span className="text-xs text-neutral-500">{q.userName}</span>
+                )}
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className="text-xs text-neutral-500">

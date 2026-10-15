@@ -158,12 +158,14 @@ export const quotationRouter = createTRPCRouter({
           id: quotations.id,
           quotationNumber: quotations.quotationNumber,
           clientName: clients.name,
+          userName: users.name,
           productCount: quotations.productCount,
           createdDate: quotations.createdDate,
           updatedDate: quotations.updatedDate,
         })
         .from(quotations)
         .leftJoin(clients, eq(quotations.clientId, clients.id))
+        .leftJoin(users, eq(quotations.userId, users.id))
         .where(ownerFilter)
         .orderBy(desc(quotations.updatedDate))
         .limit(input.limit)
