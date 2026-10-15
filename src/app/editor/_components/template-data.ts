@@ -52,8 +52,8 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       text: "{{companyName}}",
       fontSize: 18,
       fill: "#000000",
-      isDraggable: true,
-      isEditable: true,
+      isDraggable: false,
+      isEditable: false,
     },
     {
       id: "date",

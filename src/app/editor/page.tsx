@@ -115,7 +115,6 @@ export default function EditorPage() {
   // per product picked on the home page.
   const [pages, setPages] = useState<PageData[]>(makeInitialPages);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const homeClientAppliedRef = useRef(false);
   const pagesRef = useRef(pages);
   const replacePages = useCallback((next: PageData[]) => {
     pagesRef.current = next;
@@ -357,10 +356,17 @@ export default function EditorPage() {
         : {
             ...page,
             elements: page.elements.map((element) =>
-              element.id === "customer-name"
+              element.id === "company-name"
                 ? {
                     ...element,
-                    text: t("template.customer", { name: client.name }),
+                    text: client.name,
+                  }
+                : element.id === "customer-name"
+                  ? {
+                      ...element,
+                      text: t("template.customer", {
+                        name: client.contactName ?? "",
+                      }),
                   }
                 : element,
             ),
@@ -370,10 +376,13 @@ export default function EditorPage() {
     setPages(initialPages);
     historyRef.current = [initialPages];
     historyIndexRef.current = 0;
-    metaRef.current = { ...metaRef.current, customerName: client.name };
-    homeClientAppliedRef.current = true;
+    metaRef.current = {
+      ...metaRef.current,
+      companyName: client.name,
+      customerName: client.contactName ?? "",
+    };
     pendingHomeClientIdRef.current = null;
-  }, [clientsQuery.data, pendingLoadId]);
+  }, [clientsQuery.data, pendingLoadId, selectedClientId]);
 
   const loadQuery = api.quotation.byId.useQuery(
     { id: pendingLoadId ?? "" },
@@ -406,7 +415,6 @@ export default function EditorPage() {
       };
       setSelectedClientId(row.clientId);
       pendingHomeClientIdRef.current = null;
-      homeClientAppliedRef.current = false;
       replacePages(pagesWithLogos);
       // Reset history to the loaded state.
       historyRef.current = [pagesWithLogos];
@@ -457,44 +465,22 @@ export default function EditorPage() {
     const representativePhoneExtension =
       representative.phoneExt == null ? "" : String(representative.phoneExt);
     const representativeCellphone = representative.cellphone ?? "";
-    const representativeEmail = representative.email;
+    const representativeEmail = representative.email ?? "";
     const previousMeta = metaRef.current;
+    const representativeText = [
+      t("template.representative"),
+      representativeName,
+      representativePhone,
+      representativeEmail,
+    ].join("\n");
 
-    const interpolateRepresentative = (text: string) => {
-      let result = text
-        .replaceAll("{{representativeName}}", representativeName)
-        .replaceAll("{{representativePhone}}", representativePhone)
-        .replaceAll("{{representativeEmail}}", representativeEmail)
-        .replaceAll("{{representative.name}}", representativeName)
-        .replaceAll("{{representative.phone}}", representativePhone)
-        .replaceAll("{{representative.email}}", representativeEmail);
-
-      if (previousMeta.representativeName) {
-        result = result.replaceAll(
-          previousMeta.representativeName,
-          representativeName,
-        );
-      }
-      if (previousMeta.representativePhone) {
-        result = result.replaceAll(
-          previousMeta.representativePhone,
-          representativePhone,
-        );
-      }
-      if (previousMeta.representativeEmail) {
-        result = result.replaceAll(
-          previousMeta.representativeEmail,
-          representativeEmail,
-        );
-      }
-      return result;
-    };
-
-    const nextPages = pages.map((page) => ({
+    // Read the latest page snapshot: the selected client can be applied in
+    // the effect above during the same commit as this profile hydration.
+    const nextPages = pagesRef.current.map((page) => ({
       ...page,
       elements: page.elements.map((element) => {
         if (element.id === "representative-info") {
-          return { ...element, text: interpolateRepresentative(element.text) };
+          return { ...element, text: representativeText };
         }
         if (element.id === "footer") {
           return {
@@ -528,7 +514,6 @@ export default function EditorPage() {
     saved,
     isDirty,
     pendingLoadId,
-    pages,
     replacePages,
   ]);
 
