@@ -77,7 +77,6 @@ export default function QuotationCanvas({
     col: number;
   } | null>(null);
   const transformerRef = useRef<Konva.Transformer | null>(null);
-  console.log(editingBox);
 
   /** Notify the page whenever the selection changes */
   useEffect(() => {
@@ -191,7 +190,6 @@ export default function QuotationCanvas({
   const handleTextDblClick = useCallback(
     (page: PageData, element: TemplateElement) => {
       const stage = stageRef.current;
-      console.log({ stage });
       if (!stage) return;
       const stageBox = stage.container().getBoundingClientRect();
       const offset = getPageOffset(page.pageNumber);
@@ -344,7 +342,7 @@ export default function QuotationCanvas({
                     id: element.id,
                     x: absX,
                     y: absY,
-                    draggable: true,
+                    draggable: element.isDraggable,
                     dragBoundFunc: makeDragBoundFunc(page, element),
                     onMouseDown: () => setSelectedId(element.id),
                     onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) =>

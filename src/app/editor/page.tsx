@@ -406,7 +406,9 @@ export default function EditorPage() {
       if (
         !pages.some((page) =>
           page.elements.some(
-            (element) => element.id === elementId && element.isEditable,
+            (element) =>
+              element.id === elementId &&
+              (element.isDeletable ?? element.isEditable ?? false),
           ),
         )
       ) {

@@ -47,6 +47,8 @@ export interface TemplateElement {
   isDraggable: boolean;
   /** Whether text or table cells can be edited inline. */
   isEditable?: boolean;
+  /** Whether the element can be deleted; defaults to isEditable. */
+  isDeletable?: boolean;
   /** Table content (only meaningful for type === 'table') */
   table?: TableData;
   /** Image source as data URL (only meaningful for type === 'image') */

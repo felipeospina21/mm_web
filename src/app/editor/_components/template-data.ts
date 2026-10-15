@@ -75,6 +75,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       fontSize: 18,
       fill: "#000000",
       isDraggable: false,
+      isEditable: false,
     },
     {
       id: "quotation-number",
@@ -87,6 +88,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       fontSize: 18,
       fill: "#000000",
       isDraggable: false,
+      isEditable: false,
     },
     {
       id: "representative-info",
@@ -99,6 +101,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       fontSize: 14,
       fill: "#000000",
       isDraggable: false,
+      isEditable: false,
     },
   ];
 }
@@ -379,7 +382,6 @@ export function buildInventoryTable(
     text: "",
     fontSize,
     fill: "#333333",
-    isDraggable: false,
     table: {
       colWidths,
       rowHeight,
@@ -389,7 +391,9 @@ export function buildInventoryTable(
       borderColor: "#c9d2dc",
       fontSize,
     },
+    isDraggable: true,
     isEditable: false,
+    isDeletable: true,
   };
 }
 
