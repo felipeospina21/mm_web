@@ -1,9 +1,103 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "@/i18n/messages";
-import { MAX_REFERENCES } from "@/lib/references";
+import { MAX_REFERENCES, parseReferences } from "@/lib/references";
+import { api, type RouterOutputs } from "@/trpc/react";
 
-interface AddProductModalProps {}
+export type ResolvedProductList =
+  RouterOutputs["product"]["resolveReferences"]["resolved"];
 
-export function AddProductModal() {
+export interface AddProductModalProps {
+  open?: boolean;
+  onClose: () => void;
+  onAddProducts: (products: ResolvedProductList) => void;
+}
+
+function useProductLookup() {
+  const [productReferenceInput, setProductReferenceInput] = useState("");
+  const [submittedProductReferences, setSubmittedProductReferences] = useState<
+    string[]
+  >([]);
+
+  const productLookup = api.product.resolveReferences.useQuery(
+    { references: submittedProductReferences },
+    { enabled: submittedProductReferences.length > 0, staleTime: 0 },
+  );
+
+  const parsedProductReferences = parseReferences(productReferenceInput);
+  const hasCurrentProductResults =
+    parsedProductReferences.length === submittedProductReferences.length &&
+    parsedProductReferences.every(
+      (reference, index) => reference === submittedProductReferences[index],
+    ) &&
+    submittedProductReferences.length > 0 &&
+    productLookup.isSuccess;
+
+  const handleResolve = useCallback(() => {
+    setSubmittedProductReferences(parsedProductReferences);
+  }, [parsedProductReferences]);
+
+  const reset = useCallback(() => {
+    setProductReferenceInput("");
+    setSubmittedProductReferences([]);
+  }, []);
+
+  return {
+    productReferenceInput,
+    setProductReferenceInput,
+    submittedProductReferences,
+    productLookup,
+    parsedProductReferences,
+    hasCurrentProductResults,
+    handleResolve,
+    reset,
+  };
+}
+
+export function AddProductModal({
+  open = true,
+  onClose,
+  onAddProducts,
+}: AddProductModalProps) {
+  const {
+    productReferenceInput,
+    setProductReferenceInput,
+    submittedProductReferences,
+    productLookup,
+    parsedProductReferences,
+    hasCurrentProductResults,
+    handleResolve,
+    reset,
+  } = useProductLookup();
+
+  const handleClose = useCallback(() => {
+    reset();
+    onClose();
+  }, [reset, onClose]);
+
+  const handleLoad = useCallback(() => {
+    const resolved = productLookup.data?.resolved;
+    if (resolved && resolved.length > 0) {
+      onAddProducts(resolved);
+      handleClose();
+    }
+  }, [productLookup.data, onAddProducts, handleClose]);
+
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    textareaRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, handleClose]);
+
+  if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <section
@@ -19,6 +113,7 @@ export function AddProductModal() {
           {t("lookup.instructions")}
         </p>
         <textarea
+          ref={textareaRef}
           value={productReferenceInput}
           onChange={(event) => setProductReferenceInput(event.target.value)}
           rows={3}
@@ -46,9 +141,7 @@ export function AddProductModal() {
               parsedProductReferences.length > MAX_REFERENCES ||
               productLookup.isFetching
             }
-            onClick={() =>
-              setSubmittedProductReferences(parsedProductReferences)
-            }
+            onClick={handleResolve}
             className="bg-primary rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {productLookup.isFetching
@@ -59,7 +152,7 @@ export function AddProductModal() {
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
-            onClick={() => setIsAddProductsOpen(false)}
+            onClick={handleClose}
             className="rounded-lg border border-neutral-300 px-4 py-2 text-sm"
           >
             {t("common.cancel")}
@@ -69,7 +162,7 @@ export function AddProductModal() {
             disabled={
               !hasCurrentProductResults || !productLookup.data?.resolved.length
             }
-            onClick={handleAppendProducts}
+            onClick={handleLoad}
             className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {t("lookup.load")}

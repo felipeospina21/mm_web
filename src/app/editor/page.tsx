@@ -6,6 +6,7 @@ import type Konva from "konva";
 import { exportPagesToPdf } from "./_components/pdf-export";
 import {
   buildPagesFromQuotation,
+  buildProductPage,
   ensurePageLogos,
   makeEmptyProductPage,
   makeEmptyQuotationPages,
@@ -28,11 +29,11 @@ import {
   clearPendingQuotationLoad,
 } from "@/lib/quotation-load";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
+import { AddProductModal } from "./_components/add-product-modal";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
 import { formatQuotationFooter } from "@/lib/company-profile";
-import {  parseReferences } from "@/lib/references";
 
 // Konva touches `window` at import time, so the canvas is loaded
 // client-side only.
@@ -51,10 +52,6 @@ export default function EditorPage() {
   const editRevisionRef = useRef(0);
   const saveRevisionRef = useRef(0);
   const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
-  const [productReferenceInput, setProductReferenceInput] = useState("");
-  const [submittedProductReferences, setSubmittedProductReferences] = useState<
-    string[]
-  >([]);
 
   const handleStageReady = useCallback((stage: Konva.Stage | null) => {
     stageRef.current = stage;
@@ -207,123 +204,114 @@ export default function EditorPage() {
 
   const representativeQuery = api.quotation.representative.useQuery();
   const clientsQuery = api.customer.list.useQuery();
-  const productLookup = api.product.resolveReferences.useQuery(
-    { references: submittedProductReferences },
-    { enabled: submittedProductReferences.length > 0, staleTime: 0 },
-  );
-  const parsedProductReferences = parseReferences(productReferenceInput);
-  const hasCurrentProductResults =
-    parsedProductReferences.length === submittedProductReferences.length &&
-    parsedProductReferences.every(
-      (reference, index) => reference === submittedProductReferences[index],
-    ) &&
-    submittedProductReferences.length > 0 &&
-    productLookup.isSuccess;
 
   const handleAddProducts = useCallback(() => {
-    setProductReferenceInput("");
-    setSubmittedProductReferences([]);
     setIsAddProductsOpen(true);
   }, []);
 
-  const handleAppendProducts = useCallback(() => {
-    const resolved = productLookup.data?.resolved ?? [];
-    const currentPages = pagesRef.current;
-    const existingReferences = new Set(
-      currentPages.flatMap((page) =>
-        page.elements
-          .filter((element) => element.id.startsWith("product-reference-"))
-          .map((element) =>
-            element.text.split(":").at(-1)?.trim().toLowerCase(),
-          )
-          .filter((reference): reference is string => Boolean(reference)),
-      ),
-    );
-    const additions = resolved.filter(
-      (product) => !existingReferences.has(product.reference.toLowerCase()),
-    );
-    if (additions.length === 0) return;
+  const handleAppendProducts = useCallback(
+    (resolved: RouterOutputs["product"]["resolveReferences"]["resolved"]) => {
+      const currentPages = pagesRef.current;
+      const existingReferences = new Set(
+        currentPages.flatMap((page) =>
+          page.elements
+            .filter((element) => element.id.startsWith("product-reference-"))
+            .map((element) =>
+              element.text.split(":").at(-1)?.trim().toLowerCase(),
+            )
+            .filter((reference): reference is string => Boolean(reference)),
+        ),
+      );
+      const additions = resolved.filter(
+        (product) => !existingReferences.has(product.reference.toLowerCase()),
+      );
+      if (additions.length === 0) return;
 
-    const addedProducts = additions.map((product) => ({
-      name: product.name,
-      reference: product.reference,
-      price: product.price,
-      description: product.description,
-      imageUrl: product.imageUrl ?? null,
-      variants: product.variants.map((variant) => ({
-        colorName: variant.colorName,
-        colorHex: variant.colorHex,
-        stock: variant.stock,
-        packaging: variant.packaging,
-      })),
-    }));
-    const existingProductCount = currentPages.filter((page) =>
-      page.elements.some((element) => element.id.startsWith("product-name-")),
-    ).length;
-    const firstPage = currentPages[0];
-    const representativeText = firstPage?.elements.find(
-      (element) => element.id === "representative-info",
-    )?.text;
-    const representativeLines = representativeText?.split("\n") ?? [];
-    const footerText = firstPage?.elements.find(
-      (element) => element.id === "footer",
-    )?.text;
-    const currentMeta: QuotationData = {
-      ...metaRef.current,
-      representativeName:
-        representativeLines[1]?.trim() ?? metaRef.current.representativeName,
-      representativePhone:
-        representativeLines[2]?.trim() ?? metaRef.current.representativePhone,
-      representativeEmail:
-        representativeLines[3]?.trim() ?? metaRef.current.representativeEmail,
-    };
-    const baseProductCount = Math.max(existingProductCount, 1);
-    const generatedPages = buildPagesFromQuotation({
-      ...currentMeta,
-      products: [
-        ...Array.from<Product>({ length: baseProductCount }),
-        ...addedProducts,
-      ],
-    })
-      .slice(baseProductCount, baseProductCount + addedProducts.length)
-      .map((page) => ({
-        ...page,
-        elements: page.elements.map((element) => {
-          if (element.id === "representative-info" && representativeText) {
-            return { ...element, text: representativeText };
-          }
-          if (element.id === "footer" && footerText) {
-            return { ...element, text: footerText };
-          }
-          return element;
-        }),
+      const addedProducts = additions.map((product) => ({
+        name: product.name,
+        reference: product.reference,
+        price: product.price,
+        description: product.description,
+        imageUrl: product.imageUrl ?? null,
+        variants: product.variants.map((variant) => ({
+          colorName: variant.colorName,
+          colorHex: variant.colorHex,
+          stock: variant.stock,
+          packaging: variant.packaging,
+        })),
       }));
-
-    metaRef.current = {
-      ...currentMeta,
-      products: [
-        ...Array.from<Product>({ length: existingProductCount }),
-        ...addedProducts,
-      ],
-    };
-    setPagesWithHistory((previous) => {
-      const policiesIndex = previous.findIndex((page) =>
+      const existingProductCount = currentPages.filter((page) =>
+        page.elements.some((element) => element.id.startsWith("product-name-")),
+      ).length;
+      const firstPage = currentPages[0];
+      const representativeText = firstPage?.elements.find(
+        (element) => element.id === "representative-info",
+      )?.text;
+      const representativeLines = representativeText?.split("\n") ?? [];
+      const footerText = firstPage?.elements.find(
+        (element) => element.id === "footer",
+      )?.text;
+      const currentMeta: QuotationData = {
+        ...metaRef.current,
+        representativeName:
+          representativeLines[1]?.trim() ?? metaRef.current.representativeName,
+        representativePhone:
+          representativeLines[2]?.trim() ?? metaRef.current.representativePhone,
+        representativeEmail:
+          representativeLines[3]?.trim() ?? metaRef.current.representativeEmail,
+      };
+      const policiesIndex = currentPages.findIndex((page) =>
         page.elements.some((element) => element.id === "policies-body"),
       );
-      const insertAt = policiesIndex < 0 ? previous.length : policiesIndex;
-      const next = [...previous];
-      next.splice(insertAt, 0, ...generatedPages);
-      return next.map((page, index) => ({
-        ...page,
-        id: `page-${index + 1}`,
-        pageNumber: index + 1,
-      }));
-    });
-    setIsAddProductsOpen(false);
-    setProductReferenceInput("");
-    setSubmittedProductReferences([]);
-  }, [productLookup.data, setPagesWithHistory]);
+      const insertAt = policiesIndex < 0 ? currentPages.length : policiesIndex;
 
+      const generatedPages = addedProducts.map((product, i) => {
+        const pageNumber = insertAt + i + 1;
+        const productNumber = existingProductCount + i + 1;
+        const page = buildProductPage(
+          product,
+          currentMeta,
+          pageNumber,
+          productNumber,
+        );
+        return {
+          ...page,
+          elements: page.elements.map((element) => {
+            if (element.id === "representative-info" && representativeText) {
+              return { ...element, text: representativeText };
+            }
+            if (element.id === "footer" && footerText) {
+              return { ...element, text: footerText };
+            }
+            return element;
+          }),
+        };
+      });
+
+      metaRef.current = {
+        ...currentMeta,
+        products: [
+          ...(metaRef.current.products ?? []).filter(Boolean),
+          ...addedProducts,
+        ],
+      };
+      setPagesWithHistory((previous) => {
+        const pIndex = previous.findIndex((page) =>
+          page.elements.some((element) => element.id === "policies-body"),
+        );
+        const at = pIndex < 0 ? previous.length : pIndex;
+        const next = [...previous];
+        next.splice(at, 0, ...generatedPages);
+        return next.map((page, index) => ({
+          ...page,
+          id: `page-${index + 1}`,
+          pageNumber: index + 1,
+        }));
+      });
+      setIsAddProductsOpen(false);
+    },
+    [setPagesWithHistory],
+  );
   const handleSave = useCallback(() => {
     saveRevisionRef.current = editRevisionRef.current;
     const currentPages = pagesRef.current;
@@ -815,7 +803,11 @@ export default function EditorPage() {
         />
       </div>
 
-      {isAddProductsOpen && }
+      <AddProductModal
+        open={isAddProductsOpen}
+        onClose={() => setIsAddProductsOpen(false)}
+        onAddProducts={handleAppendProducts}
+      />
 
       {/* Guard: loading a saved quotation would discard unsaved changes. */}
       <ConfirmModal

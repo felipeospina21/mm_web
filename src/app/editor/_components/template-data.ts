@@ -448,6 +448,49 @@ export function makeEmptyProductPage(
 }
 
 /**
+ * Builds a single product page (middle page: logo + product block + inventory table + footer).
+ */
+export function buildProductPage(
+  product: Product,
+  quotation: QuotationData,
+  pageNumber: number,
+  productNumber: number,
+  locale: Locale = defaultLocale,
+): PageData {
+  const suffix = `p${pageNumber}`;
+  const baseElements = makeProductPageElements(suffix, locale);
+
+  const pageElements = baseElements.map((el) => {
+    const next: TemplateElement = {
+      ...el,
+      text: interpolate(el.text, quotation, product, locale, productNumber),
+    };
+    if (next.table) {
+      next.table = {
+        ...next.table,
+        cells: next.table.cells.map((row) =>
+          row.map((cell) =>
+            interpolate(cell, quotation, product, locale, productNumber),
+          ),
+        ),
+      };
+    }
+    if (next.type === "image" && next.id.startsWith("product-image-")) {
+      next.src = proxiedImageUrl(product.imageUrl);
+    }
+    return next;
+  });
+
+  pageElements.push(buildInventoryTable(product, suffix, -120, locale));
+
+  return {
+    id: `page-${pageNumber}`,
+    pageNumber,
+    elements: pageElements,
+  };
+}
+
+/**
  * Builds the full page set from a quotation:
  *  - Page 1: header (company + client) + first product (header only if
  *    the quotation has no products yet)
@@ -461,55 +504,54 @@ export function buildPagesFromQuotation(
   const pages: PageData[] = [];
 
   quotation.products.forEach((product, index) => {
+    if (!product) return;
     const pageNumber = pages.length + 1;
 
-    const baseElements =
-      index === 0
-        ? makeFirstPageElements(true, locale)
-        : makeProductPageElements(`p${pageNumber}`, locale);
+    if (index === 0) {
+      const baseElements = makeFirstPageElements(true, locale);
 
-    const pageElements = baseElements.map((el) => {
-      const next: TemplateElement = {
-        ...el,
-        text: interpolate(el.text, quotation, product, locale, index + 1),
-      };
-      // Placeholders inside table cells too
-      if (next.table) {
-        next.table = {
-          ...next.table,
-          cells: next.table.cells.map((row) =>
-            row.map((cell) =>
-              interpolate(cell, quotation, product, locale, index + 1),
-            ),
-          ),
+      const pageElements = baseElements.map((el) => {
+        const next: TemplateElement = {
+          ...el,
+          text: interpolate(el.text, quotation, product, locale, index + 1),
         };
-      }
-      // Fill the product image element's src from the product (image src
-      // can't be interpolated via {{...}} text placeholders). Route external
-      // URLs through our same-origin proxy so they load despite missing CORS
-      // headers and keep the canvas exportable to PDF.
-      if (next.type === "image" && next.id.startsWith("product-image-")) {
-        next.src = proxiedImageUrl(product.imageUrl);
-      }
-      return next;
-    });
+        // Placeholders inside table cells too
+        if (next.table) {
+          next.table = {
+            ...next.table,
+            cells: next.table.cells.map((row) =>
+              row.map((cell) =>
+                interpolate(cell, quotation, product, locale, index + 1),
+              ),
+            ),
+          };
+        }
+        // Fill the product image element's src from the product (image src
+        // can't be interpolated via {{...}} text placeholders). Route external
+        // URLs through our same-origin proxy so they load despite missing CORS
+        // headers and keep the canvas exportable to PDF.
+        if (next.type === "image" && next.id.startsWith("product-image-")) {
+          next.src = proxiedImageUrl(product.imageUrl);
+        }
+        return next;
+      });
 
-    // Each product page carries its own inventory table (one row per
-    // variant) in the bottom-left.
-    pageElements.push(
-      buildInventoryTable(
-        product,
-        `p${pageNumber}`,
-        index === 0 ? 0 : -120,
-        locale,
-      ),
-    );
+      // Each product page carries its own inventory table (one row per
+      // variant) in the bottom-left.
+      pageElements.push(
+        buildInventoryTable(product, `p${pageNumber}`, 0, locale),
+      );
 
-    pages.push({
-      id: `page-${pageNumber}`,
-      pageNumber,
-      elements: pageElements,
-    });
+      pages.push({
+        id: `page-${pageNumber}`,
+        pageNumber,
+        elements: pageElements,
+      });
+    } else {
+      pages.push(
+        buildProductPage(product, quotation, pageNumber, index + 1, locale),
+      );
+    }
   });
 
   // Empty quotation: header-only first page
