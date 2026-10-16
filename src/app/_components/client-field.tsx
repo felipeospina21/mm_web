@@ -50,6 +50,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
       </label>
       <select
         id="client-select"
+        required
         value={value ?? ""}
         onChange={(event) => {
           if (event.target.value === "__add_new__") {

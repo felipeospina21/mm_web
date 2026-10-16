@@ -51,7 +51,7 @@ export function ReferenceLookup() {
 
   const handleLoad = () => {
     const resolved = query.data?.resolved ?? [];
-    if (resolved.length === 0) return;
+    if (resolved.length === 0 || !clientId) return;
     // Replace any prior selection with this resolved set, then hand off to
     // the editor (which reads sessionStorage on mount).
     clearQuotationProducts();
@@ -73,6 +73,11 @@ export function ReferenceLookup() {
           value={clientId}
           onChange={(client) => setClientId(client?.id ?? null)}
         />
+        {!clientId && (
+          <p className="mt-2 text-sm text-red-700" role="alert">
+            {t("client.required")}
+          </p>
+        )}
       </section>
       <section className="flex flex-col gap-3">
         <label
@@ -132,7 +137,7 @@ export function ReferenceLookup() {
             <button
               type="button"
               onClick={handleLoad}
-              disabled={resolved.length === 0}
+              disabled={resolved.length === 0 || !clientId}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {t("lookup.load")}

@@ -52,6 +52,7 @@ export default function EditorPage() {
   const editRevisionRef = useRef(0);
   const saveRevisionRef = useRef(0);
   const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
+  const activePageNumberRef = useRef(1);
 
   const handleStageReady = useCallback((stage: Konva.Stage | null) => {
     stageRef.current = stage;
@@ -113,6 +114,9 @@ export default function EditorPage() {
 
   // Initial quotation pages: header page + policies page, plus one page
   // per product picked on the home page.
+  const [hasInitialProducts] = useState(
+    () => getQuotationProducts().length > 0,
+  );
   const [pages, setPages] = useState<PageData[]>(makeInitialPages);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(() =>
     takePendingQuotationClient(),
@@ -204,6 +208,7 @@ export default function EditorPage() {
 
   const representativeQuery = api.quotation.representative.useQuery();
   const clientsQuery = api.customer.list.useQuery();
+  const canSave = Boolean(saved ?? hasInitialProducts ?? isDirty);
 
   const handleAddProducts = useCallback(() => {
     setIsAddProductsOpen(true);
@@ -308,11 +313,13 @@ export default function EditorPage() {
           pageNumber: index + 1,
         }));
       });
+      activePageNumberRef.current = insertAt + 1;
       setIsAddProductsOpen(false);
     },
     [setPagesWithHistory],
   );
   const handleSave = useCallback(() => {
+    if (!canSave) return;
     saveRevisionRef.current = editRevisionRef.current;
     const currentPages = pagesRef.current;
 
@@ -321,7 +328,7 @@ export default function EditorPage() {
       clientId: selectedClientId,
       data: currentPages,
     });
-  }, [saveMutation, saved?.id, selectedClientId]);
+  }, [canSave, saveMutation, saved?.id, selectedClientId]);
 
   // ---- Load a saved quotation (handed off from the My Quotations page) ----
 
@@ -626,7 +633,7 @@ export default function EditorPage() {
     [pages, setPagesWithHistory],
   );
 
-  /** Add a new element to the first page */
+  /** Add a new element to the page currently being edited. */
   const handleAddElement = useCallback(
     (type: "text" | "rect" | "table" | "image") => {
       const newId = `el-${type}-${Date.now()}`;
@@ -669,7 +676,45 @@ export default function EditorPage() {
 
       setPagesWithHistory((prev) =>
         prev.map((page, index) =>
-          index === 0
+          index === activePageNumberRef.current - 1
+            ? { ...page, elements: [...page.elements, element] }
+            : page,
+        ),
+      );
+    },
+    [setPagesWithHistory],
+  );
+
+  const handleActivePageChange = useCallback((pageNumber: number) => {
+    activePageNumberRef.current = pageNumber;
+  }, []);
+
+  const handlePasteImage = useCallback(
+    (
+      src: string,
+      pageNumber: number,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ) => {
+      const element: TemplateElement = {
+        id: `el-image-${Date.now()}`,
+        type: "image",
+        x,
+        y,
+        width,
+        height,
+        text: "",
+        fontSize: 16,
+        fill: theme.colors.secondary,
+        isDraggable: true,
+        isEditable: true,
+        src,
+      };
+      setPagesWithHistory((prev) =>
+        prev.map((page) =>
+          page.pageNumber === pageNumber
             ? { ...page, elements: [...page.elements, element] }
             : page,
         ),
@@ -774,7 +819,7 @@ export default function EditorPage() {
           />
           <button
             onClick={handleSave}
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || !canSave}
             className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saveMutation.isPending
@@ -801,6 +846,8 @@ export default function EditorPage() {
           onDeleteElement={handleDeleteElement}
           onDuplicateElement={handleDuplicateElement}
           onSelectionChange={handleSelectionChange}
+          onActivePageChange={handleActivePageChange}
+          onPasteImage={handlePasteImage}
         />
       </div>
 

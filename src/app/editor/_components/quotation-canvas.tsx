@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ClipboardEvent as ReactClipboardEvent } from "react";
 import {
   Stage,
   Layer,
@@ -32,6 +33,15 @@ interface QuotationCanvasProps {
   onDuplicateElement: (elementId: string) => void;
   /** Notifies the page of selection changes (for keyboard shortcuts) */
   onSelectionChange: (elementId: string | null) => void;
+  onActivePageChange: (pageNumber: number) => void;
+  onPasteImage: (
+    src: string,
+    pageNumber: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) => void;
 }
 
 /**
@@ -53,6 +63,8 @@ export default function QuotationCanvas({
   onDeleteElement,
   onDuplicateElement,
   onSelectionChange,
+  onActivePageChange,
+  onPasteImage,
 }: QuotationCanvasProps) {
   const stageRef = useRef<Konva.Stage | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -77,6 +89,61 @@ export default function QuotationCanvas({
     col: number;
   } | null>(null);
   const transformerRef = useRef<Konva.Transformer | null>(null);
+  const pastePositionRef = useRef({ pageNumber: 1, x: 100, y: 100 });
+
+  const updateActivePageFromPointer = useCallback(() => {
+    const stage = stageRef.current;
+    const point = stage?.getPointerPosition();
+    if (!point) return;
+    const pageNumber =
+      Math.floor((point.y - 40) / (PAGE_HEIGHT + PAGE_GAP)) + 1;
+    const page = pages.find((item) => item.pageNumber === pageNumber);
+    if (!page || point.x < 40 || point.x > 40 + PAGE_WIDTH) return;
+    const offset = getPageOffset(pageNumber);
+    pastePositionRef.current = {
+      pageNumber,
+      x: Math.max(0, Math.min(PAGE_WIDTH - 300, point.x - offset.x)),
+      y: Math.max(0, Math.min(PAGE_HEIGHT - 200, point.y - offset.y)),
+    };
+    onActivePageChange(pageNumber);
+  }, [onActivePageChange, pages]);
+
+  const handlePaste = useCallback(
+    (event: ReactClipboardEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement;
+      if (target.closest("input, textarea, [contenteditable='true']")) return;
+      const image = Array.from(event.clipboardData.items).find((item) =>
+        item.type.startsWith("image/"),
+      );
+      const file = image?.getAsFile();
+      if (!file) return;
+      event.preventDefault();
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result !== "string") return;
+        const { pageNumber, x, y } = pastePositionRef.current;
+        const imageElement = new window.Image();
+        imageElement.onload = () => {
+          const scale = Math.min(
+            1,
+            300 / imageElement.naturalWidth,
+            200 / imageElement.naturalHeight,
+          );
+          onPasteImage(
+            reader.result as string,
+            pageNumber,
+            x,
+            y,
+            imageElement.naturalWidth * scale,
+            imageElement.naturalHeight * scale,
+          );
+        };
+        imageElement.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    },
+    [onPasteImage],
+  );
 
   /** Notify the page whenever the selection changes */
   useEffect(() => {
@@ -291,18 +358,22 @@ export default function QuotationCanvas({
   /** Deselect when clicking empty stage area */
   const handleStageMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
+      containerRef.current?.focus({ preventScroll: true });
       // Deselect if clicked on empty area (the Stage itself or a page rect)
       const clickedOnEmpty = e.target === e.target.getStage();
       if (clickedOnEmpty) {
         setSelectedId(null);
       }
+      updateActivePageFromPointer();
     },
-    [],
+    [updateActivePageFromPointer],
   );
 
   return (
     <div
       ref={containerRef}
+      tabIndex={0}
+      onPaste={handlePaste}
       className="relative h-full w-full overflow-auto"
       style={{ background: STAGE_BG }}
     >
@@ -315,6 +386,7 @@ export default function QuotationCanvas({
         )}
         style={{ background: STAGE_BG }}
         onMouseDown={handleStageMouseDown}
+        onMouseMove={updateActivePageFromPointer}
       >
         <Layer>
           {pages.map((page) => {
@@ -344,7 +416,18 @@ export default function QuotationCanvas({
                     y: absY,
                     draggable: element.isDraggable,
                     dragBoundFunc: makeDragBoundFunc(page, element),
-                    onMouseDown: () => setSelectedId(element.id),
+                    onMouseDown: () => {
+                      setSelectedId(element.id);
+                      onActivePageChange(page.pageNumber);
+                      const pointer = stageRef.current?.getPointerPosition();
+                      if (pointer) {
+                        pastePositionRef.current = {
+                          pageNumber: page.pageNumber,
+                          x: Math.max(0, pointer.x - offset.x),
+                          y: Math.max(0, pointer.y - offset.y),
+                        };
+                      }
+                    },
                     onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) =>
                       handleDragEnd(page.id, e),
                     onDblClick: () => {

@@ -84,7 +84,7 @@ export function QuotationList() {
         {quotations.map((q) => (
           <li key={q.id}>
             <button
-              // onClick={() => handleOpen(q.id)}
+              onClick={() => handleOpen(q.id)}
               className="hover:border-primary flex w-full items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-5 py-4 text-left shadow-sm transition hover:shadow"
             >
               <div className="flex flex-col gap-1">
