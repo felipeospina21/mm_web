@@ -51,8 +51,9 @@ src/
 Two logical groups share one database:
 
 - **Auth tables** (`user`, `account`, `session`, `verification_token`) — the
-  NextAuth / Auth.js Drizzle adapter schema. `user.passwordHash` (argon2) backs
-  credentials login.
+  NextAuth / Auth.js Drizzle adapter schema. `user.password_hash` (argon2)
+  backs credentials login; the database also stores the verification timestamp
+  in `email_verified`.
 - **Catalog tables** (`product`, `product_variant`) — products shown on the home
   page, each with color/stock variants.
 
@@ -68,9 +69,9 @@ erDiagram
         varchar id PK
         varchar name
         varchar email UK
-        timestamp emailVerified
+        timestamp email_verified
         varchar image
-        varchar passwordHash "argon2 hash"
+        varchar password_hash "argon2 hash"
     }
 
     account {
@@ -239,6 +240,26 @@ pnpm dev
 
 The app has no public sign-up, so `pnpm db:seed` is how you create a login user.
 
+To create or update multiple users, prepare a UTF-8 CSV with `email` and
+`password` columns. Optional columns are `name`, `phone`, `phone_ext`, and
+`cellphone`:
+
+```csv
+email,password,name,phone,phone_ext,cellphone
+alex@example.com,ChangeMe-123,Alex Smith,+1-555-0100,42,+1-555-0199
+sam@example.com,ChangeMe-456,Sam Lee,,,
+```
+
+Then run the bulk seeder against the database configured in `.env`:
+
+```bash
+pnpm db:seed:users ./users.csv
+```
+
+Passwords are hashed with Argon2id. Existing users with a matching email are
+updated; blank optional fields leave existing values unchanged. The import is
+transactional, so invalid rows or database errors leave the batch unchanged.
+
 > **Tests** use an ephemeral Docker Postgres instead of Supabase — see
 > [Run everything with one command (Docker — test DB)](#run-everything-with-one-command-docker--test-db).
 > `./start-database.sh` still spins up a local Postgres container for that purpose.
@@ -253,6 +274,7 @@ The app has no public sign-up, so `pnpm db:seed` is how you create a login user.
 - `pnpm db:migrate` — apply migrations
 - `pnpm db:push` — push schema directly (dev convenience)
 - `pnpm db:seed <email> <password> [name]` — create/update a login user
+- `pnpm db:seed:users <csv-file>` — bulk create/update login users from CSV
 - `pnpm db:seed:products` — seed demo catalog products
 - `pnpm db:studio` — open Drizzle Studio
 - `pnpm typecheck` — TypeScript check

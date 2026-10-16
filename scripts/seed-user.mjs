@@ -32,11 +32,11 @@ try {
   const passwordHash = await hash(password, { type: 2 /* argon2id */ });
 
   const [user] = await sql`
-    INSERT INTO mm_web_user (id, name, email, "emailVerified", "passwordHash")
+    INSERT INTO mm_web_user (id, name, email, email_verified, password_hash)
     VALUES (${randomUUID()}, ${name ?? null}, ${email}, now(), ${passwordHash})
     ON CONFLICT (email) DO UPDATE
       SET name = EXCLUDED.name,
-          "passwordHash" = EXCLUDED."passwordHash"
+          password_hash = EXCLUDED.password_hash
     RETURNING id, name, email
   `;
 
