@@ -721,14 +721,15 @@ export default function EditorPage() {
     // Let the button state render before the (synchronous) capture work
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     try {
-      exportPagesToPdf(stage, pages, "cotizacion.pdf");
+      const fileName = `Cotización N°${saveMutation.data?.quotationNumber} - ${saveMutation.data?.clientName} - Magic Medios SAS.pdf`;
+      exportPagesToPdf(stage, pages, fileName);
     } catch (error) {
       console.error("PDF export failed:", error);
       alert(t("editor.pdfExportFailed"));
     } finally {
       setIsExporting(false);
     }
-  }, [pages]);
+  }, [pages, saveMutation.data]);
 
   return (
     // h-screen minus the 56px global navbar rendered above by the layout,

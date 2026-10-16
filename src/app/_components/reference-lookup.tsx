@@ -147,8 +147,8 @@ export function ReferenceLookup() {
                   className="flex items-start justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm"
                 >
                   <div className="flex flex-col gap-1">
-                    <span className="flex items-center gap-2">
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-xs text-neutral-600">
+                    <span className="flex items-start gap-2">
+                      <span className="flex-none rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-xs text-neutral-600">
                         {product.reference}
                       </span>
                       <span className="font-semibold text-neutral-900">

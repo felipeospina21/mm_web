@@ -177,7 +177,7 @@ function makeProductElements(
             t("template.detail", {}, locale),
             t("template.unitPrice", {}, locale),
           ],
-          ["1", "", "", "{{productPrice}}"],
+          ["", "", "", ""],
           ["", "", "", ""],
           ["", "", "", ""],
         ],

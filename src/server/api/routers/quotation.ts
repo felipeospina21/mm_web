@@ -78,14 +78,19 @@ export const quotationRouter = createTRPCRouter({
   save: protectedProcedure.input(saveInput).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.user.id;
     const clientId = input.clientId ?? null;
+    let clientName: string | null = null;
     if (clientId) {
       const [client] = await ctx.db
-        .select({ id: clients.id })
+        .select({ id: clients.id, name: clients.name })
         .from(clients)
         .where(and(eq(clients.id, clientId), eq(clients.userId, userId)))
         .limit(1);
-      if (!client)
+
+      if (!client) {
         throw new Error("Client not found or not owned by current user");
+      }
+
+      clientName = client.name;
     }
 
     const { productCount, references } = derivePageFields(input.data);
@@ -117,7 +122,7 @@ export const quotationRouter = createTRPCRouter({
           .update(quotations)
           .set({ data })
           .where(eq(quotations.id, updated.id));
-        return { ...updated, clientId, data };
+        return { ...updated, clientId, clientName, data };
       });
     }
 
@@ -141,7 +146,7 @@ export const quotationRouter = createTRPCRouter({
         .update(quotations)
         .set({ data })
         .where(eq(quotations.id, created!.id));
-      return { ...created!, clientId, data };
+      return { ...created!, clientId, clientName, data };
     });
   }),
 

@@ -14,7 +14,7 @@ const es = {
   "lookup.label": "Referencias de productos",
   "lookup.instructions":
     "Pega una lista de referencias separadas por comas. Buscaremos los productos para agregarlos a la cotización.",
-  "lookup.placeholder": "cp-10, au 20 4, xtron",
+  "lookup.placeholder": "mu-61, te-377, TMPS 234",
   "lookup.countOne": "{count} referencia",
   "lookup.countMany": "{count} referencias",
   "lookup.resolve": "Buscar referencias",
