@@ -55,8 +55,17 @@ export default function TableNode({
       draggable={isDraggable}
       dragBoundFunc={dragBoundFunc}
       onMouseDown={onSelect}
+      onTouchStart={onSelect}
       onDblClick={(e) => {
         // Find which cell was double-clicked from the event target's cell index
+        const target = e.target as Konva.Shape;
+        const row = target.getAttr("data-row") as number | undefined;
+        const col = target.getAttr("data-col") as number | undefined;
+        if (typeof row === "number" && typeof col === "number") {
+          onDblClickCell(row, col);
+        }
+      }}
+      onDblTap={(e) => {
         const target = e.target as Konva.Shape;
         const row = target.getAttr("data-row") as number | undefined;
         const col = target.getAttr("data-col") as number | undefined;

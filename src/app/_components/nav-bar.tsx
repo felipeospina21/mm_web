@@ -34,14 +34,14 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
   };
 
   return (
-    <nav className="flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-6">
-      <div className="flex items-center gap-1">
+    <nav className="flex h-14 min-w-0 items-center justify-between gap-2 border-b border-neutral-200 bg-white px-2 sm:px-6">
+      <div className="flex min-w-0 items-center gap-0.5 sm:gap-1">
         <Image
           src="/x.png"
           alt="magic medios logo"
-          width={50}
-          height={50}
-          className="mr-2.5"
+          width={40}
+          height={40}
+          className="mr-1 shrink-0 sm:mr-2.5"
         />
         {navLinks.map(({ href, label }) => {
           const isActive =
@@ -51,7 +51,7 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
               key={href}
               href={href}
               aria-current={isActive ? "page" : undefined}
-              className={`px-3 py-1.5 text-sm font-medium transition ${
+              className={`whitespace-nowrap px-2 py-1.5 text-xs font-medium transition sm:px-3 sm:text-sm ${
                 isActive
                   ? "border-primary border-b-2"
                   : "hover:text-primary text-neutral-600"
@@ -63,14 +63,16 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
         })}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
         {userLabel && (
-          <span className="text-secondary text-sm">{userLabel}</span>
+          <span className="text-secondary hidden max-w-48 truncate text-sm md:inline">
+            {userLabel}
+          </span>
         )}
         <button
           type="button"
           onClick={handleSignOut}
-          className="border-black-200 text-primary rounded-lg border px-3 py-1.5 text-sm font-medium transition hover:bg-neutral-100"
+          className="border-black-200 text-primary rounded-lg border px-2 py-1.5 text-xs font-medium transition hover:bg-neutral-100 sm:px-3 sm:text-sm"
         >
           {t("nav.signOut")}
         </button>

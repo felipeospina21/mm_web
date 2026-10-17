@@ -107,7 +107,7 @@ export default function FloatingToolbar({
 
   return (
     <div
-      className="fixed top-16 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-md bg-white px-2.5 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.35)]"
+      className="fixed top-28 left-2 z-40 flex max-w-[calc(100vw-16px)] -translate-x-0 items-center gap-2 overflow-x-auto rounded-md bg-white px-2.5 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.35)] sm:top-16 sm:left-1/2 sm:-translate-x-1/2"
       onMouseDown={(e) => e.stopPropagation()}
     >
       {isText && (

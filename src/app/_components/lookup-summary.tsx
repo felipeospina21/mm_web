@@ -42,7 +42,7 @@ export const LookupSummary: FC<LookupSummaryProps> = ({
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-sm font-semibold text-neutral-800">
           {t("lookup.resultCount", {
             resolved: resolved.length,
@@ -53,7 +53,7 @@ export const LookupSummary: FC<LookupSummaryProps> = ({
           type="button"
           onClick={handleLoad}
           disabled={resolved.length === 0 || !clientId}
-          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {t("lookup.load")}
         </button>
@@ -71,14 +71,14 @@ function ResolvedSummary({ resolved }: { resolved: QuotationProduct[] }) {
       {resolved.map((product) => (
         <li
           key={product.id}
-          className="flex items-start justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm"
+          className="flex flex-col items-start justify-between gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:gap-4"
         >
           <div className="flex flex-col gap-1">
             <span className="flex items-start gap-2">
               <span className="flex-none rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-xs text-neutral-600">
                 {product.reference}
               </span>
-              <span className="font-semibold text-neutral-900">
+              <span className="break-words font-semibold text-neutral-900">
                 {product.name}
               </span>
             </span>
@@ -104,7 +104,7 @@ function ResolvedSummary({ resolved }: { resolved: QuotationProduct[] }) {
               </span>
             )}
           </div>
-          <span className="text-primary shrink-0 font-semibold">
+          <span className="text-primary shrink-0 self-end font-semibold sm:self-auto">
             {product.price}
           </span>
         </li>

@@ -12,7 +12,7 @@ const quotationPages = z.custom<PageData[]>(Array.isArray, {
 
 const saveInput = z.object({
   id: z.string().uuid().optional(),
-  clientId: z.string().uuid().nullable().optional(),
+  clientId: z.string().uuid(),
   data: quotationPages,
 });
 
@@ -77,21 +77,18 @@ export const quotationRouter = createTRPCRouter({
 
   save: protectedProcedure.input(saveInput).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.user.id;
-    const clientId = input.clientId ?? null;
+    const clientId = input.clientId;
     let clientName: string | null = null;
-    if (clientId) {
-      const [client] = await ctx.db
-        .select({ id: clients.id, name: clients.name })
-        .from(clients)
-        .where(and(eq(clients.id, clientId), eq(clients.userId, userId)))
-        .limit(1);
+    const [client] = await ctx.db
+      .select({ id: clients.id, name: clients.name })
+      .from(clients)
+      .where(and(eq(clients.id, clientId), eq(clients.userId, userId)))
+      .limit(1);
 
-      if (!client) {
-        throw new Error("Client not found or not owned by current user");
-      }
-
-      clientName = client.name;
+    if (!client) {
+      throw new Error("Client not found or not owned by current user");
     }
+    clientName = client.name;
 
     const { productCount, references } = derivePageFields(input.data);
     if (input.id) {

@@ -14,6 +14,9 @@ const es = {
   "lookup.label": "Referencias de productos",
   "lookup.instructions":
     "Pega una lista de referencias separadas por comas. Buscaremos los productos para agregarlos a la cotización.",
+  "lookup.manualInstructions":
+    "También puedes empezar una cotización vacía y agregar su contenido manualmente en el editor.",
+  "lookup.startManual": "Crear cotización manual",
   "lookup.placeholder": "mu-61, te-377, TMPS 234",
   "lookup.countOne": "{count} referencia",
   "lookup.countMany": "{count} referencias",
@@ -147,6 +150,9 @@ const en: Record<MessageKey, string> = {
   "lookup.label": "Product references",
   "lookup.instructions":
     "Paste a comma-separated list of references. We’ll look up the products so you can add them to the quotation.",
+  "lookup.manualInstructions":
+    "You can also start with a blank quotation and add its contents manually in the editor.",
+  "lookup.startManual": "Start manual quotation",
   "lookup.placeholder": "cp-10, au 20 4, xtron",
   "lookup.countOne": "{count} reference",
   "lookup.countMany": "{count} references",

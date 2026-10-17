@@ -270,7 +270,7 @@ function makeProductPageElements(
 /**
  * Last page: fixed commercial policies, no product info.
  */
-function makePoliciesPageElements(locale: Locale): TemplateElement[] {
+function makePoliciesPageElements(): TemplateElement[] {
   return [
     makeDocTitle("doc-title-policies"),
     {
@@ -285,18 +285,6 @@ function makePoliciesPageElements(locale: Locale): TemplateElement[] {
       fill: "#444444",
       isDraggable: true,
       src: "/comercial_policy.jpg",
-    },
-    {
-      id: "signature-line",
-      type: "text",
-      x: 40,
-      y: 900,
-      width: 300,
-      height: 24,
-      text: t("template.acceptedBy", {}, locale),
-      fontSize: 14,
-      fill: "#333333",
-      isDraggable: true,
     },
     ...makeFooter(),
   ];
@@ -572,7 +560,7 @@ export function buildPagesFromQuotation(
   pages.push({
     id: `page-${policiesPageNumber}`,
     pageNumber: policiesPageNumber,
-    elements: makePoliciesPageElements(locale),
+    elements: makePoliciesPageElements(),
   });
 
   return pages;
@@ -608,11 +596,64 @@ export function ensurePageLogos(pages: PageData[]): PageData[] {
   });
 }
 
-/** Initial quotation: header page + policies page, no products yet */
+/** Initial quotation: header page + policies, optionally with empty item fields on page one. */
 export function makeEmptyQuotationPages(
   locale: Locale = defaultLocale,
+  includeEmptyItemsOnFirstPage = false,
 ): PageData[] {
-  return buildPagesFromQuotation({ ...DUMMY_QUOTATION, products: [] }, locale);
+  if (!includeEmptyItemsOnFirstPage) {
+    return buildPagesFromQuotation(
+      { ...DUMMY_QUOTATION, products: [] },
+      locale,
+    );
+  }
+
+  const quotation = { ...DUMMY_QUOTATION, products: [] };
+  const pages = buildPagesFromQuotation(quotation, locale);
+  const firstPage = pages[0];
+  if (!firstPage) return pages;
+
+  const elements = makeFirstPageElements(true, locale).map((element) => {
+    const isProductField =
+      element.id.startsWith("product-") ||
+      element.id.startsWith("line-items-");
+    if (isProductField) {
+      return {
+        ...element,
+        text: "",
+        ...(element.table
+          ? {
+              table: {
+                ...element.table,
+                cells: element.table.cells.map((row) => row.map(() => "")),
+              },
+            }
+          : {}),
+      };
+    }
+    return {
+      ...element,
+      text: interpolate(element.text, quotation, undefined, locale),
+    };
+  });
+  const inventory = buildInventoryTable(
+    { name: "", reference: "", price: "", description: "", variants: [] },
+    "p1",
+    0,
+    locale,
+  );
+  if (inventory.table) {
+    inventory.table = {
+      ...inventory.table,
+      cells: inventory.table.cells.map((row) => row.map(() => "")),
+    };
+  }
+  const footerIndex = elements.findIndex((element) => element.id === "footer");
+  elements.splice(footerIndex < 0 ? elements.length : footerIndex, 0, inventory);
+
+  return pages.map((page) =>
+    page.id === firstPage.id ? { ...page, elements } : page,
+  );
 }
 
 /** Master template shown before products are added */

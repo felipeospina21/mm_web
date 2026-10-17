@@ -25,6 +25,7 @@ import {
 } from "@/lib/quotation-selection";
 import {
   takePendingQuotationClient,
+  takePendingManualQuotation,
   takePendingQuotationLoad,
   clearPendingQuotationLoad,
 } from "@/lib/quotation-load";
@@ -73,8 +74,8 @@ export default function EditorPage() {
 
   /**
    * Builds the initial quotation `meta` (client/company details + the
-   * products picked on the home page). Falls back to the dummy header-only
-   * quotation when nothing was picked.
+   * products picked on the home page). An empty start keeps the same blank
+   * product page used by the Add Page action.
    */
   const makeInitialMeta = useCallback((): QuotationData => {
     const picked = getQuotationProducts();
@@ -96,24 +97,29 @@ export default function EditorPage() {
     };
   }, []);
 
+  // The home-page manual-start action requests blank item fields on page one.
+  // A direct editor visit or a product lookup starts with header + policies.
+  const [isManualStart] = useState(() => takePendingManualQuotation());
+
   /**
    * Builds the initial quotation pages from the products selected on
-   * the home page: header page + first product, one page per additional
-   * product, and the fixed policies last page. Falls back to the empty
-   * quotation (header page + policies page) when nothing is picked.
+   * the home page: header page + product pages + fixed policies last page.
+   * Manual start puts blank item fields on page one; an untouched editor
+   * draft keeps only the header and policies pages.
    */
   const makeInitialPages = useCallback((): PageData[] => {
     const picked = getQuotationProducts();
-    if (picked.length === 0) return makeEmptyQuotationPages();
+    if (picked.length === 0) {
+      return makeEmptyQuotationPages(undefined, isManualStart);
+    }
     return buildPagesFromQuotation(makeInitialMeta());
-  }, [makeInitialMeta]);
+  }, [isManualStart, makeInitialMeta]);
 
   // Source `meta` for the quotation (client + products). Captured at mount;
   // persisted alongside the edited pages on save.
   const metaRef = useRef<QuotationData>(makeInitialMeta());
 
-  // Initial quotation pages: header page + policies page, plus one page
-  // per product picked on the home page.
+  // Product storage distinguishes loaded quotations from empty drafts.
   const [hasInitialProducts] = useState(
     () => getQuotationProducts().length > 0,
   );
@@ -208,7 +214,9 @@ export default function EditorPage() {
 
   const representativeQuery = api.quotation.representative.useQuery();
   const clientsQuery = api.customer.list.useQuery();
-  const canSave = Boolean(saved ?? hasInitialProducts ?? isDirty);
+  const canSave = Boolean(
+    selectedClientId && (saved || hasInitialProducts || isDirty),
+  );
 
   const handleAddProducts = useCallback(() => {
     setIsAddProductsOpen(true);
@@ -319,7 +327,7 @@ export default function EditorPage() {
     [setPagesWithHistory],
   );
   const handleSave = useCallback(() => {
-    if (!canSave) return;
+    if (!canSave || !selectedClientId) return;
     saveRevisionRef.current = editRevisionRef.current;
     const currentPages = pagesRef.current;
 
@@ -779,26 +787,26 @@ export default function EditorPage() {
   return (
     // h-screen minus the 56px global navbar rendered above by the layout,
     // so the editor fills the viewport exactly without the body scrolling.
-    <div className="flex h-[calc(100vh-56px)] flex-col">
+    <div className="flex h-[calc(100dvh-56px)] flex-col">
       {/* Slim editor toolbar. The global navbar (Catalog / Editor / Sign
           out) is rendered above this by the layout, so we only keep the
           editor-specific actions here — collapsed into a dropdown. */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-base font-semibold">{t("editor.title")}</h1>
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-y-2 border-b border-neutral-200 bg-white px-2 py-2 sm:h-12 sm:flex-nowrap sm:px-4 sm:py-0">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <h1 className="truncate text-sm font-semibold sm:text-base">{t("editor.title")}</h1>
           {/* Draft until saved; shows the DB-assigned number once persisted. */}
           {saved ? (
-            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+            <span className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800 sm:px-2.5 sm:text-xs">
               {t("editor.quotationNumber", { number: saved.quotationNumber })}
             </span>
           ) : (
-            <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-500">
+            <span className="whitespace-nowrap rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-500 sm:px-2.5 sm:text-xs">
               {t("editor.draft")}
             </span>
           )}
           {/* Unsaved-changes indicator. */}
           {isDirty && (
-            <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+            <span className="hidden items-center gap-1 text-xs font-medium text-amber-600 sm:flex">
               <span
                 className="h-1.5 w-1.5 rounded-full bg-amber-500"
                 aria-hidden="true"
@@ -807,7 +815,7 @@ export default function EditorPage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-end gap-1 sm:w-auto sm:gap-2">
           <ActionsMenu
             canUndo={canUndo}
             canRedo={canRedo}
@@ -820,7 +828,7 @@ export default function EditorPage() {
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending || !canSave}
-            className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="whitespace-nowrap rounded bg-green-600 px-2 py-1.5 text-xs text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
           >
             {saveMutation.isPending
               ? t("editor.saving")
@@ -831,7 +839,7 @@ export default function EditorPage() {
           <button
             onClick={handleExportPdf}
             disabled={!saved || isExporting}
-            className="bg-primary rounded px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="bg-primary whitespace-nowrap rounded px-2 py-1.5 text-xs text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
           >
             {isExporting ? t("editor.exporting") : t("editor.exportPdf")}
           </button>

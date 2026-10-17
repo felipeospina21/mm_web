@@ -9,6 +9,7 @@
  */
 const PENDING_LOAD_KEY = "mm_pending_quotation_load";
 const DRAFT_CLIENT_KEY = "mm_draft_quotation_client";
+const PENDING_MANUAL_QUOTATION_KEY = "mm_pending_manual_quotation";
 
 /** Stash the id of a quotation to load, then navigate to the editor. */
 export function setPendingQuotationLoad(id: string): void {
@@ -42,4 +43,18 @@ export function setPendingQuotationClient(id: string | null): void {
 export function takePendingQuotationClient(): string | null {
   if (typeof window === "undefined") return null;
   return window.sessionStorage.getItem(DRAFT_CLIENT_KEY);
+}
+
+/** Mark that the next new editor draft should start with blank item fields. */
+export function setPendingManualQuotation(): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(PENDING_MANUAL_QUOTATION_KEY, "true");
+}
+
+/** Consume the manual-draft handoff once when the editor mounts. */
+export function takePendingManualQuotation(): boolean {
+  if (typeof window === "undefined") return false;
+  const pending = window.sessionStorage.getItem(PENDING_MANUAL_QUOTATION_KEY);
+  window.sessionStorage.removeItem(PENDING_MANUAL_QUOTATION_KEY);
+  return pending === "true";
 }

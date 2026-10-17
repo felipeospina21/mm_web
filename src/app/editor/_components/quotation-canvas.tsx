@@ -374,18 +374,23 @@ export default function QuotationCanvas({
       ref={containerRef}
       tabIndex={0}
       onPaste={handlePaste}
-      className="relative h-full w-full overflow-auto"
+      className="relative h-full w-full overflow-auto overscroll-contain"
       style={{ background: STAGE_BG }}
     >
       <Stage
         ref={handleStageRef}
-        width={stageSize.width}
+        width={Math.max(stageSize.width, PAGE_WIDTH + 80)}
         height={Math.max(
           stageSize.height,
           pages.length * (PAGE_HEIGHT + PAGE_GAP) + PAGE_GAP,
         )}
         style={{ background: STAGE_BG }}
         onMouseDown={handleStageMouseDown}
+        onTouchStart={(event) => {
+          containerRef.current?.focus({ preventScroll: true });
+          if (event.target === event.target.getStage()) setSelectedId(null);
+          updateActivePageFromPointer();
+        }}
         onMouseMove={updateActivePageFromPointer}
       >
         <Layer>
@@ -428,9 +433,18 @@ export default function QuotationCanvas({
                         };
                       }
                     },
+                    onTouchStart: () => {
+                      setSelectedId(element.id);
+                      onActivePageChange(page.pageNumber);
+                    },
                     onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) =>
                       handleDragEnd(page.id, e),
                     onDblClick: () => {
+                      if (element.type === "text" && element.isEditable) {
+                        handleTextDblClick(page, element);
+                      }
+                    },
+                    onDblTap: () => {
                       if (element.type === "text" && element.isEditable) {
                         handleTextDblClick(page, element);
                       }
@@ -446,7 +460,10 @@ export default function QuotationCanvas({
                         table={element.table}
                         isDraggable={element.isDraggable}
                         isSelected={selectedId === element.id}
-                        onSelect={() => setSelectedId(element.id)}
+                        onSelect={() => {
+                          setSelectedId(element.id);
+                          onActivePageChange(page.pageNumber);
+                        }}
                         onDblClickCell={(row, col) => {
                           if (element.isEditable) {
                             handleCellDblClick(page, element, row, col);

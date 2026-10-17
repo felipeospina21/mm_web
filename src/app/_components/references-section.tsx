@@ -48,7 +48,7 @@ export const ReferencesSection: FC<ReferencesSectionProps> = ({
         className="focus:ring-primary w-full resize-y rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm outline-none focus:border-white focus:ring-1"
       />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span
           className={`text-xs ${
             overLimit ? "text-red-600" : "text-neutral-400"

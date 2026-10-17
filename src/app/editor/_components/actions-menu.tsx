@@ -62,7 +62,7 @@ export function ActionsMenu({
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-1.5 rounded border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm hover:bg-neutral-200"
+        className="flex items-center gap-1.5 rounded border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-xs hover:bg-neutral-200 sm:px-3 sm:text-sm"
       >
         {t("actions.label")}
         <svg
