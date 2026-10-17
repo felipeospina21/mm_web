@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { SearchableSelect } from "@/components/searchable-select";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 
@@ -48,30 +49,27 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
       >
         {t("client.label")}
       </label>
-      <select
+      <SearchableSelect
         id="client-select"
-        required
-        value={value ?? ""}
-        onChange={(event) => {
-          if (event.target.value === "__add_new__") {
-            setIsCreateOpen(true);
-            return;
-          }
+        label={t("client.select")}
+        searchLabel={t("client.search")}
+        noResultsLabel={t("client.noResults")}
+        options={(clientsQuery.data ?? []).map((client) => ({
+          value: client.id,
+          label: client.name,
+        }))}
+        value={value}
+        onChange={(clientId) => {
           const selected = clientsQuery.data?.find(
-            (client) => client.id === event.target.value,
+            (client) => client.id === clientId,
           );
           onChange(selected ?? null);
         }}
-        className="focus:ring-primary w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-white focus:ring-1"
-      >
-        <option value="">{t("client.select")}</option>
-        {clientsQuery.data?.map((client) => (
-          <option key={client.id} value={client.id}>
-            {client.name}
-          </option>
-        ))}
-        <option value="__add_new__">{t("client.addNew")}</option>
-      </select>
+        footerAction={{
+          label: t("client.addNew"),
+          onSelect: () => setIsCreateOpen(true),
+        }}
+      />
       {clientsQuery.error && (
         <p role="alert" className="text-sm text-red-700">
           {t("client.loadFailed")}
