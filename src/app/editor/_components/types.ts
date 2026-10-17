@@ -79,6 +79,7 @@ export interface Product {
   reference: string;
   price: string;
   description: string;
+  categories?: string[];
   /** First product image URL (main image), rendered on the product page. */
   imageUrl?: string | null;
   /** Color variants (local/zone inventory + packaging) for the inventory table. */

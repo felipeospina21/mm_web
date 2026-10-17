@@ -625,7 +625,7 @@ export default function QuotationCanvas({
           page.elements.some(
             (element) =>
               element.id === selectedId &&
-              (element.isEditable || element.isRowDeletable),
+              (element.isEditable ?? element.isRowDeletable),
           ),
         ) && (
           <FloatingToolbar

@@ -69,7 +69,7 @@ export function ReferenceLookup() {
             type="button"
             onClick={handleStartManualQuotation}
             disabled={!clientId}
-            className="w-full rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="border-primary text-primary w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {t("lookup.startManual")}
           </button>

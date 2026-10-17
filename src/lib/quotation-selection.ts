@@ -22,6 +22,7 @@ export interface QuotationProduct {
   reference: string;
   price: string;
   description: string;
+  categories?: string[];
   /** First product image URL (main image), when the source provides one. */
   imageUrl?: string | null;
   /** Color variants (inventory + packaging) captured when the product was picked. */

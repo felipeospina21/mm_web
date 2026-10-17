@@ -78,7 +78,7 @@ function ResolvedSummary({ resolved }: { resolved: QuotationProduct[] }) {
               <span className="flex-none rounded-full bg-neutral-100 px-2 py-0.5 font-mono text-xs text-neutral-600">
                 {product.reference}
               </span>
-              <span className="break-words font-semibold text-neutral-900">
+              <span className="font-semibold break-words text-neutral-900">
                 {product.name}
               </span>
             </span>

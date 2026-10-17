@@ -339,15 +339,27 @@ export function buildInventoryTable(
   if (variants.length === 0) {
     cells.push(["—", "—", "—"]);
   } else {
+    const consultationOnly = product.categories?.some(
+      (category) =>
+        category.trim().toLocaleLowerCase() === "produccion nacional",
+    );
     for (const variant of variants) {
       cells.push([
         variant.colorName,
-        variant.localInventory.toLocaleString(
-          locale === "es" ? "es-CO" : "en-US",
-        ),
-        variant.zoneInventory.toLocaleString(
-          locale === "es" ? "es-CO" : "en-US",
-        ),
+        consultationOnly &&
+        variant.localInventory === 0 &&
+        variant.zoneInventory === 0
+          ? t("template.inventoryConsultAdvisor", {}, locale)
+          : variant.localInventory.toLocaleString(
+              locale === "es" ? "es-CO" : "en-US",
+            ),
+        consultationOnly &&
+        variant.localInventory === 0 &&
+        variant.zoneInventory === 0
+          ? ""
+          : variant.zoneInventory.toLocaleString(
+              locale === "es" ? "es-CO" : "en-US",
+            ),
       ]);
     }
   }

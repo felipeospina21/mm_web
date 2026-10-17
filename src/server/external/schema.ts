@@ -289,6 +289,7 @@ const rawProductSchema = z
     regular_price: z.unknown().optional(),
     sale_price: z.unknown().optional(),
     packaging_type: z.string().optional(),
+    categories: z.array(z.string()).nullish(),
     inventory: z.union([z.number(), z.string()]).optional(),
     local_inventory: z.union([z.number(), z.string()]).optional(),
     zone_inventory: z.union([z.number(), z.string()]).optional(),
@@ -415,6 +416,7 @@ export function normalizeProduct(input: unknown): NormalizedProduct {
   const packaging = raw.packaging_type?.trim() ?? null;
 
   const imageUrl = firstImageUrl(raw.images);
+  const categories = raw.categories ?? [];
 
   // Variable products carry `variations[]`; simple products do not — for those
   // we synthesize a single inventory row from the product-level `inventory`
@@ -431,6 +433,7 @@ export function normalizeProduct(input: unknown): NormalizedProduct {
     reference,
     price,
     description,
+    categories,
     imageUrl,
     variants,
   };

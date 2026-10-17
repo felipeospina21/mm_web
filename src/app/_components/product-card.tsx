@@ -25,6 +25,7 @@ export interface CatalogProduct {
   name: string;
   reference: string;
   description: string | null;
+  categories?: string[];
   price: string;
   imageUrl: string | null;
   variants: {
@@ -59,6 +60,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
       reference: product.reference,
       price: product.price,
       description: product.description ?? "",
+      categories: product.categories,
       imageUrl: product.imageUrl,
       variants: product.variants.map((variant) => ({
         id: variant.id,

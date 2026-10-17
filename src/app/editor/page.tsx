@@ -86,6 +86,7 @@ export default function EditorPage() {
         reference: product.reference,
         price: product.price,
         description: product.description,
+        categories: product.categories,
         imageUrl: product.imageUrl ?? null,
         variants: product.variants.map((variant) => ({
           colorName: variant.colorName,
@@ -247,6 +248,7 @@ export default function EditorPage() {
         reference: product.reference,
         price: product.price,
         description: product.description,
+        categories: product.categories,
         imageUrl: product.imageUrl ?? null,
         variants: product.variants.map((variant) => ({
           colorName: variant.colorName,

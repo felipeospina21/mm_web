@@ -51,7 +51,7 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
               key={href}
               href={href}
               aria-current={isActive ? "page" : undefined}
-              className={`whitespace-nowrap px-2 py-1.5 text-xs font-medium transition sm:px-3 sm:text-sm ${
+              className={`px-2 py-1.5 text-xs font-medium whitespace-nowrap transition sm:px-3 sm:text-sm ${
                 isActive
                   ? "border-primary border-b-2"
                   : "hover:text-primary text-neutral-600"
