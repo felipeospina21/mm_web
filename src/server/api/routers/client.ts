@@ -70,6 +70,11 @@ export const clientRouter = createTRPCRouter({
     .input(clientInput)
     .mutation(async ({ ctx, input }) =>
       ctx.db.transaction(async (tx) => {
+        const [owner] = await tx
+          .select({ userAlias: users.alias })
+          .from(users)
+          .where(eq(users.id, ctx.session.user.id))
+          .limit(1);
         const [client] = await tx
           .insert(clients)
           .values({
@@ -110,6 +115,7 @@ export const clientRouter = createTRPCRouter({
 
         return {
           ...client!,
+          userAlias: owner?.userAlias ?? null,
           contacts: createdContacts,
         };
       }),

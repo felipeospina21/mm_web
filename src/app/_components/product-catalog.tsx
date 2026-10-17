@@ -24,7 +24,16 @@ export function ProductCatalog() {
     );
 
   const products: CatalogProduct[] =
-    data?.pages.flatMap((page) => page.items) ?? [];
+    data?.pages.flatMap((page) =>
+      page.items.map((product) => ({
+        ...product,
+        variants: product.variants.map((variant) => ({
+          ...variant,
+          localInventory: variant.stock,
+          zoneInventory: 0,
+        })),
+      })),
+    ) ?? [];
 
   // Infinite scroll: observe a sentinel below the grid and fetch the next
   // page when it (or the 200px margin around it) enters the viewport.

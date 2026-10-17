@@ -74,6 +74,8 @@ export default function QuotationCanvas({
   });
   /** id of the currently selected element (globally unique across pages) */
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedTableRows, setSelectedTableRows] = useState<number[]>([]);
+  const [tableRowAnchor, setTableRowAnchor] = useState<number | null>(null);
   /** id of the text element being inline-edited */
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingBox, setEditingBox] = useState<{
@@ -460,9 +462,40 @@ export default function QuotationCanvas({
                         table={element.table}
                         isDraggable={element.isDraggable}
                         isSelected={selectedId === element.id}
+                        selectedRows={
+                          selectedId === element.id ? selectedTableRows : []
+                        }
                         onSelect={() => {
                           setSelectedId(element.id);
                           onActivePageChange(page.pageNumber);
+                        }}
+                        onSelectRow={(row, extendSelection) => {
+                          setSelectedId(element.id);
+                          onActivePageChange(page.pageNumber);
+                          if (row === 0) {
+                            setSelectedTableRows([]);
+                            setTableRowAnchor(null);
+                            return;
+                          }
+
+                          if (
+                            extendSelection &&
+                            selectedId === element.id &&
+                            tableRowAnchor !== null
+                          ) {
+                            const start = Math.min(tableRowAnchor, row);
+                            const end = Math.max(tableRowAnchor, row);
+                            setSelectedTableRows(
+                              Array.from(
+                                { length: end - start + 1 },
+                                (_, index) => start + index,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setSelectedTableRows([row]);
+                          setTableRowAnchor(row);
                         }}
                         onDblClickCell={(row, col) => {
                           if (element.isEditable) {
@@ -590,12 +623,19 @@ export default function QuotationCanvas({
         !editingId &&
         pages.some((page) =>
           page.elements.some(
-            (element) => element.id === selectedId && element.isEditable,
+            (element) =>
+              element.id === selectedId &&
+              (element.isEditable || element.isRowDeletable),
           ),
         ) && (
           <FloatingToolbar
             pages={pages}
             selectedId={selectedId}
+            selectedRows={selectedTableRows}
+            onClearSelectedRows={() => {
+              setSelectedTableRows([]);
+              setTableRowAnchor(null);
+            }}
             onElementChange={onElementChange}
             onDeleteElement={(id) => {
               onDeleteElement(id);

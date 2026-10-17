@@ -90,6 +90,8 @@ export default function EditorPage() {
         variants: product.variants.map((variant) => ({
           colorName: variant.colorName,
           colorHex: variant.colorHex,
+          localInventory: variant.localInventory,
+          zoneInventory: variant.zoneInventory,
           stock: variant.stock,
           packaging: variant.packaging,
         })),
@@ -249,6 +251,8 @@ export default function EditorPage() {
         variants: product.variants.map((variant) => ({
           colorName: variant.colorName,
           colorHex: variant.colorHex,
+          localInventory: variant.localInventory,
+          zoneInventory: variant.zoneInventory,
           stock: variant.stock,
           packaging: variant.packaging,
         })),

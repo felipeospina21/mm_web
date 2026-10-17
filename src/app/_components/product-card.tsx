@@ -14,6 +14,8 @@ export interface ProductVariantView {
   id: string;
   colorName: string;
   colorHex: string;
+  localInventory: number;
+  zoneInventory: number;
   stock: number;
   packaging: string | null;
 }
@@ -29,6 +31,8 @@ export interface CatalogProduct {
     id: string;
     colorName: string;
     colorHex: string;
+    localInventory: number;
+    zoneInventory: number;
     stock: number;
     packaging: string | null;
   }[];
@@ -60,6 +64,8 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
         id: variant.id,
         colorName: variant.colorName,
         colorHex: variant.colorHex,
+        localInventory: variant.localInventory,
+        zoneInventory: variant.zoneInventory,
         stock: variant.stock,
         packaging: variant.packaging,
       })),

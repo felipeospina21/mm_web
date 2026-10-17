@@ -12,7 +12,9 @@ interface TableNodeProps {
   table: TableData;
   isDraggable: boolean;
   isSelected: boolean;
+  selectedRows: number[];
   onSelect: () => void;
+  onSelectRow: (row: number, extendSelection: boolean) => void;
   onDblClickCell: (row: number, col: number) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
@@ -31,8 +33,10 @@ export default function TableNode({
   table,
   isDraggable,
   isSelected,
+  selectedRows,
   onSelect,
   onDblClickCell,
+  onSelectRow,
   onDragEnd,
   onTransformEnd,
   dragBoundFunc,
@@ -106,6 +110,8 @@ export default function TableNode({
                 strokeWidth={1}
                 data-row={rowIndex}
                 data-col={colIndex}
+                onClick={(event) => onSelectRow(rowIndex, event.evt.shiftKey)}
+                onTap={() => onSelectRow(rowIndex, false)}
               />
               <Text
                 x={cellX + 8}
@@ -122,6 +128,20 @@ export default function TableNode({
           );
         }),
       )}
+      {selectedRows
+        .filter((row) => row > 0 && row < cells.length)
+        .map((row) => (
+          <Rect
+            key={`selected-row-${row}`}
+            x={0}
+            y={row * rowHeight}
+            width={colWidths.reduce((total, width) => total + width, 0)}
+            height={rowHeight}
+            stroke={theme.colors.primary}
+            strokeWidth={2}
+            listening={false}
+          />
+        ))}
     </Group>
   );
 }

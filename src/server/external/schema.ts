@@ -265,6 +265,8 @@ const rawVariantSchema = z
     sku: z.string().optional(),
     name: z.string().optional(),
     inventory: z.union([z.number(), z.string()]).optional(),
+    local_inventory: z.union([z.number(), z.string()]).optional(),
+    zone_inventory: z.union([z.number(), z.string()]).optional(),
     regular_price: z.unknown().optional(),
     sale_price: z.unknown().optional(),
     net_price: z.unknown().optional(),
@@ -323,9 +325,19 @@ function normalizeVariant(
   const colorHex =
     colorName === "—" ? DEFAULT_HEX : colorToHex(colorName, warnings);
 
-  const stockAmount = toAmount(raw.inventory);
-  const stock = stockAmount !== null ? Math.max(0, Math.trunc(stockAmount)) : 0;
-  if (stockAmount === null && raw.inventory !== undefined) {
+  const rawLocal = toAmount(raw.local_inventory);
+  const rawZone = toAmount(raw.zone_inventory);
+  const legacyStock =
+    rawLocal === null && rawZone === null ? toAmount(raw.inventory) : null;
+  const localInventory = Math.max(0, Math.trunc(rawLocal ?? legacyStock ?? 0));
+  const zoneInventory = Math.max(0, Math.trunc(rawZone ?? 0));
+  const stock = localInventory + zoneInventory;
+  if (
+    rawLocal === null &&
+    rawZone === null &&
+    raw.inventory !== undefined &&
+    legacyStock === null
+  ) {
     warnings.push(
       `variant ${raw.sku ?? id} had non-numeric inventory — defaulted to 0`,
     );
@@ -335,6 +347,8 @@ function normalizeVariant(
     id,
     colorName,
     colorHex,
+    localInventory,
+    zoneInventory,
     stock,
     packaging: parentPackaging,
   };
@@ -344,22 +358,25 @@ function normalizeVariant(
  * Build a single inventory row from PRODUCT-level fields, for simple products
  * that have no `variations[]`. Color is a dash (there is no variant color).
  *
- * Stock for a simple product is `local_inventory + zone_inventory` (the
- * on-hand + nearby-zone availability), NOT the plain `inventory` field —
- * that distinction is specific to the no-variation case. Packaging comes from
- * the product's `packaging_type`. The row id is derived from the sku.
+ * Simple products use their separate local and zone inventory fields.
+ * Packaging comes from the product's `packaging_type`; the row id is derived
+ * from the sku.
  */
 function productLevelVariant(
   raw: z.infer<typeof rawProductSchema>,
   packaging: string | null,
 ): QuotationProductVariant {
-  const local = toAmount(raw.local_inventory) ?? 0;
-  const zone = toAmount(raw.zone_inventory) ?? 0;
-  const stock = Math.max(0, Math.trunc(local + zone));
+  const rawLocal = toAmount(raw.local_inventory);
+  const rawZone = toAmount(raw.zone_inventory);
+  const localInventory = Math.max(0, Math.trunc(rawLocal ?? 0));
+  const zoneInventory = Math.max(0, Math.trunc(rawZone ?? 0));
+  const stock = localInventory + zoneInventory;
   return {
     id: `${raw.sku}-default`,
     colorName: "—",
     colorHex: DEFAULT_HEX,
+    localInventory,
+    zoneInventory,
     stock,
     packaging,
   };

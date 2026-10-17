@@ -237,18 +237,6 @@ function makeFirstPageElements(
   return [
     ...makeFirstPageHeader(locale),
     ...(withProduct ? makeProductElements("p1", 0, locale) : []),
-    // {
-    //   id: "customer-name-line",
-    //   type: "text",
-    //   x: 40,
-    //   y: 120,
-    //   width: 500,
-    //   height: 30,
-    //   text: t("template.customer", { name: "{{customerName}}" }, locale),
-    //   fontSize: 18,
-    //   fill: "#333333",
-    //   isDraggable: true,
-    // },
     ...makeFooter(),
   ];
 }
@@ -335,7 +323,7 @@ export function buildInventoryTable(
   verticalOffset = 0,
   locale: Locale = defaultLocale,
 ): TemplateElement {
-  const colWidths = [140, 70];
+  const colWidths = [140, 70, 70];
   const rowHeight = 22;
   const fontSize = 10;
 
@@ -343,19 +331,23 @@ export function buildInventoryTable(
   const cells: string[][] = [
     [
       t("template.inventoryColor", {}, locale),
-      t("template.inventoryStock", {}, locale),
+      t("template.inventoryLocal", {}, locale),
+      t("template.inventoryZone", {}, locale),
     ],
   ];
 
   if (variants.length === 0) {
-    cells.push(["—", "—"]);
+    cells.push(["—", "—", "—"]);
   } else {
     for (const variant of variants) {
       cells.push([
         variant.colorName,
-        variant.stock > 0
-          ? variant.stock.toLocaleString(locale === "es" ? "es-CO" : "en-US")
-          : t("template.outOfStock", {}, locale),
+        variant.localInventory.toLocaleString(
+          locale === "es" ? "es-CO" : "en-US",
+        ),
+        variant.zoneInventory.toLocaleString(
+          locale === "es" ? "es-CO" : "en-US",
+        ),
       ]);
     }
   }
@@ -382,6 +374,7 @@ export function buildInventoryTable(
     isDraggable: true,
     isEditable: false,
     isDeletable: true,
+    isRowDeletable: true,
   };
 }
 
@@ -615,8 +608,7 @@ export function makeEmptyQuotationPages(
 
   const elements = makeFirstPageElements(true, locale).map((element) => {
     const isProductField =
-      element.id.startsWith("product-") ||
-      element.id.startsWith("line-items-");
+      element.id.startsWith("product-") || element.id.startsWith("line-items-");
     if (isProductField) {
       return {
         ...element,
@@ -649,7 +641,11 @@ export function makeEmptyQuotationPages(
     };
   }
   const footerIndex = elements.findIndex((element) => element.id === "footer");
-  elements.splice(footerIndex < 0 ? elements.length : footerIndex, 0, inventory);
+  elements.splice(
+    footerIndex < 0 ? elements.length : footerIndex,
+    0,
+    inventory,
+  );
 
   return pages.map((page) =>
     page.id === firstPage.id ? { ...page, elements } : page,

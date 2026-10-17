@@ -13,6 +13,8 @@ interface FloatingToolbarProps {
   ) => void;
   onDeleteElement: (elementId: string) => void;
   onDuplicateElement: (elementId: string) => void;
+  selectedRows: number[];
+  onClearSelectedRows: () => void;
 }
 
 const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48];
@@ -39,10 +41,12 @@ export default function FloatingToolbar({
   onElementChange,
   onDeleteElement,
   onDuplicateElement,
+  selectedRows,
+  onClearSelectedRows,
 }: FloatingToolbarProps) {
   const page = pages.find((p) => p.elements.some((el) => el.id === selectedId));
   const element = page?.elements.find((el) => el.id === selectedId);
-  if (!page || !element?.isEditable) return null;
+  if (!page || (!element?.isEditable && !element?.isRowDeletable)) return null;
 
   const patch = (p: Partial<TemplateElement>) =>
     onElementChange(page.id, element.id, p);
@@ -81,6 +85,20 @@ export default function FloatingToolbar({
         cells: element.table.cells.slice(0, -1),
       },
     });
+  };
+
+  const removeSelectedRows = () => {
+    if (!element.table || selectedRows.length === 0) return;
+    const rowsToRemove = new Set(selectedRows);
+    const cells = element.table.cells.filter(
+      (_, index) => index === 0 || !rowsToRemove.has(index),
+    );
+    if (cells.length === element.table.cells.length) return;
+    patch({
+      height: element.table.rowHeight * cells.length,
+      table: { ...element.table, cells },
+    });
+    onClearSelectedRows();
   };
 
   const addColumn = () => {
@@ -195,7 +213,7 @@ export default function FloatingToolbar({
         </label>
       )}
 
-      {isTable && (
+      {isTable && element.isEditable && (
         <>
           <span className="text-xs text-neutral-700">{t("toolbar.table")}</span>
           <button
@@ -227,6 +245,17 @@ export default function FloatingToolbar({
             − {t("toolbar.column")}
           </button>
         </>
+      )}
+
+      {isTable && element.isRowDeletable && (
+        <button
+          className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={removeSelectedRows}
+          disabled={selectedRows.length === 0}
+          title={t("toolbar.removeSelectedRows")}
+        >
+          {t("toolbar.removeSelectedRows")}
+        </button>
       )}
 
       <span className="h-5 w-px bg-neutral-200" />

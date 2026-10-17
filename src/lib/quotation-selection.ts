@@ -4,11 +4,13 @@
  * selection survives navigation between the catalog and the editor.
  */
 
-/** A color variant of a product, with the stock shown in the inventory table. */
+/** A color variant with local, zone, and combined inventory amounts. */
 export interface QuotationProductVariant {
   id: string;
   colorName: string;
   colorHex: string;
+  localInventory: number;
+  zoneInventory: number;
   stock: number;
   packaging: string | null;
 }
@@ -22,7 +24,7 @@ export interface QuotationProduct {
   description: string;
   /** First product image URL (main image), when the source provides one. */
   imageUrl?: string | null;
-  /** Color variants (stock + packaging) captured when the product was picked. */
+  /** Color variants (inventory + packaging) captured when the product was picked. */
   variants: QuotationProductVariant[];
 }
 
@@ -39,7 +41,11 @@ function readAll(): QuotationProduct[] {
     // normalize so consumers can always rely on it being an array.
     return parsed.map((product) => ({
       ...product,
-      variants: product.variants ?? [],
+      variants: (product.variants ?? []).map((variant) => ({
+        ...variant,
+        localInventory: variant.localInventory ?? variant.stock,
+        zoneInventory: variant.zoneInventory ?? 0,
+      })),
     }));
   } catch {
     return [];

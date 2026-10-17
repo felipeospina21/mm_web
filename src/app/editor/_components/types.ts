@@ -49,6 +49,8 @@ export interface TemplateElement {
   isEditable?: boolean;
   /** Whether the element can be deleted; defaults to isEditable. */
   isDeletable?: boolean;
+  /** Whether a table row can be selected and deleted without editing cells. */
+  isRowDeletable?: boolean;
   /** Table content (only meaningful for type === 'table') */
   table?: TableData;
   /** Image source as data URL (only meaningful for type === 'image') */
@@ -65,6 +67,8 @@ export interface PageData {
 export interface ProductVariant {
   colorName: string;
   colorHex: string;
+  localInventory: number;
+  zoneInventory: number;
   stock: number;
   packaging: string | null;
 }
@@ -77,7 +81,7 @@ export interface Product {
   description: string;
   /** First product image URL (main image), rendered on the product page. */
   imageUrl?: string | null;
-  /** Color variants (stock + packaging) for the inventory table. */
+  /** Color variants (local/zone inventory + packaging) for the inventory table. */
   variants?: ProductVariant[];
 }
 

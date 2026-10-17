@@ -105,8 +105,10 @@ describe("normalizeProduct — sample payload", () => {
       "colorHex",
       "colorName",
       "id",
+      "localInventory",
       "packaging",
       "stock",
+      "zoneInventory",
     ]);
   });
 });
