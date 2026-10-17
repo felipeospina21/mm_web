@@ -215,7 +215,7 @@ export default function EditorPage() {
   const representativeQuery = api.quotation.representative.useQuery();
   const clientsQuery = api.customer.list.useQuery();
   const canSave = Boolean(
-    selectedClientId && (saved || hasInitialProducts || isDirty),
+    selectedClientId && (saved ?? hasInitialProducts ?? isDirty),
   );
 
   const handleAddProducts = useCallback(() => {
@@ -369,7 +369,7 @@ export default function EditorPage() {
                   ? {
                       ...element,
                       text: t("template.customer", {
-                        name: client.contactName ?? "",
+                        name: client.contacts[0]?.name ?? "",
                       }),
                     }
                   : element,
@@ -383,7 +383,7 @@ export default function EditorPage() {
     metaRef.current = {
       ...metaRef.current,
       companyName: client.name,
-      customerName: client.contactName ?? "",
+      customerName: client.contacts[0]?.name ?? "",
     };
     pendingHomeClientIdRef.current = null;
   }, [clientsQuery.data, pendingLoadId, selectedClientId]);
@@ -793,14 +793,16 @@ export default function EditorPage() {
           editor-specific actions here — collapsed into a dropdown. */}
       <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-y-2 border-b border-neutral-200 bg-white px-2 py-2 sm:h-12 sm:flex-nowrap sm:px-4 sm:py-0">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <h1 className="truncate text-sm font-semibold sm:text-base">{t("editor.title")}</h1>
+          <h1 className="truncate text-sm font-semibold sm:text-base">
+            {t("editor.title")}
+          </h1>
           {/* Draft until saved; shows the DB-assigned number once persisted. */}
           {saved ? (
-            <span className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800 sm:px-2.5 sm:text-xs">
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-green-800 sm:px-2.5 sm:text-xs">
               {t("editor.quotationNumber", { number: saved.quotationNumber })}
             </span>
           ) : (
-            <span className="whitespace-nowrap rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-500 sm:px-2.5 sm:text-xs">
+            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-neutral-500 sm:px-2.5 sm:text-xs">
               {t("editor.draft")}
             </span>
           )}
@@ -827,8 +829,8 @@ export default function EditorPage() {
           />
           <button
             onClick={handleSave}
-            disabled={saveMutation.isPending || !canSave}
-            className="whitespace-nowrap rounded bg-green-600 px-2 py-1.5 text-xs text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
+            disabled={saveMutation.isPending ?? !canSave}
+            className="rounded bg-green-600 px-2 py-1.5 text-xs whitespace-nowrap text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
           >
             {saveMutation.isPending
               ? t("editor.saving")
@@ -839,7 +841,7 @@ export default function EditorPage() {
           <button
             onClick={handleExportPdf}
             disabled={!saved || isExporting}
-            className="bg-primary whitespace-nowrap rounded px-2 py-1.5 text-xs text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
+            className="bg-primary rounded px-2 py-1.5 text-xs whitespace-nowrap text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
           >
             {isExporting ? t("editor.exporting") : t("editor.exportPdf")}
           </button>

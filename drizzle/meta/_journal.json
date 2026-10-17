@@ -71,6 +71,20 @@
       "when": 1792086381909,
       "tag": "0009_melodic_bloodstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792252800000,
+      "tag": "0010_client_contacts",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792368000000,
+      "tag": "0011_user_alias_ownership",
+      "breakpoints": true
     }
   ]
 }

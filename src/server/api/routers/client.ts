@@ -1,66 +1,117 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { clients } from "@/server/db/schema";
+import { clientContacts, clients, users } from "@/server/db/schema";
+
+const contactInput = z.object({
+  name: z.string().trim().min(1).max(256),
+  phone: z.string().trim().max(32).optional(),
+  email: z.string().trim().email().max(255).or(z.literal("")).optional(),
+});
 
 const clientInput = z.object({
   name: z.string().trim().min(1).max(256),
   companyId: z.string().trim().max(255).optional(),
   address: z.string().trim().max(4000).optional(),
   phone: z.string().trim().max(32).optional(),
-  contactName: z.string().trim().max(256).optional(),
-  contactPhone: z.string().trim().max(32).optional(),
-  contactEmail: z.string().trim().email().max(255).or(z.literal("")).optional(),
+  contacts: z.array(contactInput).default([]),
 });
 
 const nullableText = (value: string | undefined) =>
   value?.trim() ? value.trim() : null;
 
 export const clientRouter = createTRPCRouter({
-  list: protectedProcedure.query(({ ctx }) =>
-    ctx.db
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const clientRows = await ctx.db
       .select({
         id: clients.id,
         name: clients.name,
         companyId: clients.companyId,
+        userAlias: users.alias,
         address: clients.address,
         phone: clients.phone,
-        contactName: clients.contactName,
-        contactPhone: clients.contactPhone,
-        contactEmail: clients.contactEmail,
       })
       .from(clients)
-      .where(eq(clients.userId, ctx.session.user.id))
-      .orderBy(asc(clients.name)),
-  ),
+      .innerJoin(users, eq(clients.userId, users.id))
+      .orderBy(asc(clients.name));
+    if (clientRows.length === 0) return [];
+
+    const contactRows = await ctx.db
+      .select({
+        id: clientContacts.id,
+        clientId: clientContacts.clientId,
+        name: clientContacts.name,
+        phone: clientContacts.phone,
+        email: clientContacts.email,
+      })
+      .from(clientContacts)
+      .where(
+        inArray(
+          clientContacts.clientId,
+          clientRows.map(({ id }) => id),
+        ),
+      )
+      .orderBy(asc(clientContacts.name));
+    const contactsByClient = new Map<string, typeof contactRows>();
+    for (const contact of contactRows) {
+      const clientContactsList = contactsByClient.get(contact.clientId) ?? [];
+      clientContactsList.push(contact);
+      contactsByClient.set(contact.clientId, clientContactsList);
+    }
+
+    return clientRows.map((client) => ({
+      ...client,
+      contacts: contactsByClient.get(client.id) ?? [],
+    }));
+  }),
 
   create: protectedProcedure
     .input(clientInput)
-    .mutation(async ({ ctx, input }) => {
-      const [client] = await ctx.db
-        .insert(clients)
-        .values({
-          ...input,
-          companyId: nullableText(input.companyId),
-          address: nullableText(input.address),
-          phone: nullableText(input.phone),
-          contactName: nullableText(input.contactName),
-          contactPhone: nullableText(input.contactPhone),
-          contactEmail: nullableText(input.contactEmail),
-          userId: ctx.session.user.id,
-        })
-        .returning({
-          id: clients.id,
-          name: clients.name,
-          companyId: clients.companyId,
-          address: clients.address,
-          phone: clients.phone,
-          contactName: clients.contactName,
-          contactPhone: clients.contactPhone,
-          contactEmail: clients.contactEmail,
-        });
+    .mutation(async ({ ctx, input }) =>
+      ctx.db.transaction(async (tx) => {
+        const [client] = await tx
+          .insert(clients)
+          .values({
+            name: input.name,
+            companyId: nullableText(input.companyId),
+            address: nullableText(input.address),
+            phone: nullableText(input.phone),
+            userId: ctx.session.user.id,
+          })
+          .returning({
+            id: clients.id,
+            name: clients.name,
+            companyId: clients.companyId,
+            address: clients.address,
+            phone: clients.phone,
+          });
 
-      return client!;
-    }),
+        const createdContacts =
+          input.contacts.length > 0
+            ? await tx
+                .insert(clientContacts)
+                .values(
+                  input.contacts.map((contact) => ({
+                    clientId: client!.id,
+                    name: contact.name,
+                    phone: nullableText(contact.phone),
+                    email: nullableText(contact.email),
+                  })),
+                )
+                .returning({
+                  id: clientContacts.id,
+                  clientId: clientContacts.clientId,
+                  name: clientContacts.name,
+                  phone: clientContacts.phone,
+                  email: clientContacts.email,
+                })
+            : [];
+
+        return {
+          ...client!,
+          contacts: createdContacts,
+        };
+      }),
+    ),
 });

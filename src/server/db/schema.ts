@@ -92,9 +92,6 @@ export const clients = createTable(
     companyId: d.varchar({ length: 255 }),
     address: d.text(),
     phone: d.varchar({ length: 32 }),
-    contactName: d.varchar({ length: 256 }),
-    contactPhone: d.varchar({ length: 32 }),
-    contactEmail: d.varchar({ length: 255 }),
     userId: d
       .uuid()
       .notNull()
@@ -107,6 +104,28 @@ export const clients = createTable(
       .$onUpdate(() => /* @__PURE__ */ new Date()),
   }),
   (t) => [index("clients_user_id_idx").on(t.userId)],
+);
+
+/** A person who can be contacted at a client organization. */
+export const clientContacts = createTable(
+  "client_contact",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    clientId: d
+      .uuid()
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    name: d.varchar({ length: 256 }).notNull(),
+    phone: d.varchar({ length: 32 }),
+    email: d.varchar({ length: 255 }),
+    createdDate: d.timestamp({ withTimezone: true }).defaultNow().notNull(),
+    updatedDate: d
+      .timestamp({ withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => /* @__PURE__ */ new Date()),
+  }),
+  (t) => [index("client_contacts_client_id_idx").on(t.clientId)],
 );
 
 /**
@@ -155,11 +174,20 @@ export const quotationsRelations = relations(quotations, ({ one }) => ({
 export const clientsRelations = relations(clients, ({ one, many }) => ({
   user: one(users, { fields: [clients.userId], references: [users.id] }),
   quotations: many(quotations),
+  contacts: many(clientContacts),
+}));
+
+export const clientContactsRelations = relations(clientContacts, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientContacts.clientId],
+    references: [clients.id],
+  }),
 }));
 
 export const users = createTable("user", (d) => ({
   id: d.uuid().primaryKey().defaultRandom(),
   name: d.varchar({ length: 255 }),
+  alias: d.varchar({ length: 32 }),
   email: d.varchar({ length: 255 }).notNull().unique(),
   phone: d.varchar({ length: 32 }),
   phoneExt: d.integer(),
