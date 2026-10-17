@@ -133,6 +133,7 @@ const es = {
   "template.marking": "Técnica de marcación",
   "template.detail": "Detalle",
   "template.unitPrice": "Precio unitario",
+  "template.subtotal": "Subtotal",
   "template.policiesBody":
     "1. Los precios están expresados en USD y tienen una vigencia de 30 días a partir de la fecha de cotización.\n2. Forma de pago: 50 % por adelantado y 50 % contra entrega.\n3. Plazo de entrega: de 8 a 12 semanas a partir del inicio del proyecto.\n4. Los precios no incluyen impuestos; los impuestos aplicables se agregarán a la factura final.\n5. Cualquier cambio en el alcance debe acordarse por escrito y puede afectar el precio y el plazo.\n6. Esta cotización no constituye un contrato hasta que ambas partes la firmen.",
   "template.acceptedBy": "Aceptado por: ______________________",
@@ -275,6 +276,7 @@ const en: Record<MessageKey, string> = {
   "template.quantity": "Qty",
   "template.marking": "Marking",
   "template.unitPrice": "Unit price",
+  "template.subtotal": "Subtotal",
   "template.detail": "Detail",
   "template.policiesBody":
     "1. Prices are quoted in USD and are valid for 30 days from the quotation date.\n2. Payment terms: 50% upfront, 50% upon delivery.\n3. Delivery timeline: 8–12 weeks from project kickoff.\n4. Prices do not include taxes; applicable taxes will be added to the final invoice.\n5. Any scope change must be agreed in writing and may affect price and timeline.\n6. This quotation does not constitute a contract until signed by both parties.",

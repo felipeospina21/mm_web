@@ -412,11 +412,36 @@ export default function EditorPage() {
     (row: QuotationRow) => {
       const pagesWithLogos = ensurePageLogos(row.data).map((page) => ({
         ...page,
-        elements: page.elements.map((element) =>
-          element.id === "customer-name"
+        elements: page.elements.map((element) => {
+          if (element.id.startsWith("line-items-") && element.table) {
+            const cells = element.table.cells.map((rowCells, rowIndex) => {
+              const next = [...rowCells];
+              if (rowIndex === 0) {
+                next[4] ??= t("template.subtotal");
+              } else {
+                const quantity = next[0]?.replace(/\D/g, "") ?? "";
+                const price = next[3]?.replace(/\D/g, "") ?? "";
+                next[4] =
+                  quantity && price
+                    ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
+                    : "";
+              }
+              return next;
+            });
+            return {
+              ...element,
+              width: 680,
+              table: {
+                ...element.table,
+                colWidths: [70, 230, 100, 140, 140],
+                cells,
+              },
+            };
+          }
+          return element.id === "customer-name"
             ? { ...element, isDraggable: false, isEditable: false }
-            : element,
-        ),
+            : element;
+        }),
       }));
       const productCount = pagesWithLogos.filter((page) =>
         page.elements.some((element) => element.id.startsWith("product-name-")),

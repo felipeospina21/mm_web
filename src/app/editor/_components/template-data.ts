@@ -168,7 +168,7 @@ function makeProductElements(
       isDraggable: true,
       isEditable: true,
       table: {
-        colWidths: [80, 300, 120, 120],
+        colWidths: [70, 230, 100, 140, 140],
         rowHeight: 36,
         cells: [
           [
@@ -176,10 +176,11 @@ function makeProductElements(
             t("template.marking", {}, locale),
             t("template.detail", {}, locale),
             t("template.unitPrice", {}, locale),
+            t("template.subtotal", {}, locale),
           ],
-          ["", "", "", ""],
-          ["", "", "", ""],
-          ["", "", "", ""],
+          ["", "", "", "", ""],
+          ["", "", "", "", ""],
+          ["", "", "", "", ""],
         ],
         headerFill: theme.colors.primary,
         headerColor: "#ffffff",

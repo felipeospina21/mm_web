@@ -18,6 +18,18 @@ import type { PageData, TemplateElement } from "./types";
 import { t } from "@/i18n/messages";
 import { PAGE_GAP, PAGE_HEIGHT, PAGE_WIDTH, STAGE_BG } from "./types";
 
+function formatEditedCell(value: string, row: number, col: number): string {
+  if (row === 0) return value;
+  if (col === 0) return value.replace(/\D/g, "");
+  if (col === 3) {
+    const amount = Number(value.replace(/\D/g, ""));
+    return value.trim() === "" || !Number.isFinite(amount)
+      ? ""
+      : `$ ${amount.toLocaleString("es-CO")}`;
+  }
+  return value;
+}
+
 interface QuotationCanvasProps {
   pages: PageData[];
   onElementChange: (
@@ -90,6 +102,7 @@ export default function QuotationCanvas({
     row: number;
     col: number;
   } | null>(null);
+  const [editingCellValue, setEditingCellValue] = useState("");
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const pastePositionRef = useRef({ pageNumber: 1, x: 100, y: 100 });
 
@@ -285,6 +298,7 @@ export default function QuotationCanvas({
     (page: PageData, element: TemplateElement, row: number, col: number) => {
       const stage = stageRef.current;
       if (!stage || !element.table || !element.isEditable) return;
+      if (element.id.startsWith("line-items-") && col === 4) return;
       const stageBox = stage.container().getBoundingClientRect();
       const offset = getPageOffset(page.pageNumber);
       const { colWidths, rowHeight } = element.table;
@@ -296,6 +310,14 @@ export default function QuotationCanvas({
       const top = stageBox.top + offset.y + element.y + row * rowHeight;
       setEditingId(element.id);
       setEditingCell({ row, col });
+      const currentValue = element.table.cells[row]?.[col] ?? "";
+      setEditingCellValue(
+        row > 0 && col === 0
+          ? currentValue.replace(/\D/g, "")
+          : row > 0 && col === 3
+            ? currentValue.replace(/[^\d-]/g, "")
+            : currentValue,
+      );
       setEditingBox({
         left,
         top,
@@ -322,7 +344,22 @@ export default function QuotationCanvas({
               const cells = element.table.cells.map((row) => [...row]);
               const targetRow = cells[editingCell.row];
               if (targetRow) {
-                targetRow[editingCell.col] = newText;
+                targetRow[editingCell.col] = formatEditedCell(
+                  newText,
+                  editingCell.row,
+                  editingCell.col,
+                );
+                if (
+                  element.id.startsWith("line-items-") &&
+                  editingCell.row > 0
+                ) {
+                  const quantity = targetRow[0]?.replace(/\D/g, "") ?? "";
+                  const price = targetRow[3]?.replace(/\D/g, "") ?? "";
+                  targetRow[4] =
+                    quantity && price
+                      ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
+                      : "";
+                }
                 onElementChange(page.id, editingId, {
                   table: { ...element.table, cells },
                 });
@@ -335,6 +372,7 @@ export default function QuotationCanvas({
       }
       setEditingId(null);
       setEditingCell(null);
+      setEditingCellValue("");
       setEditingBox(null);
     },
     [editingId, editingCell, onElementChange, pages],
@@ -590,15 +628,29 @@ export default function QuotationCanvas({
             fontSize: editingBox.fontSize,
             color: editingBox.color,
           }}
-          defaultValue={(() => {
+          value={editingCell ? editingCellValue : (() => {
             const element = pages
               .flatMap((page) => page.elements)
               .find((item) => item.id === editingId);
-            return editingCell
-              ? (element?.table?.cells[editingCell.row]?.[editingCell.col] ??
-                  "")
-              : (element?.text ?? "");
+            return element?.text ?? "";
           })()}
+          inputMode={
+            editingCell && editingCell.row > 0 &&
+            (editingCell.col === 0 || editingCell.col === 3)
+              ? "numeric"
+              : undefined
+          }
+          onChange={(e) => {
+            if (!editingCell) return;
+            const raw = e.currentTarget.value;
+            if (editingCell.row > 0 && editingCell.col === 0) {
+              setEditingCellValue(raw.replace(/\D/g, ""));
+            } else if (editingCell.row > 0 && editingCell.col === 3) {
+              setEditingCellValue(raw.replace(/\D/g, ""));
+            } else {
+              setEditingCellValue(raw);
+            }
+          }}
           onBlur={(e) => commitTextEdit(e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
