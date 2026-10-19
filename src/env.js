@@ -11,6 +11,18 @@ export const env = createEnv({
       process.env.NODE_ENV === "production"
         ? z.string()
         : z.string().optional(),
+    AUTH_MICROSOFT_ENTRA_ID_ID:
+      process.env.NODE_ENV === "production"
+        ? z.string()
+        : z.string().optional(),
+    AUTH_MICROSOFT_ENTRA_ID_SECRET:
+      process.env.NODE_ENV === "production"
+        ? z.string()
+        : z.string().optional(),
+    AUTH_MICROSOFT_ENTRA_ID_ISSUER:
+      process.env.NODE_ENV === "production"
+        ? z.string().url()
+        : z.string().url().optional(),
     /**
      * Pooled connection string used by the running app. On Supabase this is the
      * pgBouncer pooler (port 6543). On a local Docker Postgres it is the plain
@@ -62,6 +74,11 @@ export const env = createEnv({
    */
   runtimeEnv: {
     AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_MICROSOFT_ENTRA_ID_ID: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
+    AUTH_MICROSOFT_ENTRA_ID_SECRET:
+      process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
+    AUTH_MICROSOFT_ENTRA_ID_ISSUER:
+      process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
     DATABASE_URL: process.env.DATABASE_URL,
     DIRECT_URL: process.env.DIRECT_URL,
     EXTERNAL_API_BASE_URL: process.env.EXTERNAL_API_BASE_URL,

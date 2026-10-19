@@ -1,83 +1,43 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { t } from "@/i18n/messages";
 
 function LoginFormInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
-    e.preventDefault();
+  async function handleMicrosoftSignIn() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-      if (result?.error) {
-        setError(t("login.invalidCredentials"));
-        return;
-      }
-      router.push(callbackUrl);
-      router.refresh();
-    } catch (error) {
-      console.error("Sign-in failed:", error);
+      await signIn("microsoft-entra-id", { callbackUrl });
+    } catch (cause) {
+      console.error("Microsoft sign-in failed:", cause);
       setError(t("login.failed"));
-    } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white/10 p-8 backdrop-blur"
-    >
+    <section className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white/10 p-8 backdrop-blur">
       <h1 className="text-2xl font-bold text-white">{t("login.title")}</h1>
-      <label className="flex flex-col gap-1 text-sm text-white">
-        {t("login.email")}
-        <input
-          type="email"
-          required
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded-lg border bg-white/10 px-3 py-2 placeholder-white/40 outline-none focus:border-white/50"
-          placeholder={t("login.emailPlaceholder")}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm text-white">
-        {t("login.password")}
-        <input
-          type="password"
-          required
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border bg-white/10 px-3 py-2 placeholder-white/40 outline-none focus:border-white/50"
-          placeholder="••••••••"
-        />
-      </label>
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
       <button
-        type="submit"
+        type="button"
+        onClick={handleMicrosoftSignIn}
         disabled={isSubmitting}
-        className="text-primary mt-2 rounded-lg bg-white px-4 py-2 font-semibold transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="text-primary mt-2 rounded-lg bg-white px-4 py-3 font-semibold transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? t("login.signingIn") : t("login.signIn")}
+        {isSubmitting
+          ? t("login.signingIn")
+          : t("login.continueWithMicrosoft")}
       </button>
-    </form>
+    </section>
   );
 }
 

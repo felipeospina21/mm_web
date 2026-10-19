@@ -1,9 +1,8 @@
-import { verify } from "argon2";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { eq } from "drizzle-orm";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 
+import { env } from "@/env";
 import { db } from "@/server/db";
 import {
   accounts,
@@ -73,52 +72,30 @@ declare module "next-auth" {
  */
 export const authConfig = {
   providers: [
-    CredentialsProvider({
-      name: "Email and password",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const email =
-          typeof credentials?.email === "string" ? credentials.email : null;
-        const password =
-          typeof credentials?.password === "string"
-            ? credentials.password
-            : null;
-        if (!email || !password) return null;
-
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
-
-        // No account, or account without a password (e.g. OAuth-only user)
-        if (!user?.passwordHash) return null;
-
-        const passwordMatches = await verify(user.passwordHash, password);
-        if (!passwordMatches) return null;
-
+    MicrosoftEntraID({
+      clientId: env.AUTH_MICROSOFT_ENTRA_ID_ID,
+      clientSecret: env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
+      issuer: env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
+      // Existing users are linked by their tenant-verified email, preserving
+      // their user IDs and all owned records. Entra must emit email and
+      // xms_edov claims (see .env.example setup notes).
+      allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        if (!profile.email || profile.xms_edov !== true) {
+          throw new Error("Microsoft did not provide a verified email address.");
+        }
         return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: null,
         };
       },
     }),
   ],
   adapter,
-  // The credentials provider cannot use database sessions; NextAuth only
-  // persists a session for credentials logins when the JWT strategy is set
-  // explicitly. Without this the login "succeeds" but no readable session
-  // cookie is created, so auth() keeps returning null and the login page
-  // re-renders instead of redirecting.
   session: { strategy: "jwt" },
   callbacks: {
-    // JWT strategy (required for the credentials provider): carry the
-    // user id from the authorize() result into the token.
     jwt: ({ token, user }) => {
       if (user) {
         token.sub = user.id;
