@@ -241,13 +241,13 @@ pnpm dev
 The app has no public sign-up, so `pnpm db:seed` is how you create a login user.
 
 To create or update multiple users, prepare a UTF-8 CSV with `email` and
-`password` columns. Optional columns are `name`, `phone`, `phone_ext`, and
-`cellphone`:
+`password` columns. Optional columns are `name`, `alias`, `phone`, `phone_ext`,
+and `cellphone`:
 
 ```csv
-email,password,name,phone,phone_ext,cellphone
-alex@example.com,ChangeMe-123,Alex Smith,+1-555-0100,42,+1-555-0199
-sam@example.com,ChangeMe-456,Sam Lee,,,
+email,password,name,alias,phone,phone_ext,cellphone
+alex@example.com,ChangeMe-123,Alex Smith,Alex,+1-555-0100,42,+1-555-0199
+sam@example.com,ChangeMe-456,Sam Lee,Sam,,,
 ```
 
 Then run the bulk seeder against the database configured in `.env`:

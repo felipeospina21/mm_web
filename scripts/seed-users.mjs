@@ -4,7 +4,7 @@
  * Usage:
  *   pnpm db:seed:users <csv-file>
  *
- * Required columns: email, password. Optional: name, phone, phone_ext,
+ * Required columns: email, password. Optional: name, alias, phone, phone_ext,
  * cellphone. Passwords are hashed with argon2id before being stored.
  */
 import { readFile } from "node:fs/promises";
@@ -112,6 +112,7 @@ function readUsers(source) {
       email,
       password,
       name: valueAt("name") || null,
+      alias: valueAt("alias") || null,
       phone: valueAt("phone") || null,
       phoneExt: phoneExt ? Number(phoneExt) : null,
       cellphone: valueAt("cellphone") || null,
@@ -142,14 +143,15 @@ try {
     for (const user of users) {
       await transaction`
         INSERT INTO mm_web_user (
-          id, name, email, email_verified, password_hash, phone, phone_ext, cellphone
+          id, name, alias, email, email_verified, password_hash, phone, phone_ext, cellphone
         )
         VALUES (
-          ${randomUUID()}, ${user.name}, ${user.email}, now(), ${user.passwordHash},
-          ${user.phone}, ${user.phoneExt}, ${user.cellphone}
+          ${randomUUID()}, ${user.name}, ${user.alias}, ${user.email}, now(),
+          ${user.passwordHash}, ${user.phone}, ${user.phoneExt}, ${user.cellphone}
         )
         ON CONFLICT (email) DO UPDATE SET
           name = COALESCE(EXCLUDED.name, mm_web_user.name),
+          alias = COALESCE(EXCLUDED.alias, mm_web_user.alias),
           password_hash = EXCLUDED.password_hash,
           phone = COALESCE(EXCLUDED.phone, mm_web_user.phone),
           phone_ext = COALESCE(EXCLUDED.phone_ext, mm_web_user.phone_ext),
