@@ -59,7 +59,10 @@ function LoginFormInner({
   }
 
   return (
-    <section className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white/10 p-8 backdrop-blur">
+    <section className="flex w-full max-w-sm flex-col gap-4 p-8">
+      <p className="mb-2 text-lg font-medium tracking-wide text-white/75">
+        Cotizador Magic Medios
+      </p>
       <h1 className="text-2xl font-bold text-white">{t("login.title")}</h1>
       {error && (
         <p role="alert" className="text-sm text-red-300">
