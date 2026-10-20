@@ -150,7 +150,12 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
               ).map(([field, label, required]) => (
                 <label key={field} className="flex flex-col gap-1 text-sm">
                   <span className="font-medium text-neutral-700">
-                    {t(label)}{required && <span aria-hidden="true"> *</span>}
+                    {t(label)}
+                    {required && (
+                      <span aria-hidden="true" className="text-red-600">
+                        {" *"}
+                      </span>
+                    )}
                   </span>
                   <input
                     required={required}
@@ -180,7 +185,10 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
                   ).map(([field, label, required]) => (
                     <label key={field} className="flex flex-col gap-1 text-sm">
                       <span className="font-medium text-neutral-700">
-                        {t(label)}<span aria-hidden="true"> *</span>
+                        {t(label)}
+                        <span aria-hidden="true" className="text-red-600">
+                          {" *"}
+                        </span>
                       </span>
                       <input
                         required={required}
