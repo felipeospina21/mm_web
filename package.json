@@ -17,6 +17,8 @@
     "db:seed:prod": "dotenv -e .env.production -- node scripts/seed-user.mjs",
     "db:seed:users:dev": "dotenv -e .env.development -- node scripts/seed-users.mjs",
     "db:seed:users:prod": "dotenv -e .env.production -- node scripts/seed-users.mjs",
+    "db:seed:clients:dev": "dotenv -e .env.development -- node scripts/seed-clients.mjs",
+    "db:seed:clients:prod": "dotenv -e .env.production -- node scripts/seed-clients.mjs",
     "db:seed:products:dev": "dotenv -e .env.development -- node scripts/seed-products.mjs",
     "db:seed:products:prod": "dotenv -e .env.production -- node scripts/seed-products.mjs",
     "dev": "next dev",
