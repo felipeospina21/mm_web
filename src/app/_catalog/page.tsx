@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
-
 import { auth } from "@/server/auth";
+import { redirect } from "next/navigation";
 import { api, HydrateClient } from "@/trpc/server";
 
 import { ProductCatalog } from "../_components/product-catalog";
@@ -27,9 +26,7 @@ const PAGE_SIZE = 12;
 export default async function CatalogPage() {
   const session = await auth();
 
-  // Hidden route: signed-out visitors are sent to the public home rather
-  // than shown a login form here.
-  if (!session?.user) redirect("/");
+  if (!session?.user) redirect("/login?callbackUrl=%2Fcatalog");
 
   // Server-side fetch of the first page into the QueryClient cache. The
   // client's useInfiniteQuery hydrates from this and only fetches

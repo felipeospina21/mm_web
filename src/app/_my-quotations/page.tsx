@@ -13,7 +13,7 @@ export default async function MyQuotationsPage() {
   if (!ENABLE_QUOTATIONS_PAGE) redirect("/");
 
   const session = await auth();
-  if (!session?.user) redirect("/");
+  if (!session?.user) redirect("/login?callbackUrl=%2Fmy-quotations");
 
   // Server-prefetch the first page into the QueryClient cache; the client's
   // useInfiniteQuery hydrates from this and fetches more on scroll.

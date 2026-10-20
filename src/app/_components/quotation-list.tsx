@@ -90,7 +90,7 @@ export function QuotationList() {
               <div className="flex flex-col gap-1">
                 <span className="flex items-center gap-2">
                   <span className="bg-primary rounded-full px-2 py-0.5 text-xs font-semibold text-white">
-                    #{q.quotationNumber}
+                    {q.quotationNumber}
                   </span>
                   <span className="font-semibold text-neutral-900">
                     {q.clientName ?? t("client.none")}

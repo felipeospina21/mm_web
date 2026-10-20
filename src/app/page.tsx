@@ -1,6 +1,7 @@
-import { auth } from "@/server/auth";
+import { redirect } from "next/navigation";
 
-import { LoginForm } from "./_components/login-form";
+import { auth } from "@/server/auth";
+import { LoginScreen } from "./_components/login-screen";
 import { ReferenceLookup } from "./_components/reference-lookup";
 
 /**
@@ -14,14 +15,7 @@ import { ReferenceLookup } from "./_components/reference-lookup";
 export default async function Home() {
   const session = await auth();
 
-  // Not signed in — show the login form.
-  if (!session?.user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-linear-to-b from-(--color-primary) to-(--color-secondary) px-4">
-        <LoginForm />
-      </main>
-    );
-  }
+  if (!session?.user) return <LoginScreen />;
 
   return (
     <main className="min-h-screen bg-neutral-100">

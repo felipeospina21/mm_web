@@ -6,8 +6,8 @@ import { clientContacts, clients, users } from "@/server/db/schema";
 
 const contactInput = z.object({
   name: z.string().trim().min(1).max(256),
-  phone: z.string().trim().max(32).optional(),
-  email: z.string().trim().email().max(255).or(z.literal("")).optional(),
+  phone: z.string().trim().min(1).max(32),
+  email: z.string().trim().min(1).email().max(255),
 });
 
 const clientInput = z.object({
@@ -15,7 +15,7 @@ const clientInput = z.object({
   companyId: z.string().trim().max(255).optional(),
   address: z.string().trim().max(4000).optional(),
   phone: z.string().trim().max(32).optional(),
-  contacts: z.array(contactInput).default([]),
+  contacts: z.array(contactInput).min(1),
 });
 
 const nullableText = (value: string | undefined) =>

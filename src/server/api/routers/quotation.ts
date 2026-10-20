@@ -37,7 +37,7 @@ function derivePageFields(pages: PageData[]) {
 }
 
 /** Store the database-assigned number in the canvas pages. */
-function setQuotationNumber(pages: PageData[], quotationNumber: number) {
+function setQuotationNumber(pages: PageData[], quotationNumber: string) {
   return pages.map((page) => ({
     ...page,
     elements: page.elements.map((element) =>
@@ -47,10 +47,10 @@ function setQuotationNumber(pages: PageData[], quotationNumber: number) {
             text: element.text.includes("{{quotationNumber}}")
               ? element.text.replace(
                   /\{\{quotationNumber\}\}/g,
-                  String(quotationNumber),
+                  quotationNumber,
                 )
-              : /\d+\s*$/.test(element.text)
-                ? element.text.replace(/\d+\s*$/, String(quotationNumber))
+              : /M?\d+\s*$/.test(element.text)
+                ? element.text.replace(/M?\d+\s*$/, quotationNumber)
                 : `${element.text.trimEnd()} ${quotationNumber}`,
           }
         : element,

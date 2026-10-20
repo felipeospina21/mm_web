@@ -1,6 +1,9 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
+import { verify } from "argon2";
+import { sql } from "drizzle-orm";
 
 import { env } from "@/env";
 import { db } from "@/server/db";
@@ -71,29 +74,68 @@ declare module "next-auth" {
  * @see https://next-auth.js.org/configuration/options
  */
 export const authConfig = {
-  providers: [
-    MicrosoftEntraID({
-      clientId: env.AUTH_MICROSOFT_ENTRA_ID_ID,
-      clientSecret: env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
-      issuer: env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
-      // Existing users are linked by their tenant-verified email, preserving
-      // their user IDs and all owned records. Entra must emit email and
-      // xms_edov claims (see .env.example setup notes).
-      allowDangerousEmailAccountLinking: true,
-      profile(profile) {
-        if (!profile.email || profile.xms_edov !== true) {
-          throw new Error("Microsoft did not provide a verified email address.");
-        }
-        return {
-          id: profile.sub,
-          name: profile.name,
-          email: profile.email,
-          image: null,
-        };
-      },
-    }),
-  ],
+  providers:
+    env.NODE_ENV === "development"
+      ? [
+          Credentials({
+            credentials: {
+              email: { label: "Email", type: "email" },
+              password: { label: "Password", type: "password" },
+            },
+            async authorize(credentials) {
+              const email = credentials.email;
+              const password = credentials.password;
+              if (typeof email !== "string" || typeof password !== "string") {
+                return null;
+              }
+
+              const [user] = await db
+                .select({
+                  id: users.id,
+                  name: users.name,
+                  email: users.email,
+                  passwordHash: users.passwordHash,
+                })
+                .from(users)
+                .where(sql`lower(${users.email}) = lower(${email})`)
+                .limit(1);
+
+              if (!user?.passwordHash) return null;
+              if (!(await verify(user.passwordHash, password))) return null;
+
+              return { id: user.id, name: user.name, email: user.email };
+            },
+          }),
+        ]
+      : [
+          MicrosoftEntraID({
+            clientId: env.AUTH_MICROSOFT_ENTRA_ID_ID,
+            clientSecret: env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
+            issuer: env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
+            // Existing users are linked by their tenant-verified email, preserving
+            // their user IDs and all owned records. Entra must emit email and
+            // xms_edov claims (see .env.example setup notes).
+            allowDangerousEmailAccountLinking: true,
+            profile(profile) {
+              if (!profile.email || profile.xms_edov !== true) {
+                throw new Error(
+                  "Microsoft did not provide a verified email address.",
+                );
+              }
+              return {
+                id: profile.sub,
+                name: profile.name,
+                email: profile.email,
+                image: null,
+              };
+            },
+          }),
+        ],
   adapter,
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
   session: { strategy: "jwt" },
   callbacks: {
     jwt: ({ token, user }) => {

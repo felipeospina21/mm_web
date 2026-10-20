@@ -138,10 +138,11 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
             <h2 className="text-lg font-semibold text-neutral-900">
               {t("client.addTitle")}
             </h2>
+            <p className="text-sm text-neutral-600">{t("client.requiredFields")}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {(
                 [
-                  ["name", "client.name", true],
+                  ["name", "client.companyName", true],
                   ["companyId", "client.companyId", false],
                   ["address", "client.address", false],
                   ["phone", "client.phone", false],
@@ -149,7 +150,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
               ).map(([field, label, required]) => (
                 <label key={field} className="flex flex-col gap-1 text-sm">
                   <span className="font-medium text-neutral-700">
-                    {t(label)}
+                    {t(label)}{required && <span aria-hidden="true"> *</span>}
                   </span>
                   <input
                     required={required}
@@ -173,16 +174,16 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
                   {(
                     [
                       ["name", "client.contactName", true],
-                      ["phone", "client.contactPhone", false],
-                      ["email", "client.contactEmail", false],
+                      ["phone", "client.contactPhone", true],
+                      ["email", "client.contactEmail", true],
                     ] as const
                   ).map(([field, label, required]) => (
                     <label key={field} className="flex flex-col gap-1 text-sm">
                       <span className="font-medium text-neutral-700">
-                        {t(label)}
+                        {t(label)}<span aria-hidden="true"> *</span>
                       </span>
                       <input
-                        required={required && index === 0}
+                        required={required}
                         type={field === "email" ? "email" : "text"}
                         value={contact[field]}
                         onChange={(event) =>
@@ -234,7 +235,17 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
               </button>
               <button
                 type="submit"
-                disabled={createClient.isPending || !form.name.trim()}
+                disabled={
+                  createClient.isPending ||
+                  !form.name.trim() ||
+                  contacts.length === 0 ||
+                  contacts.some(
+                    (contact) =>
+                      !contact.name.trim() ||
+                      !contact.phone.trim() ||
+                      !contact.email.trim(),
+                  )
+                }
                 className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {createClient.isPending
