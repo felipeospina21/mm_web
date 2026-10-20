@@ -4,8 +4,8 @@
  * Usage:
  *   pnpm db:seed:users <csv-file>
  *
- * Required columns: email, password. Optional: name, alias, phone, phone_ext,
- * cellphone. Passwords are hashed with argon2id before being stored.
+ * Required column: email. Optional: password, name, alias, phone, phone_ext,
+ * cellphone. Supplied passwords are hashed with argon2id before being stored.
  */
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
@@ -72,7 +72,7 @@ function readUsers(source) {
   const header = rows.shift()?.map((value) => value.trim().toLowerCase());
   if (!header?.length) throw new Error("CSV is empty or missing a header row.");
 
-  for (const required of ["email", "password"]) {
+  for (const required of ["email"]) {
     if (!header.includes(required)) {
       throw new Error(`CSV is missing the required '${required}' column.`);
     }
@@ -91,8 +91,8 @@ function readUsers(source) {
     const password = valueAt("password");
     const rowNumber = index + 2;
 
-    if (!email || !password) {
-      throw new Error(`CSV row ${rowNumber} needs both email and password.`);
+    if (!email) {
+      throw new Error(`CSV row ${rowNumber} needs an email.`);
     }
     if (!email.includes("@")) {
       throw new Error(`CSV row ${rowNumber} has an invalid email address.`);
@@ -136,7 +136,9 @@ const sql = postgres(process.env.DATABASE_URL, { max: 1 });
 
 try {
   for (const user of users) {
-    user.passwordHash = await hash(user.password, { type: 2 });
+    user.passwordHash = user.password
+      ? await hash(user.password, { type: 2 })
+      : null;
   }
 
   await sql.begin(async (transaction) => {
@@ -152,7 +154,7 @@ try {
         ON CONFLICT (email) DO UPDATE SET
           name = COALESCE(EXCLUDED.name, mm_web_user.name),
           alias = COALESCE(EXCLUDED.alias, mm_web_user.alias),
-          password_hash = EXCLUDED.password_hash,
+          password_hash = COALESCE(EXCLUDED.password_hash, mm_web_user.password_hash),
           phone = COALESCE(EXCLUDED.phone, mm_web_user.phone),
           phone_ext = COALESCE(EXCLUDED.phone_ext, mm_web_user.phone_ext),
           cellphone = COALESCE(EXCLUDED.cellphone, mm_web_user.cellphone)

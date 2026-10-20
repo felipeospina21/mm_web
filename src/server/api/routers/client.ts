@@ -5,16 +5,16 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { clientContacts, clients, users } from "@/server/db/schema";
 
 const contactInput = z.object({
-  name: z.string().trim().min(1).max(256),
-  phone: z.string().trim().min(1).max(32),
-  email: z.string().trim().min(1).email().max(255),
+  name: z.string().trim().toLowerCase().min(1).max(256),
+  phone: z.string().trim().toLowerCase().min(1).max(32),
+  email: z.string().trim().toLowerCase().min(1).email().max(255),
 });
 
 const clientInput = z.object({
-  name: z.string().trim().min(1).max(256),
-  companyId: z.string().trim().max(255).optional(),
-  address: z.string().trim().max(4000).optional(),
-  phone: z.string().trim().max(32).optional(),
+  name: z.string().trim().toLowerCase().min(1).max(256),
+  companyId: z.string().trim().toLowerCase().max(255).optional(),
+  address: z.string().trim().toLowerCase().max(4000).optional(),
+  phone: z.string().trim().toLowerCase().max(32).optional(),
   contacts: z.array(contactInput).min(1),
 });
 

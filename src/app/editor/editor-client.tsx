@@ -31,6 +31,10 @@ import {
 } from "@/lib/quotation-load";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
 import { AddProductModal } from "./_components/add-product-modal";
+import {
+  capitalizeLabeledName,
+  capitalizeName,
+} from "@/lib/capitalize-name";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
@@ -369,13 +373,13 @@ export default function EditorPage() {
               element.id === "company-name"
                 ? {
                     ...element,
-                    text: client.name,
+                    text: capitalizeName(client.name),
                   }
                 : element.id === "customer-name"
                   ? {
                       ...element,
                       text: t("template.customer", {
-                        name: client.contacts[0]?.name ?? "",
+                        name: capitalizeName(client.contacts[0]?.name ?? ""),
                       }),
                     }
                   : element,
@@ -388,8 +392,8 @@ export default function EditorPage() {
     historyIndexRef.current = 0;
     metaRef.current = {
       ...metaRef.current,
-      companyName: client.name,
-      customerName: client.contacts[0]?.name ?? "",
+      companyName: capitalizeName(client.name),
+      customerName: capitalizeName(client.contacts[0]?.name ?? ""),
     };
     pendingHomeClientIdRef.current = null;
   }, [clientsQuery.data, pendingLoadId, selectedClientId]);
@@ -413,6 +417,22 @@ export default function EditorPage() {
       const pagesWithLogos = ensurePageLogos(row.data).map((page) => ({
         ...page,
         elements: page.elements.map((element) => {
+          if (element.id === "company-name") {
+            return { ...element, text: capitalizeName(element.text) };
+          }
+          if (element.id === "customer-name") {
+            return {
+              ...element,
+              text: capitalizeLabeledName(element.text),
+              isDraggable: false,
+              isEditable: false,
+            };
+          }
+          if (element.id === "representative-info") {
+            const lines = element.text.split("\n");
+            if (lines[1]) lines[1] = capitalizeName(lines[1]);
+            return { ...element, text: lines.join("\n") };
+          }
           if (element.id.startsWith("line-items-") && element.table) {
             const cells = element.table.cells.map((rowCells, rowIndex) => {
               const next = [...rowCells];
@@ -438,9 +458,7 @@ export default function EditorPage() {
               },
             };
           }
-          return element.id === "customer-name"
-            ? { ...element, isDraggable: false, isEditable: false }
-            : element;
+          return element;
         }),
       }));
       const productCount = pagesWithLogos.filter((page) =>
@@ -500,7 +518,7 @@ export default function EditorPage() {
     }
     representativeAppliedRef.current = true;
 
-    const representativeName = representative.name ?? "";
+    const representativeName = capitalizeName(representative.name ?? "");
     const representativePhone = representative.phone ?? "";
     const representativePhoneExtension =
       representative.phoneExt == null ? "" : String(representative.phoneExt);

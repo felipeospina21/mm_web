@@ -5,6 +5,7 @@ import { useState } from "react";
 import { SearchableSelect } from "@/components/searchable-select";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { t } from "@/i18n/messages";
+import { capitalizeName } from "@/lib/capitalize-name";
 
 type ClientRecord = RouterOutputs["customer"]["list"][number];
 
@@ -75,7 +76,8 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
     return contacts.map((contact) => ({
       value: `${client.id}::${contact?.id ?? "none"}`,
       label: [client.name, contact?.name, client.userAlias]
-        .filter(Boolean)
+        .filter((part): part is string => Boolean(part))
+        .map(capitalizeName)
         .join(" - "),
       clientId: client.id,
     }));

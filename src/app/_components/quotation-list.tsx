@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/trpc/react";
 import { setPendingQuotationLoad } from "@/lib/quotation-load";
 import { defaultLocale, intlLocale, t } from "@/i18n/messages";
+import { capitalizeName } from "@/lib/capitalize-name";
 
 const PAGE_SIZE = 12;
 
@@ -93,7 +94,7 @@ export function QuotationList() {
                     {q.quotationNumber}
                   </span>
                   <span className="font-semibold text-neutral-900">
-                    {q.clientName ?? t("client.none")}
+                    {q.clientName ? capitalizeName(q.clientName) : t("client.none")}
                   </span>
                 </span>
                 <span className="text-xs text-neutral-500">
@@ -103,7 +104,9 @@ export function QuotationList() {
                   })}
                 </span>
                 {q.userName && (
-                  <span className="text-xs text-neutral-500">{q.userName}</span>
+                  <span className="text-xs text-neutral-500">
+                    {capitalizeName(q.userName)}
+                  </span>
                 )}
               </div>
               <div className="flex flex-col items-end gap-1">
