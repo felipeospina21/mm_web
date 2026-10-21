@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { t } from "@/i18n/messages";
+import { ActionsMenuItem } from "./actions-menu-item";
 
 interface ActionsMenuProps {
   canUndo: boolean;
@@ -14,9 +15,6 @@ interface ActionsMenuProps {
   canDeletePage: boolean;
   onAddProducts: () => void;
 }
-
-const ITEM_CLASS =
-  "block w-full rounded px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * Collapsible "Actions" dropdown for the editor toolbar. Groups the
@@ -88,93 +86,47 @@ export function ActionsMenu({
           role="menu"
           className="absolute right-0 z-20 mt-2 w-48 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-lg"
         >
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
-            onClick={onUndo}
-            disabled={!canUndo}
-          >
+          <ActionsMenuItem onClick={onUndo} disabled={!canUndo}>
             {t("actions.undo")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
-            onClick={onRedo}
-            disabled={!canRedo}
-          >
+          </ActionsMenuItem>
+          <ActionsMenuItem onClick={onRedo} disabled={!canRedo}>
             {t("actions.redo")}
-          </button>
+          </ActionsMenuItem>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
 
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
-            onClick={onAddPage}
-          >
+          <ActionsMenuItem onClick={onAddPage}>
             {t("actions.addPage")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
-            onClick={onDeletePage}
-            disabled={!canDeletePage}
-          >
+          </ActionsMenuItem>
+          <ActionsMenuItem onClick={onDeletePage} disabled={!canDeletePage}>
             {t("actions.deletePage")}
-          </button>
+          </ActionsMenuItem>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
 
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
-            onClick={() => onAddElement("text")}
-          >
+          <ActionsMenuItem onClick={() => onAddElement("text")}>
             {t("actions.addText")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
-            onClick={() => onAddElement("rect")}
-          >
+          </ActionsMenuItem>
+          <ActionsMenuItem onClick={() => onAddElement("rect")}>
             {t("actions.addShape")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
-            onClick={() => onAddElement("table")}
-          >
+          </ActionsMenuItem>
+          <ActionsMenuItem onClick={() => onAddElement("table")}>
             {t("actions.addTable")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
-            onClick={() => onAddElement("image")}
-          >
+          </ActionsMenuItem>
+          <ActionsMenuItem onClick={() => onAddElement("image")}>
             {t("actions.addImage")}
-          </button>
+          </ActionsMenuItem>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
 
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM_CLASS}
+          <ActionsMenuItem
             onClick={() => {
               onAddProducts();
               setOpen(false);
             }}
           >
             {t("actions.addProducts")}
-          </button>
+          </ActionsMenuItem>
         </div>
       )}
     </div>
