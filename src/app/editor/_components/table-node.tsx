@@ -13,8 +13,10 @@ interface TableNodeProps {
   isDraggable: boolean;
   isSelected: boolean;
   selectedRows: number[];
+  selectedCells: Array<{ row: number; col: number }>;
   onSelect: () => void;
   onSelectRow: (row: number, extendSelection: boolean) => void;
+  onSelectCell: (row: number, col: number, extendSelection: boolean) => void;
   onDblClickCell: (row: number, col: number) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
@@ -34,9 +36,11 @@ export default function TableNode({
   isDraggable,
   isSelected,
   selectedRows,
+  selectedCells,
   onSelect,
   onDblClickCell,
   onSelectRow,
+  onSelectCell,
   onDragEnd,
   onTransformEnd,
   dragBoundFunc,
@@ -110,8 +114,14 @@ export default function TableNode({
                 strokeWidth={1}
                 data-row={rowIndex}
                 data-col={colIndex}
-                onClick={(event) => onSelectRow(rowIndex, event.evt.shiftKey)}
-                onTap={() => onSelectRow(rowIndex, false)}
+                onClick={(event) =>
+                  onSelectCell(
+                    rowIndex,
+                    colIndex,
+                    event.evt.shiftKey || event.evt.ctrlKey || event.evt.metaKey,
+                  )
+                }
+                onTap={() => onSelectCell(rowIndex, colIndex, false)}
               />
               <Text
                 x={cellX + 8}
@@ -142,6 +152,18 @@ export default function TableNode({
             listening={false}
           />
         ))}
+      {selectedCells.map(({ row, col }) => (
+        <Rect
+          key={`selected-cell-${row}-${col}`}
+          x={colWidths.slice(0, col).reduce((total, width) => total + width, 0)}
+          y={row * rowHeight}
+          width={colWidths[col] ?? 0}
+          height={rowHeight}
+          stroke={theme.colors.primary}
+          strokeWidth={2}
+          listening={false}
+        />
+      ))}
     </Group>
   );
 }

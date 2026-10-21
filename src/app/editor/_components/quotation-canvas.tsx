@@ -87,6 +87,9 @@ export default function QuotationCanvas({
   /** id of the currently selected element (globally unique across pages) */
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedTableRows, setSelectedTableRows] = useState<number[]>([]);
+  const [selectedTableCells, setSelectedTableCells] = useState<
+    Array<{ row: number; col: number }>
+  >([]);
   const [tableRowAnchor, setTableRowAnchor] = useState<number | null>(null);
   /** id of the text element being inline-edited */
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -128,6 +131,126 @@ export default function QuotationCanvas({
     (event: ReactClipboardEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement;
       if (target.closest("input, textarea, [contenteditable='true']")) return;
+      const clipboardText = event.clipboardData.getData("text/plain");
+      const selectedTablePage = pages.find((page) =>
+        page.elements.some(
+          (element) => element.id === selectedId && element.table,
+        ),
+      );
+      const selectedTable = selectedTablePage?.elements.find(
+        (element) => element.id === selectedId && element.table,
+      );
+      const tableData = selectedTable?.table;
+      const targetRows = selectedTableRows
+        .filter((row) => row > 0)
+        .sort((a, b) => a - b);
+      const targetCells = [...selectedTableCells].sort(
+        (a, b) => a.row - b.row || a.col - b.col,
+      );
+
+      if (
+        clipboardText &&
+        selectedTablePage &&
+        selectedTable &&
+        tableData &&
+        selectedTable.isEditable &&
+        targetCells.length > 0
+      ) {
+        const sourceRows = clipboardText
+          .replace(/\r\n/g, "\n")
+          .replace(/\n$/, "")
+          .split("\n")
+          .map((row) => row.split("\t"));
+        const start = targetCells[0]!;
+        const cells = tableData.cells.map((row) => [...row]);
+        const columnCount = tableData.colWidths.length;
+
+        sourceRows.forEach((sourceRow, rowOffset) => {
+          sourceRow.forEach((value, colOffset) => {
+            const rowIndex = start.row + rowOffset;
+            const colIndex = start.col + colOffset;
+            if (rowIndex === 0 || colIndex >= columnCount) return;
+            while (cells.length <= rowIndex) {
+              cells.push(Array.from({ length: columnCount }, () => ""));
+            }
+            const row = cells[rowIndex];
+            if (!row || (selectedTable.id.startsWith("line-items-") && colIndex === 4)) return;
+            row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
+            if (selectedTable.id.startsWith("line-items-")) {
+              const quantity = row[0]?.replace(/\D/g, "") ?? "";
+              const price = row[3]?.replace(/\D/g, "") ?? "";
+              row[4] = quantity && price
+                ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
+                : "";
+            }
+          });
+        });
+
+        event.preventDefault();
+        onElementChange(selectedTablePage.id, selectedTable.id, {
+          table: { ...tableData, cells },
+        });
+        setSelectedTableCells([]);
+        return;
+      }
+
+      if (
+        clipboardText &&
+        selectedTablePage &&
+        selectedTable &&
+        tableData &&
+        selectedTable.isEditable &&
+        targetRows.length > 0
+      ) {
+        const sourceRows = clipboardText
+          .replace(/\r\n/g, "\n")
+          .replace(/\n$/, "")
+          .split("\n")
+          .map((row) => row.split("\t"));
+        const startRow = targetRows[0]!;
+        const cells = tableData.cells.map((row) => [...row]);
+        const columnCount = tableData.colWidths.length;
+
+        sourceRows.forEach((sourceRow, rowOffset) => {
+          const rowIndex = startRow + rowOffset;
+          while (cells.length <= rowIndex) {
+            cells.push(Array.from({ length: columnCount }, () => ""));
+          }
+          const row = cells[rowIndex];
+          if (!row) return;
+
+          sourceRow.slice(0, columnCount).forEach((value, colIndex) => {
+            if (
+              selectedTable.id.startsWith("line-items-") &&
+              colIndex === 4
+            ) {
+              return;
+            }
+            row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
+          });
+
+          if (selectedTable.id.startsWith("line-items-")) {
+            const quantity = row[0]?.replace(/\D/g, "") ?? "";
+            const price = row[3]?.replace(/\D/g, "") ?? "";
+            row[4] =
+              quantity && price
+                ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
+                : "";
+          }
+        });
+
+        event.preventDefault();
+        onElementChange(selectedTablePage.id, selectedTable.id, {
+          height: tableData.rowHeight * cells.length,
+          table: { ...tableData, cells },
+        });
+        setSelectedTableRows(
+          sourceRows.map((_, rowOffset) => startRow + rowOffset),
+        );
+        setSelectedTableCells([]);
+        return;
+      }
+
       const image = Array.from(event.clipboardData.items).find((item) =>
         item.type.startsWith("image/"),
       );
@@ -158,7 +281,63 @@ export default function QuotationCanvas({
       };
       reader.readAsDataURL(file);
     },
-    [onPasteImage],
+    [
+      onPasteImage,
+      onElementChange,
+      pages,
+      selectedId,
+      selectedTableRows,
+      selectedTableCells,
+    ],
+  );
+
+  const handleCopy = useCallback(
+    (event: ReactClipboardEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement;
+      if (target.closest("input, textarea, [contenteditable='true']")) return;
+      const selectedTable = pages
+        .flatMap((page) => page.elements)
+        .find((element) => element.id === selectedId && element.table);
+      if (!selectedTable?.table) return;
+
+      const rows = selectedTableRows
+        .filter((row) => row > 0 && row < selectedTable.table!.cells.length)
+        .sort((a, b) => a - b);
+      const selectedCells = selectedTableCells
+        .filter(({ row, col }) =>
+          row > 0 && row < selectedTable.table!.cells.length && col >= 0,
+        )
+        .sort((a, b) => a.row - b.row || a.col - b.col);
+      if (rows.length === 0 && selectedCells.length === 0) return;
+
+      event.preventDefault();
+      event.clipboardData.setData(
+        "text/plain",
+        rows.length > 0
+          ? rows
+              .map((rowIndex) => selectedTable.table!.cells[rowIndex]?.join("\t") ?? "")
+              .join("\n")
+          : (() => {
+              const minRow = Math.min(...selectedCells.map(({ row }) => row));
+              const maxRow = Math.max(...selectedCells.map(({ row }) => row));
+              const minCol = Math.min(...selectedCells.map(({ col }) => col));
+              const maxCol = Math.max(...selectedCells.map(({ col }) => col));
+              const selectedCellSet = new Set(
+                selectedCells.map(({ row, col }) => `${row}:${col}`),
+              );
+              return Array.from({ length: maxRow - minRow + 1 }, (_, rowOffset) =>
+                Array.from({ length: maxCol - minCol + 1 }, (_, colOffset) => {
+                  const row = minRow + rowOffset;
+                  const col = minCol + colOffset;
+                  return selectedCellSet.has(`${row}:${col}`)
+                    ? (selectedTable.table!.cells[row]?.[col] ?? "")
+                    : "";
+                }).join("\t"),
+              ).join("\n");
+            })(),
+      );
+    },
+    [pages, selectedId, selectedTableRows, selectedTableCells],
   );
 
   /** Notify the page whenever the selection changes */
@@ -407,6 +586,8 @@ export default function QuotationCanvas({
       const clickedOnEmpty = e.target === e.target.getStage();
       if (clickedOnEmpty) {
         setSelectedId(null);
+        setSelectedTableCells([]);
+        setSelectedTableRows([]);
       }
       updateActivePageFromPointer();
     },
@@ -417,6 +598,7 @@ export default function QuotationCanvas({
     <div
       ref={containerRef}
       tabIndex={0}
+      onCopy={handleCopy}
       onPaste={handlePaste}
       className="relative h-full w-full overflow-auto overscroll-contain"
       style={{ background: STAGE_BG }}
@@ -432,7 +614,11 @@ export default function QuotationCanvas({
         onMouseDown={handleStageMouseDown}
         onTouchStart={(event) => {
           containerRef.current?.focus({ preventScroll: true });
-          if (event.target === event.target.getStage()) setSelectedId(null);
+          if (event.target === event.target.getStage()) {
+            setSelectedId(null);
+            setSelectedTableCells([]);
+            setSelectedTableRows([]);
+          }
           updateActivePageFromPointer();
         }}
         onMouseMove={updateActivePageFromPointer}
@@ -507,6 +693,9 @@ export default function QuotationCanvas({
                         selectedRows={
                           selectedId === element.id ? selectedTableRows : []
                         }
+                        selectedCells={
+                          selectedId === element.id ? selectedTableCells : []
+                        }
                         onSelect={() => {
                           setSelectedId(element.id);
                           onActivePageChange(page.pageNumber);
@@ -516,6 +705,7 @@ export default function QuotationCanvas({
                           onActivePageChange(page.pageNumber);
                           if (row === 0) {
                             setSelectedTableRows([]);
+                            setSelectedTableCells([]);
                             setTableRowAnchor(null);
                             return;
                           }
@@ -533,11 +723,30 @@ export default function QuotationCanvas({
                                 (_, index) => start + index,
                               ),
                             );
+                            setSelectedTableCells([]);
                             return;
                           }
 
                           setSelectedTableRows([row]);
+                          setSelectedTableCells([]);
                           setTableRowAnchor(row);
+                        }}
+                        onSelectCell={(row, col, extendSelection) => {
+                          setSelectedId(element.id);
+                          onActivePageChange(page.pageNumber);
+                          setTableRowAnchor(null);
+                          setSelectedTableRows([]);
+                          if (row === 0) {
+                            setSelectedTableCells([]);
+                            return;
+                          }
+                          setSelectedTableCells((current) => {
+                            const alreadySelected = current.some(
+                              (cell) => cell.row === row && cell.col === col,
+                            );
+                    if (!extendSelection) return [{ row, col }];
+                            return alreadySelected ? current : [...current, { row, col }];
+                          });
                         }}
                         onDblClickCell={(row, col) => {
                           if (element.isEditable) {
@@ -688,6 +897,7 @@ export default function QuotationCanvas({
             selectedRows={selectedTableRows}
             onClearSelectedRows={() => {
               setSelectedTableRows([]);
+              setSelectedTableCells([]);
               setTableRowAnchor(null);
             }}
             onElementChange={onElementChange}
