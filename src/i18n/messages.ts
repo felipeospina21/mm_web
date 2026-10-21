@@ -144,6 +144,8 @@ const es = {
   "template.inventoryLocal": "Local",
   "template.inventoryZone": "Zona",
   "template.inventoryConsultAdvisor": "consultar",
+  "template.inventoryNationalFootnote":
+    "*Consultar otra disponibilidad de colores",
   "template.outOfStock": "Agotado",
   "image.loading": "Cargando imagen…",
   "image.failed": "No se pudo cargar la imagen",
@@ -291,6 +293,8 @@ const en: Record<MessageKey, string> = {
   "template.inventoryLocal": "Local",
   "template.inventoryZone": "Zona",
   "template.inventoryConsultAdvisor": "Consult an advisor",
+  "template.inventoryNationalFootnote":
+    "Consultar otra disponibilidad de colores",
   "template.outOfStock": "Out of stock",
   "image.loading": "Loading image…",
   "image.failed": "Could not load image",

@@ -337,6 +337,9 @@ export function buildInventoryTable(
   const fontSize = 10;
 
   const variants = product.variants ?? [];
+  const consultationOnly = product.categories?.some(
+    (category) => category.trim().toLocaleLowerCase() === "produccion nacional",
+  );
   const cells: string[][] = [
     [
       t("template.inventoryColor", {}, locale),
@@ -348,10 +351,6 @@ export function buildInventoryTable(
   if (variants.length === 0) {
     cells.push(["—", "—", "—"]);
   } else {
-    const consultationOnly = product.categories?.some(
-      (category) =>
-        category.trim().toLocaleLowerCase() === "produccion nacional",
-    );
     for (const variant of variants) {
       cells.push([
         variant.colorName,
@@ -373,7 +372,7 @@ export function buildInventoryTable(
     }
   }
 
-  return {
+  const inventoryTable: TemplateElement = {
     id: `inventory-${suffix}`,
     type: "table",
     x: 40,
@@ -396,6 +395,34 @@ export function buildInventoryTable(
     isEditable: false,
     isDeletable: true,
     isRowDeletable: true,
+  };
+  return inventoryTable;
+}
+
+function buildInventoryFootnote(
+  product: Product,
+  suffix: string,
+  verticalOffset = 0,
+  locale: Locale = defaultLocale,
+): TemplateElement | null {
+  const isNationalProduction = product.categories?.some(
+    (category) => category.trim().toLocaleLowerCase() === "produccion nacional",
+  );
+  if (!isNationalProduction) return null;
+
+  return {
+    id: `inventory-footnote-${suffix}`,
+    type: "text",
+    x: 40,
+    y: 600 + verticalOffset + ((product.variants?.length ?? 0) + 1) * 22 + 4,
+    width: 280,
+    height: 16,
+    text: t("template.inventoryNationalFootnote", {}, locale),
+    fontSize: 9,
+    fontWeight: "bold",
+    fill: "#555555",
+    isDraggable: false,
+    isEditable: false,
   };
 }
 
@@ -484,6 +511,13 @@ export function buildProductPage(
   });
 
   pageElements.push(buildInventoryTable(product, suffix, -120, locale));
+  const inventoryFootnote = buildInventoryFootnote(
+    product,
+    suffix,
+    -120,
+    locale,
+  );
+  if (inventoryFootnote) pageElements.push(inventoryFootnote);
 
   return {
     id: `page-${pageNumber}`,
@@ -543,6 +577,13 @@ export function buildPagesFromQuotation(
       pageElements.push(
         buildInventoryTable(product, `p${pageNumber}`, 0, locale),
       );
+      const inventoryFootnote = buildInventoryFootnote(
+        product,
+        `p${pageNumber}`,
+        0,
+        locale,
+      );
+      if (inventoryFootnote) pageElements.push(inventoryFootnote);
 
       pages.push({
         id: `page-${pageNumber}`,
