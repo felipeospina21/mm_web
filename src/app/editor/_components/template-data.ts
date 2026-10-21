@@ -616,10 +616,7 @@ export function makeEmptyQuotationPages(
   includeEmptyItemsOnFirstPage = false,
 ): PageData[] {
   if (!includeEmptyItemsOnFirstPage) {
-    return buildPagesFromQuotation(
-      makeEmptyQuotationData(),
-      locale,
-    );
+    return buildPagesFromQuotation(makeEmptyQuotationData(), locale);
   }
 
   const quotation = makeEmptyQuotationData();

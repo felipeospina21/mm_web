@@ -102,6 +102,7 @@ export default function QuotationCanvas({
     row: number;
     col: number;
   } | null>(null);
+  const [editingTextValue, setEditingTextValue] = useState("");
   const [editingCellValue, setEditingCellValue] = useState("");
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const pastePositionRef = useRef({ pageNumber: 1, x: 100, y: 100 });
@@ -281,6 +282,7 @@ export default function QuotationCanvas({
       const top = stageBox.top + offset.y + element.y;
       setEditingId(element.id);
       setEditingCell(null);
+      setEditingTextValue(element.text);
       setEditingBox({
         left,
         top,
@@ -310,6 +312,7 @@ export default function QuotationCanvas({
       const top = stageBox.top + offset.y + element.y + row * rowHeight;
       setEditingId(element.id);
       setEditingCell({ row, col });
+      setEditingTextValue("");
       const currentValue = element.table.cells[row]?.[col] ?? "";
       setEditingCellValue(
         row > 0 && col === 0
@@ -372,6 +375,7 @@ export default function QuotationCanvas({
       }
       setEditingId(null);
       setEditingCell(null);
+      setEditingTextValue("");
       setEditingCellValue("");
       setEditingBox(null);
     },
@@ -628,12 +632,7 @@ export default function QuotationCanvas({
             fontSize: editingBox.fontSize,
             color: editingBox.color,
           }}
-          value={editingCell ? editingCellValue : (() => {
-            const element = pages
-              .flatMap((page) => page.elements)
-              .find((item) => item.id === editingId);
-            return element?.text ?? "";
-          })()}
+          value={editingCell ? editingCellValue : editingTextValue}
           inputMode={
             editingCell && editingCell.row > 0 &&
             (editingCell.col === 0 || editingCell.col === 3)
@@ -641,8 +640,11 @@ export default function QuotationCanvas({
               : undefined
           }
           onChange={(e) => {
-            if (!editingCell) return;
             const raw = e.currentTarget.value;
+            if (!editingCell) {
+              setEditingTextValue(raw);
+              return;
+            }
             if (editingCell.row > 0 && editingCell.col === 0) {
               setEditingCellValue(raw.replace(/\D/g, ""));
             } else if (editingCell.row > 0 && editingCell.col === 3) {
