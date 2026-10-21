@@ -13,9 +13,11 @@ interface TableNodeProps {
   isDraggable: boolean;
   isSelected: boolean;
   selectedRows: number[];
+  selectedColumns: number[];
   selectedCells: Array<{ row: number; col: number }>;
   onSelect: () => void;
   onSelectRow: (row: number, extendSelection: boolean) => void;
+  onSelectColumn: (column: number, extendSelection: boolean) => void;
   onSelectCell: (row: number, col: number, extendSelection: boolean) => void;
   onDblClickCell: (row: number, col: number) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
@@ -36,10 +38,12 @@ export default function TableNode({
   isDraggable,
   isSelected,
   selectedRows,
+  selectedColumns,
   selectedCells,
   onSelect,
   onDblClickCell,
   onSelectRow,
+  onSelectColumn,
   onSelectCell,
   onDragEnd,
   onTransformEnd,
@@ -123,6 +127,23 @@ export default function TableNode({
                 }
                 onTap={() => onSelectCell(rowIndex, colIndex, false)}
               />
+              {rowIndex === 0 && (
+                <Rect
+                  x={cellX}
+                  y={0}
+                  width={cellWidth}
+                  height={Math.min(8, rowHeight)}
+                  fill="transparent"
+                  data-column={colIndex}
+                  onClick={(event) =>
+                    onSelectColumn(
+                      colIndex,
+                      event.evt.shiftKey || event.evt.ctrlKey || event.evt.metaKey,
+                    )
+                  }
+                  onTap={() => onSelectColumn(colIndex, false)}
+                />
+              )}
               <Text
                 x={cellX + 8}
                 y={rowIndex * rowHeight}
@@ -138,6 +159,26 @@ export default function TableNode({
           );
         }),
       )}
+      {cells.slice(1).map((_, index) => {
+        const row = index + 1;
+        return (
+          <Rect
+            key={`row-selector-${row}`}
+            x={0}
+            y={row * rowHeight}
+            width={8}
+            height={rowHeight}
+            fill="transparent"
+            onClick={(event) =>
+              onSelectRow(
+                row,
+                event.evt.shiftKey || event.evt.ctrlKey || event.evt.metaKey,
+              )
+            }
+            onTap={() => onSelectRow(row, false)}
+          />
+        );
+      })}
       {selectedRows
         .filter((row) => row > 0 && row < cells.length)
         .map((row) => (
@@ -152,6 +193,18 @@ export default function TableNode({
             listening={false}
           />
         ))}
+      {selectedColumns.map((col) => (
+        <Rect
+          key={`selected-column-${col}`}
+          x={colWidths.slice(0, col).reduce((total, width) => total + width, 0)}
+          y={0}
+          width={colWidths[col] ?? 0}
+          height={rowHeight * cells.length}
+          stroke={theme.colors.primary}
+          strokeWidth={2}
+          listening={false}
+        />
+      ))}
       {selectedCells.map(({ row, col }) => (
         <Rect
           key={`selected-cell-${row}-${col}`}

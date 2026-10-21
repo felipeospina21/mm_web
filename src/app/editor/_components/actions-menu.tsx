@@ -10,6 +10,8 @@ interface ActionsMenuProps {
   onRedo: () => void;
   onAddElement: (type: "text" | "rect" | "table" | "image") => void;
   onAddPage: () => void;
+  onDeletePage: () => void;
+  canDeletePage: boolean;
   onAddProducts: () => void;
 }
 
@@ -28,6 +30,8 @@ export function ActionsMenu({
   onRedo,
   onAddElement,
   onAddPage,
+  onDeletePage,
+  canDeletePage,
   onAddProducts,
 }: ActionsMenuProps) {
   const [open, setOpen] = useState(false);
@@ -112,6 +116,15 @@ export function ActionsMenu({
             onClick={onAddPage}
           >
             {t("actions.addPage")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={ITEM_CLASS}
+            onClick={onDeletePage}
+            disabled={!canDeletePage}
+          >
+            {t("actions.deletePage")}
           </button>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />

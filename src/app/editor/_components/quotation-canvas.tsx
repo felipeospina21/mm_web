@@ -16,6 +16,7 @@ import TableNode from "./table-node";
 import FloatingToolbar from "./floating-toolbar";
 import type { PageData, TemplateElement } from "./types";
 import { t } from "@/i18n/messages";
+import { theme } from "@/lib/theme";
 import { PAGE_GAP, PAGE_HEIGHT, PAGE_WIDTH, STAGE_BG } from "./types";
 
 function formatEditedCell(value: string, row: number, col: number): string {
@@ -44,6 +45,8 @@ interface QuotationCanvasProps {
   /** Notifies the page of selection changes (for keyboard shortcuts) */
   onSelectionChange: (elementId: string | null) => void;
   onActivePageChange: (pageNumber: number) => void;
+  activePageNumber: number;
+  onDeletePage: (pageNumber: number) => void;
   onPasteImage: (
     src: string,
     pageNumber: number,
@@ -73,6 +76,8 @@ export default function QuotationCanvas({
   onDuplicateElement,
   onSelectionChange,
   onActivePageChange,
+  activePageNumber,
+  onDeletePage,
   onPasteImage,
 }: QuotationCanvasProps) {
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -84,6 +89,7 @@ export default function QuotationCanvas({
   /** id of the currently selected element (globally unique across pages) */
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedTableRows, setSelectedTableRows] = useState<number[]>([]);
+  const [selectedTableColumns, setSelectedTableColumns] = useState<number[]>([]);
   const [selectedTableCells, setSelectedTableCells] = useState<
     Array<{ row: number; col: number }>
   >([]);
@@ -141,6 +147,7 @@ export default function QuotationCanvas({
       const targetRows = selectedTableRows
         .filter((row) => row > 0)
         .sort((a, b) => a - b);
+      const targetColumns = [...selectedTableColumns].sort((a, b) => a - b);
       const targetCells = [...selectedTableCells].sort(
         (a, b) => a.row - b.row || a.col - b.col,
       );
@@ -188,6 +195,52 @@ export default function QuotationCanvas({
           table: { ...tableData, cells },
         });
         setSelectedTableCells([]);
+        return;
+      }
+
+      if (
+        clipboardText &&
+        selectedTablePage &&
+        selectedTable &&
+        tableData &&
+        selectedTable.isEditable &&
+        targetColumns.length > 0
+      ) {
+        const sourceRows = clipboardText
+          .replace(/\r\n/g, "\n")
+          .replace(/\n$/, "")
+          .split("\n")
+          .map((row) => row.split("\t"));
+        const startColumn = targetColumns[0]!;
+        const cells = tableData.cells.map((row) => [...row]);
+        const columnCount = tableData.colWidths.length;
+
+        sourceRows.forEach((sourceRow, rowOffset) => {
+          const rowIndex = rowOffset + 1;
+          while (cells.length <= rowIndex) {
+            cells.push(Array.from({ length: columnCount }, () => ""));
+          }
+          const row = cells[rowIndex];
+          if (!row) return;
+          sourceRow.forEach((value, colOffset) => {
+            const colIndex = startColumn + colOffset;
+            if (colIndex >= columnCount || (selectedTable.id.startsWith("line-items-") && colIndex === 4)) return;
+            row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
+          });
+          if (selectedTable.id.startsWith("line-items-")) {
+            const quantity = row[0]?.replace(/\D/g, "") ?? "";
+            const price = row[3]?.replace(/\D/g, "") ?? "";
+            row[4] = quantity && price
+              ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
+              : "";
+          }
+        });
+
+        event.preventDefault();
+        onElementChange(selectedTablePage.id, selectedTable.id, {
+          height: tableData.rowHeight * cells.length,
+          table: { ...tableData, cells },
+        });
         return;
       }
 
@@ -284,6 +337,7 @@ export default function QuotationCanvas({
       pages,
       selectedId,
       selectedTableRows,
+      selectedTableColumns,
       selectedTableCells,
     ],
   );
@@ -305,7 +359,10 @@ export default function QuotationCanvas({
           row > 0 && row < selectedTable.table!.cells.length && col >= 0,
         )
         .sort((a, b) => a.row - b.row || a.col - b.col);
-      if (rows.length === 0 && selectedCells.length === 0) return;
+      const columns = selectedTableColumns
+        .filter((col) => col >= 0 && col < selectedTable.table!.colWidths.length)
+        .sort((a, b) => a - b);
+      if (rows.length === 0 && columns.length === 0 && selectedCells.length === 0) return;
 
       event.preventDefault();
       event.clipboardData.setData(
@@ -314,6 +371,11 @@ export default function QuotationCanvas({
           ? rows
               .map((rowIndex) => selectedTable.table!.cells[rowIndex]?.join("\t") ?? "")
               .join("\n")
+          : columns.length > 0
+            ? selectedTable.table!.cells
+                .slice(1)
+                .map((row) => columns.map((col) => row[col] ?? "").join("\t"))
+                .join("\n")
           : (() => {
               const minRow = Math.min(...selectedCells.map(({ row }) => row));
               const maxRow = Math.max(...selectedCells.map(({ row }) => row));
@@ -334,7 +396,7 @@ export default function QuotationCanvas({
             })(),
       );
     },
-    [pages, selectedId, selectedTableRows, selectedTableCells],
+    [pages, selectedId, selectedTableRows, selectedTableColumns, selectedTableCells],
   );
 
   /** Notify the page whenever the selection changes */
@@ -577,6 +639,7 @@ export default function QuotationCanvas({
         setSelectedId(null);
         setSelectedTableCells([]);
         setSelectedTableRows([]);
+        setSelectedTableColumns([]);
       }
       updateActivePageFromPointer();
     },
@@ -607,6 +670,7 @@ export default function QuotationCanvas({
             setSelectedId(null);
             setSelectedTableCells([]);
             setSelectedTableRows([]);
+            setSelectedTableColumns([]);
           }
           updateActivePageFromPointer();
         }}
@@ -616,7 +680,11 @@ export default function QuotationCanvas({
           {pages.map((page) => {
             const offset = getPageOffset(page.pageNumber);
             return (
-              <Group key={page.id}>
+              <Group
+                key={page.id}
+                onMouseDown={() => onActivePageChange(page.pageNumber)}
+                onTouchStart={() => onActivePageChange(page.pageNumber)}
+              >
                 {/* White page rectangle with drop shadow */}
                 <Rect
                   x={offset.x}
@@ -631,6 +699,17 @@ export default function QuotationCanvas({
                   cornerRadius={2}
                   listening={false}
                 />
+                {page.pageNumber === activePageNumber && (
+                  <Rect
+                    x={offset.x - 3}
+                    y={offset.y - 3}
+                    width={PAGE_WIDTH + 6}
+                    height={PAGE_HEIGHT + 6}
+                    stroke={theme.colors.primary}
+                    strokeWidth={3}
+                    listening={false}
+                  />
+                )}
                 {page.elements.map((element) => {
                   const absX = offset.x + element.x;
                   const absY = offset.y + element.y;
@@ -682,6 +761,9 @@ export default function QuotationCanvas({
                         selectedRows={
                           selectedId === element.id ? selectedTableRows : []
                         }
+                        selectedColumns={
+                          selectedId === element.id ? selectedTableColumns : []
+                        }
                         selectedCells={
                           selectedId === element.id ? selectedTableCells : []
                         }
@@ -694,6 +776,7 @@ export default function QuotationCanvas({
                           onActivePageChange(page.pageNumber);
                           if (row === 0) {
                             setSelectedTableRows([]);
+                            setSelectedTableColumns([]);
                             setSelectedTableCells([]);
                             setTableRowAnchor(null);
                             return;
@@ -717,14 +800,29 @@ export default function QuotationCanvas({
                           }
 
                           setSelectedTableRows([row]);
+                          setSelectedTableColumns([]);
                           setSelectedTableCells([]);
                           setTableRowAnchor(row);
+                        }}
+                        onSelectColumn={(column, extendSelection) => {
+                          setSelectedId(element.id);
+                          onActivePageChange(page.pageNumber);
+                          setTableRowAnchor(null);
+                          setSelectedTableRows([]);
+                          setSelectedTableCells([]);
+                          setSelectedTableColumns((current) => {
+                            if (!extendSelection) return [column];
+                            return current.includes(column)
+                              ? current.filter((item) => item !== column)
+                              : [...current, column].sort((a, b) => a - b);
+                          });
                         }}
                         onSelectCell={(row, col, extendSelection) => {
                           setSelectedId(element.id);
                           onActivePageChange(page.pageNumber);
                           setTableRowAnchor(null);
                           setSelectedTableRows([]);
+                          setSelectedTableColumns([]);
                           if (row === 0) {
                             setSelectedTableCells([]);
                             return;
@@ -733,8 +831,10 @@ export default function QuotationCanvas({
                             const alreadySelected = current.some(
                               (cell) => cell.row === row && cell.col === col,
                             );
-                    if (!extendSelection) return [{ row, col }];
-                            return alreadySelected ? current : [...current, { row, col }];
+                            if (!extendSelection) return [{ row, col }];
+                            return alreadySelected
+                              ? current
+                              : [...current, { row, col }];
                           });
                         }}
                         onDblClickCell={(row, col) => {

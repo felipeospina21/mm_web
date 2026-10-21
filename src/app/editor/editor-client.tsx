@@ -53,6 +53,7 @@ export default function EditorPage() {
   const saveRevisionRef = useRef(0);
   const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
   const activePageNumberRef = useRef(1);
+  const [activePageNumber, setActivePageNumber] = useState(1);
 
   // Warn before leaving/reloading the tab when there are unsaved changes.
   useEffect(() => {
@@ -696,7 +697,32 @@ export default function EditorPage() {
 
   const handleActivePageChange = useCallback((pageNumber: number) => {
     activePageNumberRef.current = pageNumber;
+    setActivePageNumber(pageNumber);
   }, []);
+
+  const handleDeletePage = useCallback((pageNumber: number) => {
+    setPagesWithHistory((prev) => {
+      if (prev.length <= 2) return prev;
+      const pageToDelete = prev.find((page) => page.pageNumber === pageNumber);
+      if (
+        !pageToDelete ||
+        pageToDelete.elements.some((element) => element.id === "policies-body")
+      ) {
+        return prev;
+      }
+      const next = prev
+        .filter((page) => page.pageNumber !== pageNumber)
+        .map((page, index) => ({
+          ...page,
+          id: `page-${index + 1}`,
+          pageNumber: index + 1,
+        }));
+      const nextActivePage = Math.min(pageNumber, next.length - 1);
+      activePageNumberRef.current = nextActivePage;
+      setActivePageNumber(nextActivePage);
+      return next;
+    });
+  }, [setPagesWithHistory]);
 
   const handlePasteImage = useCallback(
     (
@@ -824,6 +850,14 @@ export default function EditorPage() {
             onRedo={handleRedo}
             onAddElement={handleAddElement}
             onAddPage={handleAddPage}
+            onDeletePage={() => handleDeletePage(activePageNumber)}
+            canDeletePage={
+              pages.length > 2 &&
+              pages[activePageNumber - 1]?.elements.some(
+                (element) => element.id === "policies-body",
+              ) !== true &&
+              activePageNumber > 1
+            }
             onAddProducts={handleAddProducts}
           />
           <button
@@ -850,6 +884,8 @@ export default function EditorPage() {
       <div className="min-h-0 flex-1">
         <QuotationCanvas
           pages={pages}
+          activePageNumber={activePageNumber}
+          onDeletePage={handleDeletePage}
           onElementChange={handleElementChange}
           onDeleteElement={handleDeleteElement}
           onDuplicateElement={handleDuplicateElement}
