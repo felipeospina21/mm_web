@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type Konva from "konva";
 import { exportPagesToPdf } from "./_components/pdf-export";
 import {
   buildPagesFromQuotation,
@@ -54,10 +53,6 @@ export default function EditorPage() {
   const saveRevisionRef = useRef(0);
   const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
   const activePageNumberRef = useRef(1);
-
-  const handleStageReady = useCallback((stage: Konva.Stage | null) => {
-    stageRef.current = stage;
-  }, []);
 
   // Warn before leaving/reloading the tab when there are unsaved changes.
   useEffect(() => {
@@ -192,7 +187,6 @@ export default function EditorPage() {
     setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
   }, []);
   const [isExporting, setIsExporting] = useState(false);
-  const stageRef = useRef<Konva.Stage | null>(null);
 
   // Saved identity: null while a draft, { id, quotationNumber } once persisted.
   const [saved, setSaved] = useState<{
@@ -775,14 +769,12 @@ export default function EditorPage() {
   }, [handleUndo, handleRedo, handleDeleteElement, handleDuplicateElement]);
 
   const handleExportPdf = useCallback(async () => {
-    const stage = stageRef.current;
-    if (!stage) return;
     setIsExporting(true);
-    // Let the button state render before the (synchronous) capture work
+    // Let the button state render before image loading and PDF generation.
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     try {
       const fileName = `Cotización N°${saveMutation.data?.quotationNumber} - ${saveMutation.data?.clientName} - Magic Medios SAS.pdf`;
-      exportPagesToPdf(stage, pages, fileName);
+      await exportPagesToPdf(pages, fileName);
     } catch (error) {
       console.error("PDF export failed:", error);
       alert(t("editor.pdfExportFailed"));
@@ -859,7 +851,6 @@ export default function EditorPage() {
         <QuotationCanvas
           pages={pages}
           onElementChange={handleElementChange}
-          onStageReady={handleStageReady}
           onDeleteElement={handleDeleteElement}
           onDuplicateElement={handleDuplicateElement}
           onSelectionChange={handleSelectionChange}

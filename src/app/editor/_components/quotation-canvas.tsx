@@ -37,8 +37,6 @@ interface QuotationCanvasProps {
     elementId: string,
     patch: Partial<TemplateElement>,
   ) => void;
-  /** Registered by the canvas so the export button can capture pages */
-  onStageReady: (stage: Konva.Stage | null) => void;
   /** Delete the element with the given id */
   onDeleteElement: (elementId: string) => void;
   /** Duplicate the element with the given id */
@@ -71,7 +69,6 @@ export function getPageOffset(pageNumber: number): { x: number; y: number } {
 export default function QuotationCanvas({
   pages,
   onElementChange,
-  onStageReady,
   onDeleteElement,
   onDuplicateElement,
   onSelectionChange,
@@ -345,14 +342,6 @@ export default function QuotationCanvas({
     onSelectionChange(selectedId);
   }, [selectedId, onSelectionChange]);
 
-  const handleStageRef = useCallback(
-    (node: Konva.Stage | null) => {
-      stageRef.current = node;
-      onStageReady(node);
-    },
-    [onStageReady],
-  );
-
   // Keep the stage sized to its container (not the window) so it fits
   // beside the inventory panel and under the toolbar. Pages scroll inside.
   useEffect(() => {
@@ -604,7 +593,7 @@ export default function QuotationCanvas({
       style={{ background: STAGE_BG }}
     >
       <Stage
-        ref={handleStageRef}
+        ref={stageRef}
         width={Math.max(stageSize.width, PAGE_WIDTH + 80)}
         height={Math.max(
           stageSize.height,
