@@ -97,6 +97,22 @@ export function SearchableSelect({
             role="listbox"
             className="max-h-56 overflow-y-auto p-1"
           >
+            {footerAction && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setIsOpen(false);
+                    footerAction.onSelect();
+                  }}
+                  className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-green-700 hover:bg-green-50"
+                >
+                  {footerAction.label}
+                </button>
+              </li>
+            )}
+
             {filteredOptions.map((option) => (
               <li
                 key={option.value}
@@ -119,21 +135,6 @@ export function SearchableSelect({
             {filteredOptions.length === 0 && (
               <li className="px-3 py-2 text-sm text-neutral-500">
                 {noResultsLabel}
-              </li>
-            )}
-            {footerAction && (
-              <li>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setIsOpen(false);
-                    footerAction.onSelect();
-                  }}
-                  className="w-full rounded-md px-3 py-2 text-left text-sm font-medium text-green-700 hover:bg-green-50"
-                >
-                  {footerAction.label}
-                </button>
               </li>
             )}
           </ul>

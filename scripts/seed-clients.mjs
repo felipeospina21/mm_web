@@ -178,61 +178,111 @@ try {
 }
 
 const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false });
+const INSERT_BATCH_SIZE = 500;
+
+function batches(items, size) {
+  const result = [];
+  for (let index = 0; index < items.length; index += size) {
+    result.push(items.slice(index, index + size));
+  }
+  return result;
+}
 
 try {
   let contactCount = 0;
+  let savedClientCount = 0;
+  let failedClientBatches = 0;
+  let failedContactBatches = 0;
 
-  await sql.begin(async (transaction) => {
-    const ownerEmails = [...new Set(clients.map((client) => client.ownerEmail))];
-    const userRows = await transaction`
-      SELECT id, lower(email) AS email
-      FROM mm_web_user
-      WHERE lower(email) IN ${transaction(ownerEmails)}
-    `;
-    const usersByEmail = new Map();
-    for (const user of userRows) {
-      if (usersByEmail.has(user.email)) {
-        throw new Error(`More than one user has email '${user.email}'.`);
-      }
-      usersByEmail.set(user.email, user.id);
+  const ownerEmails = [...new Set(clients.map((client) => client.ownerEmail))];
+  const userRows = await sql`
+    SELECT id, lower(email) AS email
+    FROM mm_web_user
+    WHERE lower(email) IN ${sql(ownerEmails)}
+  `;
+  const usersByEmail = new Map();
+  for (const user of userRows) {
+    if (usersByEmail.has(user.email)) {
+      throw new Error(`More than one user has email '${user.email}'.`);
     }
-    const missingOwners = ownerEmails.filter((email) => !usersByEmail.has(email));
-    if (missingOwners.length > 0) {
-      throw new Error(`No existing user found for: ${missingOwners.join(", ")}`);
-    }
+    usersByEmail.set(user.email, user.id);
+  }
+  const missingOwners = ownerEmails.filter((email) => !usersByEmail.has(email));
+  if (missingOwners.length > 0) {
+    throw new Error(`No existing user found for: ${missingOwners.join(", ")}`);
+  }
 
-    for (const client of clients) {
-      const [createdClient] = await transaction`
-        INSERT INTO mm_web_client (
-          name, company_id, address, phone, user_id
-        )
-        VALUES (
-          ${client.name},
-          ${client.companyId || null},
-          ${client.address || null},
-          ${client.phone || null},
-          ${usersByEmail.get(client.ownerEmail)}
-        )
-        RETURNING id
-      `;
-
-      if (client.contacts.length > 0) {
-        await transaction`
-          INSERT INTO mm_web_client_contact ${transaction(
-            client.contacts.map((contact) => ({
-              client_id: createdClient.id,
-              name: contact.name,
-              phone: contact.phone,
-              email: contact.email,
-            })),
+  for (const [batchIndex, clientBatch] of batches(clients, INSERT_BATCH_SIZE).entries()) {
+    let createdClients;
+    try {
+      createdClients = await sql.begin(async (transaction) => {
+        const inserted = await transaction`
+          INSERT INTO mm_web_client (
+            name, company_id, address, phone, user_id
+          )
+          VALUES ${transaction(
+            clientBatch.map((client) => [
+              client.name,
+              client.companyId || null,
+              client.address || null,
+              client.phone || null,
+              usersByEmail.get(client.ownerEmail),
+            ]),
           )}
+          RETURNING id
         `;
-        contactCount += client.contacts.length;
+
+        if (inserted.length !== clientBatch.length) {
+          throw new Error("Database returned an unexpected number of created clients.");
+        }
+        return inserted;
+      });
+    } catch (error) {
+      failedClientBatches += 1;
+      console.error(
+        `Client batch ${batchIndex + 1} failed; its ${clientBatch.length} clients were skipped: ${error.message}`,
+      );
+      continue;
+    }
+
+    savedClientCount += clientBatch.length;
+    const contacts = clientBatch.flatMap((client, index) =>
+      client.contacts.map((contact) => ({
+        client_id: createdClients[index].id,
+        name: contact.name,
+        phone: contact.phone,
+        email: contact.email,
+      })),
+    );
+
+    for (const [contactBatchIndex, contactBatch] of batches(
+      contacts,
+      INSERT_BATCH_SIZE,
+    ).entries()) {
+      try {
+        await sql.begin(async (transaction) => {
+          await transaction`
+            INSERT INTO mm_web_client_contact ${transaction(contactBatch)}
+          `;
+        });
+        contactCount += contactBatch.length;
+      } catch (error) {
+        failedContactBatches += 1;
+        console.error(
+          `Contact batch ${contactBatchIndex + 1} for client batch ${batchIndex + 1} failed; ${contactBatch.length} contacts were skipped: ${error.message}`,
+        );
       }
     }
-  });
+    console.log(
+      `Saved client batch ${batchIndex + 1}: ${clientBatch.length} clients, ${contacts.length} contacts processed.`,
+    );
+  }
 
-  console.log(`Seeded ${clients.length} clients and ${contactCount} contacts.`);
+  const clientBatchCount = batches(clients, INSERT_BATCH_SIZE).length;
+  console.log(
+    `Import finished: ${savedClientCount}/${clients.length} clients saved in ${clientBatchCount} batches; ${contactCount} contacts saved; ${failedClientBatches} client batches and ${failedContactBatches} contact batches failed.`,
+  );
+  if (failedClientBatches > 0 || failedContactBatches > 0) process.exitCode = 1;
 } catch (error) {
   console.error(`Client import failed; no clients were changed: ${error.message}`);
   process.exitCode = 1;

@@ -134,8 +134,8 @@ const es = {
   "template.quantity": "Cant.",
   "template.marking": "Técnica de marcación",
   "template.detail": "Detalle",
-  "template.unitPrice": "Precio unitario",
-  "template.subtotal": "Subtotal",
+  "template.unitPrice": "Precio unitario \n(antes de iva)",
+  "template.subtotal": "Subtotal \n(antes de iva)",
   "template.policiesBody":
     "1. Los precios están expresados en USD y tienen una vigencia de 30 días a partir de la fecha de cotización.\n2. Forma de pago: 50 % por adelantado y 50 % contra entrega.\n3. Plazo de entrega: de 8 a 12 semanas a partir del inicio del proyecto.\n4. Los precios no incluyen impuestos; los impuestos aplicables se agregarán a la factura final.\n5. Cualquier cambio en el alcance debe acordarse por escrito y puede afectar el precio y el plazo.\n6. Esta cotización no constituye un contrato hasta que ambas partes la firmen.",
   "template.acceptedBy": "Aceptado por: ______________________",
