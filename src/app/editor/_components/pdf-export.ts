@@ -173,6 +173,44 @@ function getImageFormat(dataUrl: string): "PNG" | "JPEG" | "WEBP" {
   return "JPEG";
 }
 
+async function resizeImageData(
+  dataUrl: string,
+  displayWidth: number,
+  displayHeight: number,
+): Promise<string> {
+  const image = new window.Image();
+  const imageLoaded = new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("Image could not be decoded"));
+  });
+  image.src = dataUrl;
+  await imageLoaded;
+
+  // Keep at most 2x the PDF's rendered dimensions and avoid enlarging small sources.
+  const width = Math.max(1, Math.min(image.naturalWidth, Math.ceil(displayWidth * 2)));
+  const height = Math.max(1, Math.min(image.naturalHeight, Math.ceil(displayHeight * 2)));
+  if (width === image.naturalWidth && height === image.naturalHeight) return dataUrl;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Image resize canvas is unavailable");
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, 0, 0, width, height);
+
+  const format = getImageFormat(dataUrl);
+  const mimeType =
+    format === "PNG"
+      ? "image/png"
+      : format === "WEBP"
+        ? "image/webp"
+        : "image/jpeg";
+  return canvas.toDataURL(mimeType, 0.92);
+}
+
 async function drawImage(pdf: jsPDF, element: TemplateElement): Promise<void> {
   if (!element.src) {
     pdf.setFillColor(238, 238, 238);
@@ -182,7 +220,12 @@ async function drawImage(pdf: jsPDF, element: TemplateElement): Promise<void> {
   }
 
   try {
-    const dataUrl = await loadImageData(element.src);
+    const sourceData = await loadImageData(element.src);
+    const dataUrl = await resizeImageData(
+      sourceData,
+      element.width,
+      element.height,
+    );
     pdf.addImage(
       dataUrl,
       getImageFormat(dataUrl),
