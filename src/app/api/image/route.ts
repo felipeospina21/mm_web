@@ -22,7 +22,7 @@ import { log } from "@/server/observability/logger";
 export const dynamic = "force-dynamic";
 
 /** Abort an upstream fetch that takes longer than this. */
-const UPSTREAM_TIMEOUT_MS = 8_000;
+const UPSTREAM_TIMEOUT_MS = 12_000;
 
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("url");
@@ -71,11 +71,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const body = await upstream.arrayBuffer();
-    return new NextResponse(body, {
+    const contentLength = upstream.headers.get("content-length");
+    return new NextResponse(upstream.body, {
       status: 200,
       headers: {
         "content-type": contentType,
+        ...(contentLength ? { "content-length": contentLength } : {}),
         // Cache aggressively: product images are effectively immutable per URL.
         "cache-control": "public, max-age=86400, s-maxage=86400, immutable",
       },
