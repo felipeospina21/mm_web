@@ -10,7 +10,6 @@ import {
   ensurePageLogos,
   makeEmptyProductPage,
   makeEmptyQuotationPages,
-  DUMMY_QUOTATION,
 } from "./_components/template-data";
 import type {
   PageData,
@@ -31,14 +30,11 @@ import {
 } from "@/lib/quotation-load";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
 import { AddProductModal } from "./_components/add-product-modal";
-import {
-  capitalizeLabeledName,
-  capitalizeName,
-} from "@/lib/capitalize-name";
+import { capitalizeLabeledName, capitalizeName } from "@/lib/capitalize-name";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
-import { formatQuotationFooter } from "@/lib/company-profile";
+import { useRepresentativeProfile } from "./_components/use-representative-profile";
 
 // Konva touches `window` at import time, so the canvas is loaded
 // client-side only.
@@ -84,7 +80,13 @@ export default function EditorPage() {
   const makeInitialMeta = useCallback((): QuotationData => {
     const picked = getQuotationProducts();
     return {
-      ...DUMMY_QUOTATION,
+      companyName: "",
+      customerName: "",
+      representativeName: "",
+      representativePhone: "",
+      representativePhoneExtension: "",
+      representativeCellphone: "",
+      representativeEmail: "",
       products: picked.map((product: QuotationProduct) => ({
         name: product.name,
         reference: product.reference,
@@ -219,7 +221,6 @@ export default function EditorPage() {
     },
   });
 
-  const representativeQuery = api.quotation.representative.useQuery();
   const clientsQuery = api.customer.list.useQuery();
   const canSave = Boolean(
     selectedClientId && (saved ?? hasInitialProducts ?? isDirty),
@@ -354,6 +355,24 @@ export default function EditorPage() {
   const [pendingLoadId] = useState<string | null>(() =>
     takePendingQuotationLoad(),
   );
+
+  const resetHistory = useCallback((nextPages: PageData[]) => {
+    historyRef.current = [nextPages];
+    historyIndexRef.current = 0;
+    setCanUndo(false);
+    setCanRedo(false);
+  }, []);
+
+  useRepresentativeProfile({
+    isDirty,
+    isSaved: Boolean(saved),
+    pendingLoadId,
+    pagesRef,
+    metaRef,
+    replacePages,
+    resetHistory,
+  });
+
   const pendingHomeClientIdRef = useRef(selectedClientId);
 
   useEffect(() => {
@@ -465,7 +484,13 @@ export default function EditorPage() {
         page.elements.some((element) => element.id.startsWith("product-name-")),
       ).length;
       metaRef.current = {
-        ...DUMMY_QUOTATION,
+        companyName: "",
+        customerName: "",
+        representativeName: "",
+        representativePhone: "",
+        representativePhoneExtension: "",
+        representativeCellphone: "",
+        representativeEmail: "",
         products: Array.from<Product>({ length: productCount }),
       };
       setSelectedClientId(row.clientId);
@@ -501,73 +526,6 @@ export default function EditorPage() {
   }, [loadQuery.data, isDirty, dismissedLoadId, hydrateFromRow]);
 
   // ---- Undo/redo history ----
-  const representativeAppliedRef = useRef(false);
-
-  // Populate a new draft from the signed-in user's database profile. Saved
-  // quotations keep their own metadata snapshot when reopened.
-  useEffect(() => {
-    const representative = representativeQuery.data;
-    if (
-      !representative ||
-      representativeAppliedRef.current ||
-      saved ||
-      isDirty ||
-      pendingLoadId
-    ) {
-      return;
-    }
-    representativeAppliedRef.current = true;
-
-    const representativeName = capitalizeName(representative.name ?? "");
-    const representativePhone = representative.phone ?? "";
-    const representativePhoneExtension =
-      representative.phoneExt == null ? "" : String(representative.phoneExt);
-    const representativeCellphone = representative.cellphone ?? "";
-    const representativeEmail = representative.email ?? "";
-    const previousMeta = metaRef.current;
-    const representativeText = [
-      t("template.representative"),
-      representativeName,
-      representativePhone,
-      representativeEmail,
-    ].join("\n");
-
-    // Read the latest page snapshot: the selected client can be applied in
-    // the effect above during the same commit as this profile hydration.
-    const nextPages = pagesRef.current.map((page) => ({
-      ...page,
-      elements: page.elements.map((element) => {
-        if (element.id === "representative-info") {
-          return { ...element, text: representativeText };
-        }
-        if (element.id === "footer") {
-          return {
-            ...element,
-            text: formatQuotationFooter({
-              representativeCellphone,
-              representativePhone,
-              representativePhoneExtension,
-              representativeEmail,
-            }),
-          };
-        }
-        return element;
-      }),
-    }));
-    metaRef.current = {
-      ...previousMeta,
-      representativeName,
-      representativePhone,
-      representativePhoneExtension,
-      representativeCellphone,
-      representativeEmail,
-    };
-    replacePages(nextPages);
-    historyRef.current = [nextPages];
-    historyIndexRef.current = 0;
-    setCanUndo(false);
-    setCanRedo(false);
-  }, [representativeQuery.data, saved, isDirty, pendingLoadId, replacePages]);
 
   /** Persist any element edit (drag, resize, text, formatting) */
   const handleElementChange = useCallback(

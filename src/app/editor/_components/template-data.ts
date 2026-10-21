@@ -97,7 +97,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
       y: 100,
       width: 350,
       height: 115,
-      text: `${t("template.representative", {}, locale)} \n{{representativeName}}\n{{representativePhone}}\n{{representativeEmail}}`,
+      text: `${t("template.representative", {}, locale)} \n{{representativeName}}\n{{representativeCellphone}} / {{representativePhone}} ext. {{representativePhoneExtension}}\n{{representativeEmail}}`,
       fontSize: 14,
       fill: "#000000",
       isDraggable: false,
@@ -291,7 +291,15 @@ function interpolate(
     .replaceAll("{{companyName}}", quotation.companyName)
     .replaceAll("{{customerName}}", quotation.customerName)
     .replaceAll("{{representativeName}}", quotation.representativeName)
+    .replaceAll(
+      "{{representativeCellphone}}",
+      quotation.representativeCellphone,
+    )
     .replaceAll("{{representativePhone}}", quotation.representativePhone)
+    .replaceAll(
+      "{{representativePhoneExtension}}",
+      quotation.representativePhoneExtension,
+    )
     .replaceAll("{{representativeEmail}}", quotation.representativeEmail);
 
   result = result.replaceAll(
@@ -609,12 +617,12 @@ export function makeEmptyQuotationPages(
 ): PageData[] {
   if (!includeEmptyItemsOnFirstPage) {
     return buildPagesFromQuotation(
-      { ...DUMMY_QUOTATION, products: [] },
+      makeEmptyQuotationData(),
       locale,
     );
   }
 
-  const quotation = { ...DUMMY_QUOTATION, products: [] };
+  const quotation = makeEmptyQuotationData();
   const pages = buildPagesFromQuotation(quotation, locale);
   const firstPage = pages[0];
   if (!firstPage) return pages;
@@ -674,12 +682,15 @@ export function makeMasterTemplate(locale: Locale = defaultLocale): PageData {
   };
 }
 
-export const DUMMY_QUOTATION: Omit<QuotationData, "products"> = {
-  companyName: "",
-  customerName: "",
-  representativeName: "",
-  representativePhone: "",
-  representativePhoneExtension: "",
-  representativeCellphone: "",
-  representativeEmail: "",
-};
+function makeEmptyQuotationData(): QuotationData {
+  return {
+    companyName: "",
+    customerName: "",
+    representativeName: "",
+    representativePhone: "",
+    representativePhoneExtension: "",
+    representativeCellphone: "",
+    representativeEmail: "",
+    products: [],
+  };
+}
