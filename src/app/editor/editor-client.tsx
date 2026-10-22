@@ -34,6 +34,7 @@ import { api, type RouterOutputs } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
 import { useRepresentativeProfile } from "./_components/use-representative-profile";
+import { getFileName } from "@/lib/quotation-save";
 
 // Konva touches `window` at import time, so the canvas is loaded
 // client-side only.
@@ -218,7 +219,8 @@ export default function EditorPage() {
 
   const clientsQuery = api.customer.list.useQuery();
   const canSave = Boolean(
-    selectedClientId && (saved ?? hasInitialProducts ?? isDirty),
+    selectedClientId &&
+    (isManualStart || saved || hasInitialProducts || isDirty),
   );
 
   const handleAddProducts = useCallback(() => {
@@ -700,29 +702,36 @@ export default function EditorPage() {
     setActivePageNumber(pageNumber);
   }, []);
 
-  const handleDeletePage = useCallback((pageNumber: number) => {
-    setPagesWithHistory((prev) => {
-      if (prev.length <= 2) return prev;
-      const pageToDelete = prev.find((page) => page.pageNumber === pageNumber);
-      if (
-        !pageToDelete ||
-        pageToDelete.elements.some((element) => element.id === "policies-body")
-      ) {
-        return prev;
-      }
-      const next = prev
-        .filter((page) => page.pageNumber !== pageNumber)
-        .map((page, index) => ({
-          ...page,
-          id: `page-${index + 1}`,
-          pageNumber: index + 1,
-        }));
-      const nextActivePage = Math.min(pageNumber, next.length - 1);
-      activePageNumberRef.current = nextActivePage;
-      setActivePageNumber(nextActivePage);
-      return next;
-    });
-  }, [setPagesWithHistory]);
+  const handleDeletePage = useCallback(
+    (pageNumber: number) => {
+      setPagesWithHistory((prev) => {
+        if (prev.length <= 2) return prev;
+        const pageToDelete = prev.find(
+          (page) => page.pageNumber === pageNumber,
+        );
+        if (
+          !pageToDelete ||
+          pageToDelete.elements.some(
+            (element) => element.id === "policies-body",
+          )
+        ) {
+          return prev;
+        }
+        const next = prev
+          .filter((page) => page.pageNumber !== pageNumber)
+          .map((page, index) => ({
+            ...page,
+            id: `page-${index + 1}`,
+            pageNumber: index + 1,
+          }));
+        const nextActivePage = Math.min(pageNumber, next.length - 1);
+        activePageNumberRef.current = nextActivePage;
+        setActivePageNumber(nextActivePage);
+        return next;
+      });
+    },
+    [setPagesWithHistory],
+  );
 
   const handlePasteImage = useCallback(
     (
@@ -799,7 +808,10 @@ export default function EditorPage() {
     // Let the button state render before image loading and PDF generation.
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     try {
-      const fileName = `Cotización N°${saveMutation.data?.quotationNumber} - ${saveMutation.data?.clientName} - Magic Medios SAS.pdf`;
+      const fileName = getFileName(
+        saveMutation.data?.quotationNumber,
+        saveMutation.data?.clientName,
+      );
       await exportPagesToPdf(pages, fileName);
     } catch (error) {
       console.error("PDF export failed:", error);
