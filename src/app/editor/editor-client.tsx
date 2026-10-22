@@ -767,6 +767,19 @@ export default function EditorPage() {
     [setPagesWithHistory],
   );
 
+  const handlePasteElement = useCallback(
+    (pageNumber: number, element: TemplateElement) => {
+      setPagesWithHistory((prev) =>
+        prev.map((page) =>
+          page.pageNumber === pageNumber
+            ? { ...page, elements: [...page.elements, element] }
+            : page,
+        ),
+      );
+    },
+    [setPagesWithHistory],
+  );
+
   // Track the selected element id via a ref (set by the canvas)
   const selectedIdRef = useRef<string | null>(null);
   const handleSelectionChange = useCallback((id: string | null) => {
@@ -904,6 +917,7 @@ export default function EditorPage() {
           onSelectionChange={handleSelectionChange}
           onActivePageChange={handleActivePageChange}
           onPasteImage={handlePasteImage}
+          onPasteElement={handlePasteElement}
         />
       </div>
 

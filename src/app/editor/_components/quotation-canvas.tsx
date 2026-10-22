@@ -55,6 +55,7 @@ interface QuotationCanvasProps {
     width: number,
     height: number,
   ) => void;
+  onPasteElement: (pageNumber: number, element: TemplateElement) => void;
 }
 
 /**
@@ -79,6 +80,7 @@ export default function QuotationCanvas({
   activePageNumber,
   onDeletePage,
   onPasteImage,
+  onPasteElement,
 }: QuotationCanvasProps) {
   const stageRef = useRef<Konva.Stage | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -112,6 +114,7 @@ export default function QuotationCanvas({
   const [editingCellValue, setEditingCellValue] = useState("");
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const pastePositionRef = useRef({ pageNumber: 1, x: 100, y: 100 });
+  const elementClipboardRef = useRef<TemplateElement | null>(null);
 
   const updateActivePageFromPointer = useCallback(() => {
     const stage = stageRef.current;
@@ -135,6 +138,30 @@ export default function QuotationCanvas({
       const target = event.target as HTMLElement;
       if (target.closest("input, textarea, [contenteditable='true']")) return;
       const clipboardText = event.clipboardData.getData("text/plain");
+
+      if (!clipboardText && elementClipboardRef.current) {
+        const { pageNumber, x, y } = pastePositionRef.current;
+        const page = pages.find((item) => item.pageNumber === pageNumber);
+        if (!page) return;
+        const copy = elementClipboardRef.current;
+        const pastedElement: TemplateElement = {
+          ...copy,
+          id: `${copy.id}-copy-${Date.now()}`,
+          x: Math.max(0, Math.min(PAGE_WIDTH - copy.width, x + 20)),
+          y: Math.max(0, Math.min(PAGE_HEIGHT - copy.height, y + 20)),
+          table: copy.table
+            ? {
+                ...copy.table,
+                cells: copy.table.cells.map((row) => [...row]),
+                colWidths: [...copy.table.colWidths],
+              }
+            : undefined,
+        };
+        event.preventDefault();
+        onPasteElement(pageNumber, pastedElement);
+        return;
+      }
+
       const selectedTablePage = pages.find((page) =>
         page.elements.some(
           (element) => element.id === selectedId && element.table,
@@ -333,6 +360,7 @@ export default function QuotationCanvas({
     },
     [
       onPasteImage,
+      onPasteElement,
       onElementChange,
       pages,
       selectedId,
@@ -346,6 +374,9 @@ export default function QuotationCanvas({
     (event: ReactClipboardEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement;
       if (target.closest("input, textarea, [contenteditable='true']")) return;
+      const selectedElement = pages
+        .flatMap((page) => page.elements)
+        .find((element) => element.id === selectedId);
       const selectedTable = pages
         .flatMap((page) => page.elements)
         .find((element) => element.id === selectedId && element.table);
@@ -362,7 +393,22 @@ export default function QuotationCanvas({
       const columns = selectedTableColumns
         .filter((col) => col >= 0 && col < selectedTable.table!.colWidths.length)
         .sort((a, b) => a - b);
-      if (rows.length === 0 && columns.length === 0 && selectedCells.length === 0) return;
+      if (rows.length === 0 && columns.length === 0 && selectedCells.length === 0) {
+        if (!selectedElement) return;
+        event.preventDefault();
+        elementClipboardRef.current = {
+          ...selectedElement,
+          table: selectedElement.table
+            ? {
+                ...selectedElement.table,
+                cells: selectedElement.table.cells.map((row) => [...row]),
+                colWidths: [...selectedElement.table.colWidths],
+              }
+            : undefined,
+        };
+        event.clipboardData.setData("text/plain", "");
+        return;
+      }
 
       event.preventDefault();
       event.clipboardData.setData(
