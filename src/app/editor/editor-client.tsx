@@ -2,14 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { exportPagesToPdf } from "./_components/pdf-export";
+import { exportPagesToPdf } from "./_lib/pdf-export";
 import {
   buildPagesFromQuotation,
   buildProductPage,
   ensurePageLogos,
   makeEmptyProductPage,
   makeEmptyQuotationPages,
-} from "./_components/template-data";
+} from "./_lib/template-data";
 import type {
   PageData,
   Product,

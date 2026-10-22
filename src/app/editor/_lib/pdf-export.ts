@@ -1,6 +1,10 @@
 import { jsPDF } from "jspdf";
-import type { PageData, TableData, TemplateElement } from "./types";
-import { PAGE_HEIGHT, PAGE_WIDTH } from "./types";
+import type {
+  PageData,
+  TableData,
+  TemplateElement,
+} from "../_components/types";
+import { PAGE_HEIGHT, PAGE_WIDTH } from "../_components/types";
 
 const PX_TO_PT = 0.75;
 const PDF_TEXT_SCALE = 1.5;

@@ -86,7 +86,9 @@ export const quotationRouter = createTRPCRouter({
       .limit(1);
 
     if (!client) {
-      throw new Error("Client not found or not owned by current user");
+      throw new Error(
+        "El cliente no pertence al comercial o no existe en la BD",
+      );
     }
     clientName = client.name;
 
@@ -112,7 +114,9 @@ export const quotationRouter = createTRPCRouter({
           });
 
         if (!updated)
-          throw new Error("Quotation not found or not owned by current user");
+          throw new Error(
+            "La cotización no existe o no pertenece al comercial",
+          );
 
         const data = setQuotationNumber(input.data, updated.quotationNumber);
         await tx

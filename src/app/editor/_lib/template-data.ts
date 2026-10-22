@@ -3,7 +3,7 @@ import type {
   Product,
   QuotationData,
   TemplateElement,
-} from "./types";
+} from "../_components/types";
 import { proxiedImageUrl } from "@/lib/product-image";
 import { theme } from "@/lib/theme";
 import { formatQuotationFooter } from "@/lib/company-profile";
@@ -342,7 +342,10 @@ export function buildInventoryTable(
   const formatInventory = (value: number) =>
     value.toLocaleString(locale === "es" ? "es-CO" : "en-US");
   const cells: string[][] = [
-    [t("template.inventoryColor", {}, locale), t("template.inventoryTotal", {}, locale)],
+    [
+      t("template.inventoryColor", {}, locale),
+      t("template.inventoryTotal", {}, locale),
+    ],
   ];
 
   if (variants.length === 0) {
