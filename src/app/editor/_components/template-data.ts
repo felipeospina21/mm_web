@@ -156,39 +156,6 @@ function makeProductElements(
       isEditable: true,
     },
     {
-      id: `line-items-${suffix}`,
-      type: "table",
-      x: 40,
-      y: 420 + verticalOffset,
-      width: 714,
-      height: 150,
-      text: "",
-      fontSize: 0,
-      fill: "#000000",
-      isDraggable: true,
-      isEditable: true,
-      table: {
-        colWidths: [70, 230, 100, 140, 140],
-        rowHeight: 36,
-        cells: [
-          [
-            t("template.quantity", {}, locale),
-            t("template.marking", {}, locale),
-            t("template.detail", {}, locale),
-            t("template.unitPrice", {}, locale),
-            t("template.subtotal", {}, locale),
-          ],
-          ["", "", "", "", ""],
-          ["", "", "", "", ""],
-          ["", "", "", "", ""],
-        ],
-        headerFill: theme.colors.primary,
-        headerColor: "#ffffff",
-        borderColor: "#cccccc",
-        fontSize: 13,
-      },
-    },
-    {
       // Product image (bottom-right of the product block). `src` is filled in
       // per-product by buildPagesFromQuotation; empty renders a placeholder.
       id: `product-image-${suffix}`,
@@ -238,6 +205,39 @@ function makeFirstPageElements(
   return [
     ...makeFirstPageHeader(locale),
     ...(withProduct ? makeProductElements("p1", 0, locale) : []),
+    {
+      id: `line-items-p1`,
+      type: "table",
+      x: 40,
+      y: 420,
+      width: 714,
+      height: 150,
+      text: "",
+      fontSize: 0,
+      fill: "#000000",
+      isDraggable: true,
+      isEditable: true,
+      table: {
+        colWidths: [70, 230, 100, 140, 140],
+        rowHeight: 36,
+        cells: [
+          [
+            t("template.quantity", {}, locale),
+            t("template.marking", {}, locale),
+            t("template.detail", {}, locale),
+            t("template.unitPrice", {}, locale),
+            t("template.subtotal", {}, locale),
+          ],
+          ["", "", "", "", ""],
+          ["", "", "", "", ""],
+          ["", "", "", "", ""],
+        ],
+        headerFill: theme.colors.primary,
+        headerColor: "#ffffff",
+        borderColor: "#cccccc",
+        fontSize: 13,
+      },
+    },
     ...makeFooter(),
   ];
 }
@@ -332,44 +332,34 @@ export function buildInventoryTable(
   verticalOffset = 0,
   locale: Locale = defaultLocale,
 ): TemplateElement {
-  const colWidths = [140, 70, 70];
+  const colWidths = [140, 140];
   const rowHeight = 22;
   const fontSize = 10;
-
   const variants = product.variants ?? [];
   const consultationOnly = product.categories?.some(
     (category) => category.trim().toLocaleLowerCase() === "produccion nacional",
   );
+  const formatInventory = (value: number) =>
+    value.toLocaleString(locale === "es" ? "es-CO" : "en-US");
   const cells: string[][] = [
-    [
-      t("template.inventoryColor", {}, locale),
-      t("template.inventoryLocal", {}, locale),
-      t("template.inventoryZone", {}, locale),
-    ],
+    [t("template.inventoryColor", {}, locale), t("template.inventoryTotal", {}, locale)],
   ];
 
   if (variants.length === 0) {
-    cells.push(["—", "—", "—"]);
+    cells.push(["—", "—"]);
   } else {
-    for (const variant of variants) {
-      cells.push([
-        variant.colorName,
-        consultationOnly &&
-        variant.localInventory === 0 &&
-        variant.zoneInventory === 0
-          ? t("template.inventoryConsultAdvisor", {}, locale)
-          : variant.localInventory.toLocaleString(
-              locale === "es" ? "es-CO" : "en-US",
-            ),
-        consultationOnly &&
-        variant.localInventory === 0 &&
-        variant.zoneInventory === 0
-          ? ""
-          : variant.zoneInventory.toLocaleString(
-              locale === "es" ? "es-CO" : "en-US",
-            ),
-      ]);
-    }
+    cells.push(
+      ...variants.map((variant) => {
+        const total = variant.localInventory + variant.zoneInventory;
+        const unavailable = consultationOnly && total === 0;
+        return [
+          variant.colorName,
+          unavailable
+            ? t("template.inventoryConsultAdvisor", {}, locale)
+            : formatInventory(total),
+        ];
+      }),
+    );
   }
 
   const inventoryTable: TemplateElement = {
@@ -392,7 +382,7 @@ export function buildInventoryTable(
       fontSize,
     },
     isDraggable: true,
-    isEditable: false,
+    isEditable: true,
     isDeletable: true,
     isRowDeletable: true,
   };

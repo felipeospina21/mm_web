@@ -91,7 +91,9 @@ export default function QuotationCanvas({
   /** id of the currently selected element (globally unique across pages) */
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedTableRows, setSelectedTableRows] = useState<number[]>([]);
-  const [selectedTableColumns, setSelectedTableColumns] = useState<number[]>([]);
+  const [selectedTableColumns, setSelectedTableColumns] = useState<number[]>(
+    [],
+  );
   const [selectedTableCells, setSelectedTableCells] = useState<
     Array<{ row: number; col: number }>
   >([]);
@@ -112,6 +114,7 @@ export default function QuotationCanvas({
   } | null>(null);
   const [editingTextValue, setEditingTextValue] = useState("");
   const [editingCellValue, setEditingCellValue] = useState("");
+  const editingCellValueRef = useRef("");
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const pastePositionRef = useRef({ pageNumber: 1, x: 100, y: 100 });
   const elementClipboardRef = useRef<TemplateElement | null>(null);
@@ -205,14 +208,19 @@ export default function QuotationCanvas({
               cells.push(Array.from({ length: columnCount }, () => ""));
             }
             const row = cells[rowIndex];
-            if (!row || (selectedTable.id.startsWith("line-items-") && colIndex === 4)) return;
+            if (
+              !row ||
+              (selectedTable.id.startsWith("line-items-") && colIndex === 4)
+            )
+              return;
             row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
             if (selectedTable.id.startsWith("line-items-")) {
               const quantity = row[0]?.replace(/\D/g, "") ?? "";
               const price = row[3]?.replace(/\D/g, "") ?? "";
-              row[4] = quantity && price
-                ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
-                : "";
+              row[4] =
+                quantity && price
+                  ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
+                  : "";
             }
           });
         });
@@ -251,15 +259,20 @@ export default function QuotationCanvas({
           if (!row) return;
           sourceRow.forEach((value, colOffset) => {
             const colIndex = startColumn + colOffset;
-            if (colIndex >= columnCount || (selectedTable.id.startsWith("line-items-") && colIndex === 4)) return;
+            if (
+              colIndex >= columnCount ||
+              (selectedTable.id.startsWith("line-items-") && colIndex === 4)
+            )
+              return;
             row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
           });
           if (selectedTable.id.startsWith("line-items-")) {
             const quantity = row[0]?.replace(/\D/g, "") ?? "";
             const price = row[3]?.replace(/\D/g, "") ?? "";
-            row[4] = quantity && price
-              ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
-              : "";
+            row[4] =
+              quantity && price
+                ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
+                : "";
           }
         });
 
@@ -297,10 +310,7 @@ export default function QuotationCanvas({
           if (!row) return;
 
           sourceRow.slice(0, columnCount).forEach((value, colIndex) => {
-            if (
-              selectedTable.id.startsWith("line-items-") &&
-              colIndex === 4
-            ) {
+            if (selectedTable.id.startsWith("line-items-") && colIndex === 4) {
               return;
             }
             row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
@@ -386,14 +396,21 @@ export default function QuotationCanvas({
         .filter((row) => row > 0 && row < selectedTable.table!.cells.length)
         .sort((a, b) => a - b);
       const selectedCells = selectedTableCells
-        .filter(({ row, col }) =>
-          row > 0 && row < selectedTable.table!.cells.length && col >= 0,
+        .filter(
+          ({ row, col }) =>
+            row > 0 && row < selectedTable.table!.cells.length && col >= 0,
         )
         .sort((a, b) => a.row - b.row || a.col - b.col);
       const columns = selectedTableColumns
-        .filter((col) => col >= 0 && col < selectedTable.table!.colWidths.length)
+        .filter(
+          (col) => col >= 0 && col < selectedTable.table!.colWidths.length,
+        )
         .sort((a, b) => a - b);
-      if (rows.length === 0 && columns.length === 0 && selectedCells.length === 0) {
+      if (
+        rows.length === 0 &&
+        columns.length === 0 &&
+        selectedCells.length === 0
+      ) {
         if (!selectedElement) return;
         event.preventDefault();
         elementClipboardRef.current = {
@@ -415,34 +432,48 @@ export default function QuotationCanvas({
         "text/plain",
         rows.length > 0
           ? rows
-              .map((rowIndex) => selectedTable.table!.cells[rowIndex]?.join("\t") ?? "")
+              .map(
+                (rowIndex) =>
+                  selectedTable.table!.cells[rowIndex]?.join("\t") ?? "",
+              )
               .join("\n")
           : columns.length > 0
-            ? selectedTable.table!.cells
-                .slice(1)
+            ? selectedTable
+                .table!.cells.slice(1)
                 .map((row) => columns.map((col) => row[col] ?? "").join("\t"))
                 .join("\n")
-          : (() => {
-              const minRow = Math.min(...selectedCells.map(({ row }) => row));
-              const maxRow = Math.max(...selectedCells.map(({ row }) => row));
-              const minCol = Math.min(...selectedCells.map(({ col }) => col));
-              const maxCol = Math.max(...selectedCells.map(({ col }) => col));
-              const selectedCellSet = new Set(
-                selectedCells.map(({ row, col }) => `${row}:${col}`),
-              );
-              return Array.from({ length: maxRow - minRow + 1 }, (_, rowOffset) =>
-                Array.from({ length: maxCol - minCol + 1 }, (_, colOffset) => {
-                  const row = minRow + rowOffset;
-                  const col = minCol + colOffset;
-                  return selectedCellSet.has(`${row}:${col}`)
-                    ? (selectedTable.table!.cells[row]?.[col] ?? "")
-                    : "";
-                }).join("\t"),
-              ).join("\n");
-            })(),
+            : (() => {
+                const minRow = Math.min(...selectedCells.map(({ row }) => row));
+                const maxRow = Math.max(...selectedCells.map(({ row }) => row));
+                const minCol = Math.min(...selectedCells.map(({ col }) => col));
+                const maxCol = Math.max(...selectedCells.map(({ col }) => col));
+                const selectedCellSet = new Set(
+                  selectedCells.map(({ row, col }) => `${row}:${col}`),
+                );
+                return Array.from(
+                  { length: maxRow - minRow + 1 },
+                  (_, rowOffset) =>
+                    Array.from(
+                      { length: maxCol - minCol + 1 },
+                      (_, colOffset) => {
+                        const row = minRow + rowOffset;
+                        const col = minCol + colOffset;
+                        return selectedCellSet.has(`${row}:${col}`)
+                          ? (selectedTable.table!.cells[row]?.[col] ?? "")
+                          : "";
+                      },
+                    ).join("\t"),
+                ).join("\n");
+              })(),
       );
     },
-    [pages, selectedId, selectedTableRows, selectedTableColumns, selectedTableCells],
+    [
+      pages,
+      selectedId,
+      selectedTableRows,
+      selectedTableColumns,
+      selectedTableCells,
+    ],
   );
 
   /** Notify the page whenever the selection changes */
@@ -597,6 +628,12 @@ export default function QuotationCanvas({
             ? currentValue.replace(/[^\d-]/g, "")
             : currentValue,
       );
+      editingCellValueRef.current =
+        row > 0 && col === 0
+          ? currentValue.replace(/\D/g, "")
+          : row > 0 && col === 3
+            ? currentValue.replace(/[^\d-]/g, "")
+            : currentValue;
       setEditingBox({
         left,
         top,
@@ -653,6 +690,7 @@ export default function QuotationCanvas({
       setEditingCell(null);
       setEditingTextValue("");
       setEditingCellValue("");
+      editingCellValueRef.current = "";
       setEditingBox(null);
     },
     [editingId, editingCell, onElementChange, pages],
@@ -698,6 +736,39 @@ export default function QuotationCanvas({
       tabIndex={0}
       onCopy={handleCopy}
       onPaste={handlePaste}
+      onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        if ((event.target as HTMLElement).closest("input, textarea")) return;
+
+        const page = pages.find((item) =>
+          item.elements.some((element) => element.id === selectedId),
+        );
+        const element = page?.elements.find(
+          (item) => item.id === selectedId && item.table,
+        );
+        const table = element?.table;
+        if (!page || !element || !table?.cells.length) return;
+
+        const selectedCell = selectedTableCells.at(-1) ?? { row: 1, col: -1 };
+        let row = selectedCell.row;
+        let col = selectedCell.col;
+        for (let step = 0; step < table.cells.length * table.colWidths.length; step += 1) {
+          col += 1;
+          if (col >= table.colWidths.length) {
+            row += 1;
+            col = 0;
+          }
+          if (row >= table.cells.length) {
+            row = 1;
+            col = 0;
+          }
+          if (!(element.id.startsWith("line-items-") && col === 4)) break;
+        }
+        if (row < table.cells.length && table.cells[row]?.[col] !== undefined) {
+          event.preventDefault();
+          handleCellDblClick(page, element, row, col);
+        }
+      }}
       className="relative h-full w-full overflow-auto overscroll-contain"
       style={{ background: STAGE_BG }}
     >
@@ -965,7 +1036,8 @@ export default function QuotationCanvas({
       {/* Inline text editing overlay */}
       {editingBox && (
         <textarea
-          key={`${editingId}-${editingCell ? `${editingCell.row}-${editingCell.col}` : "text"}`}
+          key={editingId ?? "text-editor"}
+          data-cell-editor={editingCell ? editingId ?? undefined : undefined}
           autoFocus
           className="border-primary fixed z-[100] m-0 resize-none border-2 border-dashed bg-white/95 p-0 outline-none"
           style={{
@@ -978,7 +1050,8 @@ export default function QuotationCanvas({
           }}
           value={editingCell ? editingCellValue : editingTextValue}
           inputMode={
-            editingCell && editingCell.row > 0 &&
+            editingCell &&
+            editingCell.row > 0 &&
             (editingCell.col === 0 || editingCell.col === 3)
               ? "numeric"
               : undefined
@@ -990,15 +1063,108 @@ export default function QuotationCanvas({
               return;
             }
             if (editingCell.row > 0 && editingCell.col === 0) {
-              setEditingCellValue(raw.replace(/\D/g, ""));
+              const value = raw.replace(/\D/g, "");
+              editingCellValueRef.current = value;
+              setEditingCellValue(value);
             } else if (editingCell.row > 0 && editingCell.col === 3) {
-              setEditingCellValue(raw.replace(/\D/g, ""));
+              const value = raw.replace(/\D/g, "");
+              editingCellValueRef.current = value;
+              setEditingCellValue(value);
             } else {
+              editingCellValueRef.current = raw;
               setEditingCellValue(raw);
             }
           }}
           onBlur={(e) => commitTextEdit(e.currentTarget.value)}
           onKeyDown={(e) => {
+            if (e.key === "Tab" && editingCell) {
+              e.preventDefault();
+              const page = pages.find((item) =>
+                item.elements.some((element) => element.id === editingId),
+              );
+              const element = page?.elements.find(
+                (item) => item.id === editingId,
+              );
+              const table = element?.table;
+              if (!page || !element || !table) return;
+
+              const cellCount = table.cells.reduce(
+                (count, row) => count + row.length,
+                0,
+              );
+              let nextRow = editingCell.row;
+              let nextCol = editingCell.col;
+              let foundNextCell = false;
+              for (let step = 0; step < cellCount; step += 1) {
+                nextCol += 1;
+                if (nextCol >= table.colWidths.length) {
+                  nextRow += 1;
+                  nextCol = 0;
+                }
+                if (nextRow >= table.cells.length) {
+                  nextRow = 0;
+                  nextCol = 0;
+                }
+                if (!(element.id.startsWith("line-items-") && nextCol === 4)) {
+                  foundNextCell = true;
+                  break;
+                }
+              }
+
+              if (foundNextCell) {
+                const stage = stageRef.current;
+                const { colWidths, rowHeight } = table;
+                const cells = table.cells.map((row) => [...row]);
+                const currentRow = cells[editingCell.row];
+                if (currentRow) {
+                  currentRow[editingCell.col] = formatEditedCell(
+                    e.currentTarget.value,
+                    editingCell.row,
+                    editingCell.col,
+                  );
+                  if (element.id.startsWith("line-items-") && editingCell.row > 0) {
+                    const quantity = currentRow[0]?.replace(/\D/g, "") ?? "";
+                    const price = currentRow[3]?.replace(/\D/g, "") ?? "";
+                    currentRow[4] =
+                      quantity && price
+                        ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
+                        : "";
+                  }
+                  onElementChange(page.id, element.id, {
+                    table: { ...table, cells },
+                  });
+                }
+
+                if (stage) {
+                  const stageBox = stage.container().getBoundingClientRect();
+                  const offset = getPageOffset(page.pageNumber);
+                  const currentValue = table.cells[nextRow]?.[nextCol] ?? "";
+                  const nextValue =
+                    nextRow > 0 && nextCol === 0
+                      ? currentValue.replace(/\D/g, "")
+                      : nextRow > 0 && nextCol === 3
+                        ? currentValue.replace(/[^\d-]/g, "")
+                        : currentValue;
+                editingCellValueRef.current = nextValue;
+                  setEditingCell({ row: nextRow, col: nextCol });
+                  setEditingCellValue(nextValue);
+                  setEditingBox({
+                    left:
+                      stageBox.left +
+                      offset.x +
+                      element.x +
+                      colWidths.slice(0, nextCol).reduce((a, b) => a + b, 0),
+                    top:
+                      stageBox.top + offset.y + element.y + nextRow * rowHeight,
+                    width: colWidths[nextCol] ?? 0,
+                    height: rowHeight,
+                    fontSize: table.fontSize,
+                    color: nextRow === 0 ? table.headerColor : "#333333",
+                  });
+                }
+              }
+              return;
+            }
             if (e.key === "Escape") {
               e.preventDefault();
               const element = pages
@@ -1018,7 +1184,6 @@ export default function QuotationCanvas({
       )}
       {/* Table structure controls + formatting toolbar for the selected element */}
       {selectedId &&
-        !editingId &&
         pages.some((page) =>
           page.elements.some(
             (element) =>

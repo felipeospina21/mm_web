@@ -143,6 +143,7 @@ const es = {
   "template.inventoryColor": "Color",
   "template.inventoryLocal": "Local",
   "template.inventoryZone": "Zona",
+  "template.inventoryTotal": "INVENTARIO DISPONIBLE",
   "template.inventoryConsultAdvisor": "consultar",
   "template.inventoryNationalFootnote":
     "*Consultar otra disponibilidad de colores",
@@ -292,6 +293,7 @@ const en: Record<MessageKey, string> = {
   "template.inventoryColor": "Color",
   "template.inventoryLocal": "Local",
   "template.inventoryZone": "Zona",
+  "template.inventoryTotal": "INVENTARIO DISPONIBLE",
   "template.inventoryConsultAdvisor": "Consult an advisor",
   "template.inventoryNationalFootnote":
     "Consultar otra disponibilidad de colores",
