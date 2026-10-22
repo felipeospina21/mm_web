@@ -19,8 +19,14 @@ import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
 import { PAGE_GAP, PAGE_HEIGHT, PAGE_WIDTH, STAGE_BG } from "./types";
 
-function formatEditedCell(value: string, row: number, col: number): string {
+function formatEditedCell(
+  value: string,
+  row: number,
+  col: number,
+  isLineItemsTable: boolean,
+): string {
   if (row === 0) return value;
+  if (!isLineItemsTable) return value;
   if (col === 0) return value.replace(/\D/g, "");
   if (col === 3) {
     const amount = Number(value.replace(/\D/g, ""));
@@ -213,7 +219,12 @@ export default function QuotationCanvas({
               (selectedTable.id.startsWith("line-items-") && colIndex === 4)
             )
               return;
-            row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
+            row[colIndex] = formatEditedCell(
+              value,
+              rowIndex,
+              colIndex,
+              selectedTable.id.startsWith("line-items-"),
+            );
             if (selectedTable.id.startsWith("line-items-")) {
               const quantity = row[0]?.replace(/\D/g, "") ?? "";
               const price = row[3]?.replace(/\D/g, "") ?? "";
@@ -264,7 +275,12 @@ export default function QuotationCanvas({
               (selectedTable.id.startsWith("line-items-") && colIndex === 4)
             )
               return;
-            row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
+            row[colIndex] = formatEditedCell(
+              value,
+              rowIndex,
+              colIndex,
+              selectedTable.id.startsWith("line-items-"),
+            );
           });
           if (selectedTable.id.startsWith("line-items-")) {
             const quantity = row[0]?.replace(/\D/g, "") ?? "";
@@ -313,7 +329,12 @@ export default function QuotationCanvas({
             if (selectedTable.id.startsWith("line-items-") && colIndex === 4) {
               return;
             }
-            row[colIndex] = formatEditedCell(value, rowIndex, colIndex);
+            row[colIndex] = formatEditedCell(
+              value,
+              rowIndex,
+              colIndex,
+              selectedTable.id.startsWith("line-items-"),
+            );
           });
 
           if (selectedTable.id.startsWith("line-items-")) {
@@ -621,17 +642,18 @@ export default function QuotationCanvas({
       setEditingCell({ row, col });
       setEditingTextValue("");
       const currentValue = element.table.cells[row]?.[col] ?? "";
+      const lineItemsTable = element.id.startsWith("line-items-");
       setEditingCellValue(
-        row > 0 && col === 0
+        lineItemsTable && row > 0 && col === 0
           ? currentValue.replace(/\D/g, "")
-          : row > 0 && col === 3
+          : lineItemsTable && row > 0 && col === 3
             ? currentValue.replace(/[^\d-]/g, "")
             : currentValue,
       );
       editingCellValueRef.current =
-        row > 0 && col === 0
+        lineItemsTable && row > 0 && col === 0
           ? currentValue.replace(/\D/g, "")
-          : row > 0 && col === 3
+          : lineItemsTable && row > 0 && col === 3
             ? currentValue.replace(/[^\d-]/g, "")
             : currentValue;
       setEditingBox({
@@ -664,6 +686,7 @@ export default function QuotationCanvas({
                   newText,
                   editingCell.row,
                   editingCell.col,
+                  element.id.startsWith("line-items-"),
                 );
                 if (
                   element.id.startsWith("line-items-") &&
@@ -1051,6 +1074,7 @@ export default function QuotationCanvas({
           value={editingCell ? editingCellValue : editingTextValue}
           inputMode={
             editingCell &&
+            editingId?.startsWith("line-items-") &&
             editingCell.row > 0 &&
             (editingCell.col === 0 || editingCell.col === 3)
               ? "numeric"
@@ -1062,11 +1086,19 @@ export default function QuotationCanvas({
               setEditingTextValue(raw);
               return;
             }
-            if (editingCell.row > 0 && editingCell.col === 0) {
+            if (
+              editingId?.startsWith("line-items-") &&
+              editingCell.row > 0 &&
+              editingCell.col === 0
+            ) {
               const value = raw.replace(/\D/g, "");
               editingCellValueRef.current = value;
               setEditingCellValue(value);
-            } else if (editingCell.row > 0 && editingCell.col === 3) {
+            } else if (
+              editingId?.startsWith("line-items-") &&
+              editingCell.row > 0 &&
+              editingCell.col === 3
+            ) {
               const value = raw.replace(/\D/g, "");
               editingCellValueRef.current = value;
               setEditingCellValue(value);
@@ -1121,6 +1153,7 @@ export default function QuotationCanvas({
                     e.currentTarget.value,
                     editingCell.row,
                     editingCell.col,
+                    element.id.startsWith("line-items-"),
                   );
                   if (element.id.startsWith("line-items-") && editingCell.row > 0) {
                     const quantity = currentRow[0]?.replace(/\D/g, "") ?? "";
@@ -1139,10 +1172,11 @@ export default function QuotationCanvas({
                   const stageBox = stage.container().getBoundingClientRect();
                   const offset = getPageOffset(page.pageNumber);
                   const currentValue = table.cells[nextRow]?.[nextCol] ?? "";
+                  const lineItemsTable = element.id.startsWith("line-items-");
                   const nextValue =
-                    nextRow > 0 && nextCol === 0
+                    lineItemsTable && nextRow > 0 && nextCol === 0
                       ? currentValue.replace(/\D/g, "")
-                      : nextRow > 0 && nextCol === 3
+                      : lineItemsTable && nextRow > 0 && nextCol === 3
                         ? currentValue.replace(/[^\d-]/g, "")
                         : currentValue;
                 editingCellValueRef.current = nextValue;
