@@ -3,6 +3,7 @@ import type { PageData, TableData, TemplateElement } from "./types";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./types";
 
 const PX_TO_PT = 0.75;
+const PDF_TEXT_SCALE = 1.5;
 
 function parseColor(color: string): [number, number, number] {
   const hex = color.trim().match(/^#([\da-f]{3}|[\da-f]{6})$/i)?.[1];
@@ -28,14 +29,18 @@ function parseColor(color: string): [number, number, number] {
   return [0, 0, 0];
 }
 
-function getFontFamily(fontFamily: string | undefined): "helvetica" | "times" | "courier" {
+function getFontFamily(
+  fontFamily: string | undefined,
+): "helvetica" | "times" | "courier" {
   const family = fontFamily?.toLowerCase() ?? "arial";
   if (family.includes("times") || family.includes("georgia")) return "times";
   if (family.includes("courier")) return "courier";
   return "helvetica";
 }
 
-function getFontStyle(element: TemplateElement): "normal" | "bold" | "italic" | "bolditalic" {
+function getFontStyle(
+  element: TemplateElement,
+): "normal" | "bold" | "italic" | "bolditalic" {
   if (element.fontWeight === "bold" && element.italic) return "bolditalic";
   if (element.fontWeight === "bold") return "bold";
   if (element.italic) return "italic";
@@ -43,20 +48,23 @@ function getFontStyle(element: TemplateElement): "normal" | "bold" | "italic" | 
 }
 
 function wrapText(pdf: jsPDF, text: string, width: number): string[] {
-  return text.split("\n").flatMap((line) =>
-    line.length === 0 ? [""] : pdf.splitTextToSize(line, Math.max(width, 1)),
-  );
+  return text
+    .split("\n")
+    .flatMap((line) =>
+      line.length === 0 ? [""] : pdf.splitTextToSize(line, Math.max(width, 1)),
+    );
 }
 
 function drawTextElement(pdf: jsPDF, element: TemplateElement): void {
   if (!element.text) return;
 
   const fontSizePx = element.fontSize;
+  const renderedFontSizePx = fontSizePx * PDF_TEXT_SCALE;
   const lineHeightPx = fontSizePx * (element.lineHeight ?? 1.2);
   const [red, green, blue] = parseColor(element.fill);
 
   pdf.setFont(getFontFamily(element.fontFamily), getFontStyle(element));
-  pdf.setFontSize(fontSizePx * PX_TO_PT);
+  pdf.setFontSize(renderedFontSizePx * PX_TO_PT);
   pdf.setTextColor(red, green, blue);
   const maxLines = Math.max(1, Math.floor(element.height / lineHeightPx));
   const lines = wrapText(pdf, element.text, element.width).slice(0, maxLines);
@@ -81,7 +89,11 @@ function drawRectElement(pdf: jsPDF, element: TemplateElement): void {
   pdf.rect(element.x, element.y, element.width, element.height, "F");
 }
 
-function drawTable(pdf: jsPDF, element: TemplateElement, table: TableData): void {
+function drawTable(
+  pdf: jsPDF,
+  element: TemplateElement,
+  table: TableData,
+): void {
   const [borderRed, borderGreen, borderBlue] = parseColor(table.borderColor);
   const [headerRed, headerGreen, headerBlue] = parseColor(table.headerFill);
   const [headerTextRed, headerTextGreen, headerTextBlue] = parseColor(
@@ -105,8 +117,9 @@ function drawTable(pdf: jsPDF, element: TemplateElement, table: TableData): void
       pdf.rect(x, y, width, table.rowHeight, "FD");
 
       const fontSizePx = table.fontSize;
+      const renderedFontSizePx = fontSizePx * PDF_TEXT_SCALE;
       pdf.setFont("helvetica", rowIndex === 0 ? "bold" : "normal");
-      pdf.setFontSize(fontSizePx * PX_TO_PT);
+      pdf.setFontSize(renderedFontSizePx * PX_TO_PT);
       if (rowIndex === 0) {
         pdf.setTextColor(headerTextRed, headerTextGreen, headerTextBlue);
       } else {
@@ -162,7 +175,8 @@ async function loadImageData(src: string): Promise<string> {
       typeof reader.result === "string"
         ? resolve(reader.result)
         : reject(new Error("Image could not be read"));
-    reader.onerror = () => reject(reader.error ?? new Error("Image could not be read"));
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Image could not be read"));
     reader.readAsDataURL(blob);
   });
 }
@@ -187,9 +201,16 @@ async function resizeImageData(
   await imageLoaded;
 
   // Keep at most 2x the PDF's rendered dimensions and avoid enlarging small sources.
-  const width = Math.max(1, Math.min(image.naturalWidth, Math.ceil(displayWidth * 2)));
-  const height = Math.max(1, Math.min(image.naturalHeight, Math.ceil(displayHeight * 2)));
-  if (width === image.naturalWidth && height === image.naturalHeight) return dataUrl;
+  const width = Math.max(
+    1,
+    Math.min(image.naturalWidth, Math.ceil(displayWidth * 2)),
+  );
+  const height = Math.max(
+    1,
+    Math.min(image.naturalHeight, Math.ceil(displayHeight * 2)),
+  );
+  if (width === image.naturalWidth && height === image.naturalHeight)
+    return dataUrl;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -237,14 +258,20 @@ async function drawImage(pdf: jsPDF, element: TemplateElement): Promise<void> {
       "FAST",
     );
   } catch (error) {
-    console.warn("PDF image could not be loaded; drawing a placeholder.", error);
+    console.warn(
+      "PDF image could not be loaded; drawing a placeholder.",
+      error,
+    );
     pdf.setFillColor(243, 244, 246);
     pdf.setDrawColor(209, 213, 219);
     pdf.rect(element.x, element.y, element.width, element.height, "FD");
   }
 }
 
-async function drawElement(pdf: jsPDF, element: TemplateElement): Promise<void> {
+async function drawElement(
+  pdf: jsPDF,
+  element: TemplateElement,
+): Promise<void> {
   if (element.type === "text") {
     drawTextElement(pdf, element);
   } else if (element.type === "rect") {
