@@ -33,7 +33,7 @@ import { capitalizeLabeledName, capitalizeName } from "@/lib/capitalize-name";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
-import { useRepresentativeProfile } from "./_components/use-representative-profile";
+import { useRepresentativeProfile } from "./_hooks/use-representative-profile";
 import { getFileName } from "@/lib/quotation-save";
 
 // Konva touches `window` at import time, so the canvas is loaded

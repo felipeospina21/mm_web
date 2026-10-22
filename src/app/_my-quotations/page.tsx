@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
 import { api, HydrateClient } from "@/trpc/server";
 
-import { QuotationList } from "../_components/quotation-list";
+import { QuotationList } from "./_components/quotation-list";
 
 /** Must match PAGE_SIZE in quotation-list.tsx so query keys line up. */
 const PAGE_SIZE = 12;

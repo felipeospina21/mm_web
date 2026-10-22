@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 import { auth } from "@/server/auth";
 import { LoginScreen } from "./_components/login-screen";
 import { ReferenceLookup } from "./_components/reference-lookup";

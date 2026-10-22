@@ -34,8 +34,7 @@ export function ReferenceLookup() {
     { references: submitted },
     {
       enabled: submitted.length > 0,
-      // Lookups are live; don't serve a stale cache for a changed list.
-      staleTime: 0,
+      staleTime: 60_000,
     },
   );
 

@@ -38,7 +38,9 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
   const [contacts, setContacts] = useState<ContactForm[]>([
     { ...EMPTY_CONTACT },
   ]);
-  const clientsQuery = api.customer.list.useQuery();
+  const clientsQuery = api.customer.list.useQuery(undefined, {
+    staleTime: 60_000,
+  });
   const utils = api.useUtils();
   const createClient = api.customer.create.useMutation({
     onSuccess: async (client) => {
@@ -140,7 +142,9 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
             <h2 className="text-lg font-semibold text-neutral-900">
               {t("client.addTitle")}
             </h2>
-            <p className="text-sm text-neutral-600">{t("client.requiredFields")}</p>
+            <p className="text-sm text-neutral-600">
+              {t("client.requiredFields")}
+            </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {(
                 [

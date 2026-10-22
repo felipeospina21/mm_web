@@ -4,7 +4,7 @@ import { capitalizeName } from "@/lib/capitalize-name";
 import { formatQuotationFooter } from "@/lib/company-profile";
 import { t } from "@/i18n/messages";
 import { api } from "@/trpc/react";
-import type { PageData, QuotationData } from "./types";
+import type { PageData, QuotationData } from "../_components/types";
 
 interface UseRepresentativeProfileOptions {
   isDirty: boolean;
