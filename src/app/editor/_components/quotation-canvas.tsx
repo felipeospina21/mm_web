@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ClipboardEvent as ReactClipboardEvent } from "react";
 import { Layer, Stage, Transformer } from "react-konva";
 import type Konva from "konva";
@@ -59,10 +59,17 @@ export default function QuotationCanvas({
   onPasteImage,
   onPasteElement,
 }: QuotationCanvasProps) {
+  const scrollTopRef = useRef(0);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [visiblePageNumbers, setVisiblePageNumbers] = useState<Set<number>>(
+    () => new Set([1, 2, 3]),
+  );
+  const visiblePageNumbersRef = useRef(visiblePageNumbers);
   const stage = useCanvasStage({
     pages,
     onActivePageChange,
     onSelectionChange,
+    scrollTopRef,
   });
   const tableSelection = useTableSelection();
   const inlineEditing = useInlineEditing({
@@ -72,6 +79,62 @@ export default function QuotationCanvas({
   });
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const elementClipboardRef = useRef<TemplateElement | null>(null);
+
+  useEffect(() => {
+    const container = stage.containerRef.current;
+    if (!container) return;
+
+    const updateVisiblePages = () => {
+      scrollTopRef.current = container.scrollTop;
+      setScrollTop(container.scrollTop);
+      const pageStride = PAGE_HEIGHT + PAGE_GAP;
+      const firstVisiblePage = Math.max(
+        1,
+        Math.floor((container.scrollTop - PAGE_GAP) / pageStride) + 1,
+      );
+      const lastVisiblePage = Math.min(
+        pages.length,
+        Math.ceil(
+          (container.scrollTop + container.clientHeight - PAGE_GAP) /
+            pageStride,
+        ) + 1,
+      );
+      const next = new Set<number>();
+      for (
+        let pageNumber = Math.max(1, firstVisiblePage - 1);
+        pageNumber <= Math.min(pages.length, lastVisiblePage + 1);
+        pageNumber += 1
+      ) {
+        next.add(pageNumber);
+      }
+      setVisiblePageNumbers((current) => {
+        if (
+          current.size === next.size &&
+          [...current].every((pageNumber) => next.has(pageNumber))
+        ) {
+          return current;
+        }
+        visiblePageNumbersRef.current = next;
+        return next;
+      });
+    };
+
+    updateVisiblePages();
+    container.addEventListener("scroll", updateVisiblePages, { passive: true });
+    const observer = new ResizeObserver(updateVisiblePages);
+    observer.observe(container);
+    return () => {
+      container.removeEventListener("scroll", updateVisiblePages);
+      observer.disconnect();
+    };
+  }, [pages.length, stage.containerRef, scrollTopRef]);
+
+  useEffect(() => {
+    if (visiblePageNumbersRef.current.has(activePageNumber)) return;
+    const next = new Set(visiblePageNumbersRef.current).add(activePageNumber);
+    visiblePageNumbersRef.current = next;
+    setVisiblePageNumbers(next);
+  }, [activePageNumber]);
 
   const handlePaste = useCallback(
     (event: ReactClipboardEvent<HTMLDivElement>) => {
@@ -415,11 +478,8 @@ export default function QuotationCanvas({
       <Stage
         ref={stage.stageRef}
         width={Math.max(stage.stageSize.width, PAGE_WIDTH + 80)}
-        height={Math.max(
-          stage.stageSize.height,
-          pages.length * (PAGE_HEIGHT + PAGE_GAP) + PAGE_GAP,
-        )}
-        style={{ background: STAGE_BG }}
+        height={Math.max(stage.stageSize.height, 1)}
+        style={{ background: STAGE_BG, position: "sticky", top: 0, zIndex: 1 }}
         onMouseDown={(event) =>
           stage.handleStageMouseDown(event, tableSelection.clear)
         }
@@ -428,9 +488,10 @@ export default function QuotationCanvas({
         }
         onMouseMove={stage.updateActivePageFromPointer}
       >
-        <Layer>
+        <Layer y={-scrollTop}>
           <CanvasPageRenderer
             pages={pages}
+            visiblePageNumbers={visiblePageNumbers}
             activePageNumber={activePageNumber}
             selectedId={stage.selectedId}
             selection={{
@@ -461,6 +522,17 @@ export default function QuotationCanvas({
           />
         </Layer>
       </Stage>
+      <div
+        aria-hidden="true"
+        style={{
+          height: Math.max(
+            0,
+            pages.length * (PAGE_HEIGHT + PAGE_GAP) +
+              PAGE_GAP -
+              Math.max(stage.stageSize.height, 1),
+          ),
+        }}
+      />
       {inlineEditing.editingBox && (
         <InlineTextEditor
           id={inlineEditing.editingId ?? ""}

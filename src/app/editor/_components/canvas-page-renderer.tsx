@@ -18,6 +18,7 @@ export interface CanvasSelection {
 
 export interface CanvasPageRendererProps {
   pages: PageData[];
+  visiblePageNumbers: Set<number>;
   activePageNumber: number;
   selectedId: string | null;
   selection: CanvasSelection;
@@ -62,6 +63,7 @@ export interface CanvasPageRendererProps {
 
 export function CanvasPageRenderer({
   pages,
+  visiblePageNumbers,
   activePageNumber,
   selectedId,
   selection,
@@ -78,31 +80,33 @@ export function CanvasPageRenderer({
 }: CanvasPageRendererProps) {
   return (
     <>
-      {pages.map((page) => (
-        <CanvasPage
-          key={page.id}
-          page={page}
-          activePageNumber={activePageNumber}
-          selectedId={selectedId}
-          selection={selection}
-          onSelectElement={onSelectElement}
-          onActivePageChange={onActivePageChange}
-          onDragEnd={onDragEnd}
-          onTransformEnd={onTransformEnd}
-          makeDragBoundFunc={makeDragBoundFunc}
-          onOpenTextEditor={onOpenTextEditor}
-          onOpenCellEditor={onOpenCellEditor}
-          onSelectRow={onSelectRow}
-          onSelectColumn={onSelectColumn}
-          onSelectCell={onSelectCell}
-        />
-      ))}
+      {pages
+        .filter((page) => visiblePageNumbers.has(page.pageNumber))
+        .map((page) => (
+          <CanvasPage
+            key={page.id}
+            page={page}
+            activePageNumber={activePageNumber}
+            selectedId={selectedId}
+            selection={selection}
+            onSelectElement={onSelectElement}
+            onActivePageChange={onActivePageChange}
+            onDragEnd={onDragEnd}
+            onTransformEnd={onTransformEnd}
+            makeDragBoundFunc={makeDragBoundFunc}
+            onOpenTextEditor={onOpenTextEditor}
+            onOpenCellEditor={onOpenCellEditor}
+            onSelectRow={onSelectRow}
+            onSelectColumn={onSelectColumn}
+            onSelectCell={onSelectCell}
+          />
+        ))}
     </>
   );
 }
 
 function CanvasPage(
-  props: Omit<CanvasPageRendererProps, "pages"> & {
+  props: Omit<CanvasPageRendererProps, "pages" | "visiblePageNumbers"> & {
     page: PageData;
   },
 ) {
