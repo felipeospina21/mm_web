@@ -266,19 +266,20 @@ export default function QuotationCanvas({
     (page: PageData, element: TemplateElement) => {
       return (pos: Konva.Vector2d): Konva.Vector2d => {
         const pageOffset = getPageOffset(page.pageNumber);
+        const visiblePageY = pageOffset.y - scrollTopRef.current;
         return {
           x: Math.min(
             Math.max(pos.x, pageOffset.x),
             pageOffset.x + PAGE_WIDTH - element.width,
           ),
           y: Math.min(
-            Math.max(pos.y, pageOffset.y),
-            pageOffset.y + PAGE_HEIGHT - element.height,
+            Math.max(pos.y, visiblePageY),
+            visiblePageY + PAGE_HEIGHT - element.height,
           ),
         };
       };
     },
-    [],
+    [scrollTopRef],
   );
 
   const handleDragEnd = useCallback(
