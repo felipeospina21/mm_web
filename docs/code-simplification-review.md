@@ -4,7 +4,8 @@ Read-only review focused on making files easier to navigate and maintain. This i
 
 ## Recommended first steps
 
-1. **Split `quotation-canvas.tsx` by responsibility (1,148 lines).** Keep `QuotationCanvas` as the coordinator, and move the Konva page/element rendering into a canvas/page renderer, inline text/cell editing into an editing component or hook, clipboard serialization and paste transforms into a focused clipboard module, and image loading into its own component/hook. The copy and paste handlers currently occupy about 270 lines and contain repeated parsing, cell formatting, bounds handling, and line-item subtotal logic. This is the highest readability payoff; preserve behavior with focused tests during the extraction.
+1. **Split `quotation-canvas.tsx` by responsibility.** Clipboard serialization and paste transforms now live in `_lib/clipboard.ts`. Inline editing state and workflows live in `use-inline-editing.ts`, with the textarea rendered by `inline-text-editor.tsx`. Konva page and element rendering now lives in `canvas-page-renderer.tsx`; stage sizing, active-page tracking, pointer paste positioning, and deselection live in `use-canvas-stage.ts`. Table selection state lives in `use-table-selection.ts`, and page geometry helpers live in `_lib/quotation-canvas-geometry.ts`. Remaining follow-up:
+   - Consider extracting image loading/rendering from the page renderer if it grows further.
 2. **Extract editor state workflows from `editor-client.tsx` (924 lines).** The file combines page history, initial quotation construction, save state, quotation hydration, element/page actions, keyboard shortcuts, and PDF export. Start with `use-page-history` for history/ref synchronization and a quotation load/hydration hook for loading a saved record; leave the page as the composition layer. Avoid moving all state at once because the callbacks share refs and mutation state.
 3. **Separate toolbar sections and table operations from `floating-toolbar.tsx` (279 lines).** Extract text formatting controls, table controls, and shared add/remove row/column transformations. Keep the toolbar responsible for choosing which section to show. The current component mixes rendering with table-data mutation logic.
 
@@ -17,8 +18,8 @@ Read-only review focused on making files easier to navigate and maintain. This i
 
 ## Suggested order
 
-Start with clipboard helpers from `quotation-canvas.tsx`, then split canvas rendering/editing, then extract the history workflow from `editor-client.tsx`. These boundaries separate pure transformations or cohesive state groups first, which should make subsequent changes smaller and easier to review.
+Clipboard helpers, inline editing, page rendering, and stage interactions are extracted from `quotation-canvas.tsx`. Next extract the history workflow from `editor-client.tsx`. These boundaries separate pure transformations or cohesive state groups first, which should make subsequent changes smaller and easier to review.
 
 ## Scope note
 
-No source files were changed in this review. The editor currently has no editor-specific tests, so behavior-sensitive extractions—especially clipboard, history, and hydration—should add tests alongside the refactor. File sizes and locations were checked against the current working tree on 2026-10-21.
+The editor currently has no editor-specific tests, so behavior-sensitive extractions—especially clipboard, inline editing, history, and hydration—should add tests alongside the refactor. File sizes and locations were checked against the current working tree on 2026-10-21.
