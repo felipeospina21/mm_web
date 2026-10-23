@@ -251,13 +251,26 @@ async function drawImage(pdf: jsPDF, element: TemplateElement): Promise<void> {
       element.width,
       element.height,
     );
+    const image = new window.Image();
+    const imageLoaded = new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Image could not be decoded"));
+    });
+    image.src = dataUrl;
+    await imageLoaded;
+    const scale = Math.min(
+      element.width / image.naturalWidth,
+      element.height / image.naturalHeight,
+    );
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
     pdf.addImage(
       dataUrl,
       getImageFormat(dataUrl),
-      element.x,
-      element.y,
-      element.width,
-      element.height,
+      element.x + (element.width - width) / 2,
+      element.y + (element.height - height) / 2,
+      width,
+      height,
       undefined,
       "FAST",
     );

@@ -378,12 +378,29 @@ function ImageElement({
       </>
     );
   }
+  const image = imageState.image;
+  const imageWidth = image?.naturalWidth ?? element.width;
+  const imageHeight = image?.naturalHeight ?? element.height;
+  const scale = Math.min(
+    element.width / imageWidth,
+    element.height / imageHeight,
+  );
+  const width = imageWidth * scale;
+  const height = imageHeight * scale;
+  const x =
+    (typeof shapeProps.x === "number" ? shapeProps.x : element.x) +
+    (element.width - width) / 2;
+  const y =
+    (typeof shapeProps.y === "number" ? shapeProps.y : element.y) +
+    (element.height - height) / 2;
   return (
     <KonvaImage
       {...shapeProps}
-      image={imageState.image ?? undefined}
-      width={element.width}
-      height={element.height}
+      image={image ?? undefined}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
     />
   );
 }
