@@ -14,12 +14,14 @@ import type { FC } from "react";
 interface LookupSummaryProps {
   data: ResolveResult | undefined;
   clientId: string | null;
+  contactId: string | null;
   submitted: string[];
 }
 
 export const LookupSummary: FC<LookupSummaryProps> = ({
   data,
   clientId,
+  contactId,
   submitted,
 }) => {
   const router = useRouter();
@@ -33,7 +35,7 @@ export const LookupSummary: FC<LookupSummaryProps> = ({
     for (const product of resolved) {
       addQuotationProduct(product);
     }
-    setPendingQuotationClient(clientId);
+    setPendingQuotationClient(clientId, contactId);
     router.push("/editor");
   };
 

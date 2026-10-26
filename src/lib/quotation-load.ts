@@ -9,6 +9,7 @@
  */
 const PENDING_LOAD_KEY = "mm_pending_quotation_load";
 const DRAFT_CLIENT_KEY = "mm_draft_quotation_client";
+const DRAFT_CONTACT_KEY = "mm_draft_quotation_contact";
 const PENDING_MANUAL_QUOTATION_KEY = "mm_pending_manual_quotation";
 
 /** Stash the id of a quotation to load, then navigate to the editor. */
@@ -33,16 +34,31 @@ export function clearPendingQuotationLoad(id: string): void {
 }
 
 /** Keep the home-selected client available while the draft is being edited. */
-export function setPendingQuotationClient(id: string | null): void {
+export function setPendingQuotationClient(
+  id: string | null,
+  contactId: string | null = null,
+): void {
   if (typeof window === "undefined") return;
-  if (id) window.sessionStorage.setItem(DRAFT_CLIENT_KEY, id);
-  else window.sessionStorage.removeItem(DRAFT_CLIENT_KEY);
+  if (id) {
+    window.sessionStorage.setItem(DRAFT_CLIENT_KEY, id);
+    if (contactId) window.sessionStorage.setItem(DRAFT_CONTACT_KEY, contactId);
+    else window.sessionStorage.removeItem(DRAFT_CONTACT_KEY);
+  } else {
+    window.sessionStorage.removeItem(DRAFT_CLIENT_KEY);
+    window.sessionStorage.removeItem(DRAFT_CONTACT_KEY);
+  }
 }
 
 /** Read the draft client; keep it so a browser refresh can restore the draft. */
 export function takePendingQuotationClient(): string | null {
   if (typeof window === "undefined") return null;
   return window.sessionStorage.getItem(DRAFT_CLIENT_KEY);
+}
+
+/** Read the selected contact for the pending draft client. */
+export function takePendingQuotationContact(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem(DRAFT_CONTACT_KEY);
 }
 
 /** Mark that the next new editor draft should start with blank item fields. */

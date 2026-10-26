@@ -23,6 +23,7 @@ import {
 } from "@/lib/quotation-selection";
 import {
   takePendingQuotationClient,
+  takePendingQuotationContact,
   takePendingManualQuotation,
   takePendingQuotationLoad,
   clearPendingQuotationLoad,
@@ -133,6 +134,7 @@ export default function EditorPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(() =>
     takePendingQuotationClient(),
   );
+  const pendingHomeContactIdRef = useRef(takePendingQuotationContact());
   const pagesRef = useRef(pages);
   const replacePages = useCallback((next: PageData[]) => {
     pagesRef.current = next;
@@ -395,7 +397,11 @@ export default function EditorPage() {
                   ? {
                       ...element,
                       text: t("template.customer", {
-                        name: capitalizeName(client.contacts[0]?.name ?? ""),
+                      name: capitalizeName(
+                        client.contacts.find(
+                          (contact) => contact.id === pendingHomeContactIdRef.current,
+                        )?.name ?? client.contacts[0]?.name ?? "",
+                      ),
                       }),
                     }
                   : element,
@@ -409,7 +415,11 @@ export default function EditorPage() {
     metaRef.current = {
       ...metaRef.current,
       companyName: capitalizeName(client.name),
-      customerName: capitalizeName(client.contacts[0]?.name ?? ""),
+      customerName: capitalizeName(
+        client.contacts.find(
+          (contact) => contact.id === pendingHomeContactIdRef.current,
+        )?.name ?? client.contacts[0]?.name ?? "",
+      ),
     };
     pendingHomeClientIdRef.current = null;
   }, [clientsQuery.data, pendingLoadId, selectedClientId]);

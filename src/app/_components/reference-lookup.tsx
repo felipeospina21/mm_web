@@ -29,6 +29,7 @@ export function ReferenceLookup() {
   // first "Resolve" so nothing runs on mount.
   const [submitted, setSubmitted] = useState<string[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
+  const [contactId, setContactId] = useState<string | null>(null);
 
   const query = api.product.resolveReferences.useQuery(
     { references: submitted },
@@ -43,7 +44,7 @@ export function ReferenceLookup() {
   const handleStartManualQuotation = () => {
     if (!clientId) return;
     clearQuotationProducts();
-    setPendingQuotationClient(clientId);
+    setPendingQuotationClient(clientId, contactId);
     setPendingManualQuotation();
     router.push("/editor");
   };
@@ -53,7 +54,10 @@ export function ReferenceLookup() {
       <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
         <ClientField
           value={clientId}
-          onChange={(client) => setClientId(client?.id ?? null)}
+          onChange={(client, selectedContactId) => {
+            setClientId(client?.id ?? null);
+            setContactId(selectedContactId);
+          }}
         />
         {!clientId && (
           <p className="mt-2 text-sm text-red-700" role="alert">
@@ -90,6 +94,7 @@ export function ReferenceLookup() {
         <LookupSummary
           data={query.data}
           clientId={clientId}
+          contactId={contactId}
           submitted={submitted}
         />
       )}

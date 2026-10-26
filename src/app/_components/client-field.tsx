@@ -11,7 +11,7 @@ type ClientRecord = RouterOutputs["customer"]["list"][number];
 
 interface ClientFieldProps {
   value: string | null;
-  onChange: (client: ClientRecord | null) => void;
+  onChange: (client: ClientRecord | null, contactId: string | null) => void;
 }
 
 const EMPTY_FORM = {
@@ -34,6 +34,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
   const [selectedOptionValue, setSelectedOptionValue] = useState<string | null>(
     null,
   );
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [contacts, setContacts] = useState<ContactForm[]>([
     { ...EMPTY_CONTACT },
@@ -50,7 +51,8 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
           ? `${client.id}::${client.contacts[0].id}`
           : `${client.id}::none`,
       );
-      onChange(client);
+      setSelectedClientId(client.id);
+          onChange(client, client.contacts[0]?.id ?? null);
       setForm(EMPTY_FORM);
       setContacts([{ ...EMPTY_CONTACT }]);
       setIsCreateOpen(false);
@@ -87,7 +89,8 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
   const selectedOption =
     clientOptions.find(
       (option) =>
-        option.value === selectedOptionValue && option.clientId === value,
+        option.value === selectedOptionValue &&
+        option.clientId === (selectedClientId ?? value),
     ) ?? clientOptions.find((option) => option.clientId === value);
 
   return (
@@ -111,10 +114,17 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
           );
           if (!option) return;
           setSelectedOptionValue(option.value);
+          setSelectedClientId(option.clientId);
           const selected = clientsQuery.data?.find(
             (client) => client.id === option.clientId,
           );
-          onChange(selected ?? null);
+          const selectedContactId = option.value.split("::")[1];
+          onChange(
+            selected ?? null,
+            selectedContactId && selectedContactId !== "none"
+              ? selectedContactId
+              : null,
+          );
         }}
         footerAction={{
           label: t("client.addNew"),
