@@ -141,6 +141,40 @@ export default function QuotationCanvas({
       const target = event.target as HTMLElement;
       if (target.closest("input, textarea, [contenteditable='true']")) return;
       const clipboardText = event.clipboardData.getData("text/plain");
+      // Prefer real clipboard images over the editor's in-memory element copy.
+      // The latter remains available after copying an editor element, while
+      // image clipboard payloads commonly have no plain text.
+      const image = Array.from(event.clipboardData.items).find((item) =>
+        item.type.startsWith("image/"),
+      );
+      const file = image?.getAsFile();
+      if (file) {
+        event.preventDefault();
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result !== "string") return;
+          const { pageNumber, x, y } = stage.pastePositionRef.current;
+          const imageElement = new window.Image();
+          imageElement.onload = () => {
+            const scale = Math.min(
+              1,
+              300 / imageElement.naturalWidth,
+              200 / imageElement.naturalHeight,
+            );
+            onPasteImage(
+              reader.result as string,
+              pageNumber,
+              x,
+              y,
+              imageElement.naturalWidth * scale,
+              imageElement.naturalHeight * scale,
+            );
+          };
+          imageElement.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
       if (!clipboardText && elementClipboardRef.current) {
         const { pageNumber, x, y } = stage.pastePositionRef.current;
         if (!pages.some((page) => page.pageNumber === pageNumber)) return;
@@ -187,35 +221,6 @@ export default function QuotationCanvas({
         }
       }
 
-      const image = Array.from(event.clipboardData.items).find((item) =>
-        item.type.startsWith("image/"),
-      );
-      const file = image?.getAsFile();
-      if (!file) return;
-      event.preventDefault();
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result !== "string") return;
-        const { pageNumber, x, y } = stage.pastePositionRef.current;
-        const imageElement = new window.Image();
-        imageElement.onload = () => {
-          const scale = Math.min(
-            1,
-            300 / imageElement.naturalWidth,
-            200 / imageElement.naturalHeight,
-          );
-          onPasteImage(
-            reader.result as string,
-            pageNumber,
-            x,
-            y,
-            imageElement.naturalWidth * scale,
-            imageElement.naturalHeight * scale,
-          );
-        };
-        imageElement.src = reader.result;
-      };
-      reader.readAsDataURL(file);
     },
     [
       onPasteElement,
