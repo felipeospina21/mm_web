@@ -44,6 +44,9 @@
 - ✅ **Task 3.3** — Persistence extracted to `useQuotationPersistence` (`d079212`)
   and load orchestration to `useQuotationLoad` (`4f0de7e`). Load path is
   flag-gated off, so that half is extraction-only (not reachable yet).
+- ✅ **Task 3.4** — `EditorToolbar` header extracted; floating-toolbar logic moved
+  to pure `_lib/table-ops` (12 tests) + rendering split into text-format/table
+  subcomponents. (`b020887`, `85098ad`, +2b)
 
 **Deferred:**
 
@@ -51,10 +54,11 @@
   iteration (module is feature-flagged off; see the task for details). Plan text
   retained below.
 
-**Not started** (full detail retained in the sections below): Task 3.4,
-3.5, 3.6; Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
+**Not started** (full detail retained in the sections below): Task 3.5, 3.6;
+Task 4.0a, 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
 
-**Next up:** Task 3.4 — `EditorToolbar` component + `floating-toolbar` split.
+**Next up:** Task 3.5 — element `role` discriminator (riskiest; touches persisted
+`data` + ~5 files; depends on the Task 2.1 schema).
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -188,15 +192,13 @@ dirty-guard stayed in `editor-client.tsx` (separate concern). Pure hydration-
 transform tests were NOT added (transform left inline); revisit if that logic is
 later extracted. typecheck/lint/test unchanged.
 
-### Task 3.4 — `EditorToolbar` component + `floating-toolbar` split (1.1, 1.6)
+### Task 3.4 — `EditorToolbar` component + `floating-toolbar` split (1.1, 1.6) — ✅ DONE (`b020887`, `85098ad`, +2b)
 
-- **Files:** new `src/app/editor/_components/editor-toolbar.tsx`; split
-  `floating-toolbar.tsx` into text-format / table / shared-actions pieces.
-- **Change:** move the header toolbar JSX out of `editor-client.tsx`; separate the
-  toolbar's table-mutation logic from its rendering.
-- **Acceptance:** toolbar renders/behaves identically; `editor-client.tsx` is
-  materially shorter; `pnpm lint` clean.
-- **Effort:** medium. **Risk:** low–medium.
+Three parts: (1) extracted the header into `_components/editor-toolbar.tsx`
+(`b020887`); (2a) moved the table-mutation logic into pure `_lib/table-ops.ts`
+with 12 unit tests (`85098ad`); (2b) split the floating-toolbar rendering into
+`text-format-controls.tsx` + `table-controls.tsx`, leaving `FloatingToolbar` as a
+thin orchestrator. Behaviour preserved throughout.
 
 ### Task 3.5 — Element `role` discriminator (1.2)
 
@@ -369,6 +371,13 @@ Pick up alongside nearby work rather than as a dedicated push.
   `client-field.tsx` create-client dialog extraction; a shared
   Escape/outside-click hook for the modal components — only if its API stays
   simpler than the current effects.
+- **Review the i18n implementation — is it needed?** The editor/toolbar use a
+  `t(...)` helper from `@/i18n/messages` with a single `defaultLocale`. Assess
+  whether full internationalization is actually a requirement: if the app is
+  effectively single-locale (currently `es-CO`-flavoured), the `t()` indirection
+  may be adding ceremony without payoff. Decide to (a) keep and properly
+  multi-locale it, or (b) simplify to plain strings/constants. Scope the
+  blast radius first (grep usages) before changing anything.
 
 ---
 
