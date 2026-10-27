@@ -12,12 +12,44 @@
 
 ## Conventions for every task
 
-- Branch off `main` (do **not** commit to `main` directly).
+- Commit directly to `main` (team decision for this effort), one self-contained
+  commit per task so it can be reviewed/reverted alone.
 - After each task: `pnpm typecheck && pnpm lint && pnpm test` must pass; add/adjust
   tests where the task says so.
-- Keep each task a self-contained commit so it can be reviewed/reverted alone.
 - Follow `AGENTS.md`: kebab-case component files, interfaces over type aliases,
   small components, custom hooks to consolidate related state.
+
+---
+
+## Status (updated 2026-10-27)
+
+**Done** (committed to `main`):
+
+- ✅ **Task 1.1** — Save-button disable bug fixed; `prefer-nullish-coalescing`
+  configured to ignore booleans. (`7d5aed4`)
+- ✅ **Task 1.2** — Shared `_lib/line-items.ts` (dedup + `LINE_ITEM_COLS`), with
+  tests. (`965f34c`)
+- ✅ **Task 2.1** — Lossless, template-agnostic Zod schema for persisted `data`
+  (`quotation-schema.ts`) + drift guard + `quotationDocumentInput`; wired into
+  `save`. (`0fe83fe`)
+- ✅ **Task 2.2** — Image `src` allowlist (`isAllowedImageSrc`) enforced in the
+  schema + both sinks (pdf-export, canvas). (`83c490f`)
+- ✅ **Lint cleanup** (not a numbered task) — all 16 lint errors cleared; four
+  React Compiler rules downgraded to `warn`. (`3158769`)
+
+**Deferred:**
+
+- ⏸️ **Task 2.3** — Required-elements enforcement: deferred to the quotation-module
+  iteration (module is feature-flagged off; see the task for details). Plan text
+  retained below.
+
+**Not started** (full detail retained in the sections below): Task 3.0, 3.1, 3.2,
+3.3, 3.4, 3.5, 3.6; Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
+
+**Next up:** Task 3.0 — consolidate hooks into `_hooks/`.
+
+> Phase 1 & 2 task sections below are kept for historical reference; the Status
+> block above is the source of truth for what is done.
 
 ---
 
@@ -27,7 +59,7 @@ These are cheap, safe, and some fix real bugs. Doing them first also makes the
 later architecture/testing work cleaner (one canonical line-item module to
 refactor and test).
 
-### Task 1.1 — Fix the Save-button disable bug (3.6)
+### Task 1.1 — Fix the Save-button disable bug (3.6) — ✅ DONE (`7d5aed4`)
 
 - **File:** `src/app/editor/editor-client.tsx` (~line 900).
 - **Change:** `disabled={saveMutation.isPending ?? !canSave}` →
@@ -41,7 +73,7 @@ refactor and test).
   - Manual: selecting a client + making an edit enables it.
 - **Effort:** trivial. **Risk:** none.
 
-### Task 1.2 — Extract shared line-item logic (3.1) + name column indices (3.2)
+### Task 1.2 — Extract shared line-item logic (3.1) + name column indices (3.2) — ✅ DONE (`965f34c`)
 
 - **Files:** new `src/app/editor/_lib/line-items.ts`; update
   `src/app/editor/_lib/use-inline-editing.ts` and
@@ -84,7 +116,7 @@ not require touching the editor's component structure.
 > rule (header + policies page) is enforced **separately** (see Task 2.3), not in
 > this universal schema.
 
-### Task 2.1 — Real (lossless) Zod schema for persisted quotation `data` (4.1)
+### Task 2.1 — Real (lossless) Zod schema for persisted quotation `data` (4.1) — ✅ DONE (`0fe83fe`)
 
 - **Files:** `src/server/api/routers/quotation.ts` (the `saveInput` ~line 13);
   new `src/app/editor/_components/quotation-schema.ts` holding the Zod schemas;
@@ -108,7 +140,7 @@ not require touching the editor's component structure.
   documents**. Capture a real default-template `data` fixture first and assert it
   parses unchanged.
 
-### Task 2.2 — Constrain image `src` (4.2)
+### Task 2.2 — Constrain image `src` (4.2) — ✅ DONE (`83c490f`)
 
 - **Files:** the schema from Task 2.1 (element `src` field);
   `src/app/editor/_lib/pdf-export.ts` (the `fetch(new URL(src, …))` path);
