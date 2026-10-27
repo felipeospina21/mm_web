@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type Konva from "konva";
 import type { PageData, TemplateElement } from "../_components/types";
@@ -10,6 +10,12 @@ import { getPageOffset } from "./quotation-canvas-geometry";
 interface InlineEditingOptions {
   pages: PageData[];
   stageRef: { current: Konva.Stage | null };
+  /** The scrollable canvas container. Used both to compute overlay positions
+   * and to keep the overlay aligned with its cell while scrolling. */
+  containerRef: { current: HTMLDivElement | null };
+  /** Live scroll offset of the canvas container, used to keep the overlay
+   * textarea aligned with its cell while the canvas scrolls. */
+  scrollTopRef: { current: number };
   onElementChange: (
     pageId: string,
     elementId: string,
@@ -58,6 +64,8 @@ function getCellInputValue(
 export function useInlineEditing({
   pages,
   stageRef,
+  containerRef,
+  scrollTopRef,
   onElementChange,
 }: InlineEditingOptions) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -69,6 +77,15 @@ export function useInlineEditing({
   const [editingTextValue, setEditingTextValue] = useState("");
   const [editingCellValue, setEditingCellValue] = useState("");
   const editingCellValueRef = useRef("");
+  /**
+   * Top of the active overlay in *content space* — i.e. the viewport `top`
+   * the textarea would have if the canvas were scrolled to the top. The
+   * canvas renders its Konva layer with `y={-scrollTop}` while the Stage
+   * container itself is `position: sticky; top: 0`, so the on-screen cell
+   * moves by `-scrollTop`. We store the un-scrolled top here and subtract the
+   * live scroll offset so the textarea tracks the cell as the user scrolls.
+   */
+  const contentTopRef = useRef(0);
 
   const resetEditing = useCallback(() => {
     setEditingId(null);
@@ -79,25 +96,47 @@ export function useInlineEditing({
     setEditingBox(null);
   }, []);
 
+  /**
+   * While an overlay is open, keep its `top` aligned with the underlying cell
+   * as the canvas container scrolls. Without this the fixed-position textarea
+   * would stay put and drift out of bounds of its cell.
+   */
+  useEffect(() => {
+    if (!editingId) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const sync = () => {
+      setEditingBox((current) =>
+        current
+          ? { ...current, top: contentTopRef.current - container.scrollTop }
+          : current,
+      );
+    };
+    container.addEventListener("scroll", sync, { passive: true });
+    return () => container.removeEventListener("scroll", sync);
+  }, [editingId, containerRef]);
+
   const openTextEditor = useCallback(
     (page: PageData, element: TemplateElement) => {
       const stage = stageRef.current;
       if (!stage) return;
       const stageBox = stage.container().getBoundingClientRect();
       const offset = getPageOffset(page.pageNumber);
+      const scrollTop = scrollTopRef.current;
+      contentTopRef.current = stageBox.top + offset.y + element.y;
       setEditingId(element.id);
       setEditingCell(null);
       setEditingTextValue(element.text);
       setEditingBox({
         left: stageBox.left + offset.x + element.x,
-        top: stageBox.top + offset.y + element.y,
+        top: contentTopRef.current - scrollTop,
         width: element.width,
         height: element.height,
         fontSize: element.fontSize,
         color: element.fill,
       });
     },
-    [stageRef],
+    [stageRef, scrollTopRef],
   );
 
   const openCellEditor = useCallback(
@@ -107,6 +146,7 @@ export function useInlineEditing({
       if (element.id.startsWith("line-items-") && col === 4) return;
       const stageBox = stage.container().getBoundingClientRect();
       const offset = getPageOffset(page.pageNumber);
+      const scrollTop = scrollTopRef.current;
       const { colWidths, rowHeight } = element.table;
       const value = getCellInputValue(
         element.table.cells[row]?.[col] ?? "",
@@ -114,6 +154,8 @@ export function useInlineEditing({
         row,
         col,
       );
+      contentTopRef.current =
+        stageBox.top + offset.y + element.y + row * rowHeight;
       setEditingId(element.id);
       setEditingCell({ row, col });
       setEditingTextValue("");
@@ -125,14 +167,14 @@ export function useInlineEditing({
           offset.x +
           element.x +
           colWidths.slice(0, col).reduce((a, b) => a + b, 0),
-        top: stageBox.top + offset.y + element.y + row * rowHeight,
+        top: contentTopRef.current - scrollTop,
         width: colWidths[col] ?? 0,
         height: rowHeight,
         fontSize: element.table.fontSize,
         color: row === 0 ? element.table.headerColor : "#333333",
       });
     },
-    [stageRef],
+    [stageRef, scrollTopRef],
   );
 
   const commitTextEdit = useCallback(
@@ -243,12 +285,15 @@ export function useInlineEditing({
         if (!stage) return;
         const stageBox = stage.container().getBoundingClientRect();
         const offset = getPageOffset(page.pageNumber);
+        const scrollTop = scrollTopRef.current;
         const nextValue = getCellInputValue(
           table.cells[nextRow]?.[nextCol] ?? "",
           element,
           nextRow,
           nextCol,
         );
+        contentTopRef.current =
+          stageBox.top + offset.y + element.y + nextRow * rowHeight;
         setEditingCell({ row: nextRow, col: nextCol });
         setEditingCellValue(nextValue);
         editingCellValueRef.current = nextValue;
@@ -258,7 +303,7 @@ export function useInlineEditing({
             offset.x +
             element.x +
             colWidths.slice(0, nextCol).reduce((a, b) => a + b, 0),
-          top: stageBox.top + offset.y + element.y + nextRow * rowHeight,
+          top: contentTopRef.current - scrollTop,
           width: colWidths[nextCol] ?? 0,
           height: rowHeight,
           fontSize: table.fontSize,
@@ -278,7 +323,7 @@ export function useInlineEditing({
         commitTextEdit(original);
       }
     },
-    [commitTextEdit, editingCell, editingId, onElementChange, pages, stageRef],
+    [commitTextEdit, editingCell, editingId, onElementChange, pages, stageRef, scrollTopRef],
   );
 
   return {

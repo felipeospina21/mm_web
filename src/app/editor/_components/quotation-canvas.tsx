@@ -75,6 +75,8 @@ export default function QuotationCanvas({
   const inlineEditing = useInlineEditing({
     pages,
     stageRef: stage.stageRef,
+    containerRef: stage.containerRef,
+    scrollTopRef,
     onElementChange,
   });
   const transformerRef = useRef<Konva.Transformer | null>(null);
