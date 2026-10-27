@@ -11,7 +11,7 @@ const PX_TO_PT = 0.75;
 const PDF_TEXT_SCALE = 1.5;
 
 function parseColor(color: string): [number, number, number] {
-  const hex = color.trim().match(/^#([\da-f]{3}|[\da-f]{6})$/i)?.[1];
+  const hex = /^#([\da-f]{3}|[\da-f]{6})$/i.exec(color.trim())?.[1];
   if (hex) {
     const normalized =
       hex.length === 3
@@ -27,7 +27,7 @@ function parseColor(color: string): [number, number, number] {
     ];
   }
 
-  const rgb = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  const rgb = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/i.exec(color);
   if (rgb) {
     return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
   }
@@ -53,11 +53,14 @@ function getFontStyle(
 }
 
 function wrapText(pdf: jsPDF, text: string, width: number): string[] {
-  return text
-    .split("\n")
-    .flatMap((line) =>
-      line.length === 0 ? [""] : pdf.splitTextToSize(line, Math.max(width, 1)),
-    );
+  return text.split("\n").flatMap((line): string[] => {
+    if (line.length === 0) return [""];
+    // jsPDF's splitTextToSize is typed as `any`; it returns string | string[].
+    const split = pdf.splitTextToSize(line, Math.max(width, 1)) as
+      | string
+      | string[];
+    return Array.isArray(split) ? split : [split];
+  });
 }
 
 function drawTextElement(pdf: jsPDF, element: TemplateElement): void {

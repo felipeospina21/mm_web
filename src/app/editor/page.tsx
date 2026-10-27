@@ -1,4 +1,3 @@
-import { LoginScreen } from "@/app/_components/login-screen";
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
 

@@ -12,6 +12,6 @@ export function capitalizeLabeledName(value: string): string {
 
   const label = value.slice(0, separator + 1);
   const rest = value.slice(separator + 1);
-  const whitespace = rest.match(/^\s*/u)?.[0] ?? "";
+  const whitespace = /^\s*/u.exec(rest)?.[0] ?? "";
   return `${label}${whitespace}${capitalizeName(rest.slice(whitespace.length))}`;
 }

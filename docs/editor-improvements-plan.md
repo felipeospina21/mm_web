@@ -291,6 +291,30 @@ stateful and would be better as pure, testable helpers:
 Do after Phase 3: `React.memo` is blocked by unstable props, and stabilizing them
 is easier post-decomposition.
 
+### Task 4.0 — Fix refs-during-render & re-upgrade the lint rule (3.7)
+
+`quotation-canvas.tsx` reads ref-bundled values during render (the
+`react-hooks/refs` React Compiler rule fires ~9×). As a stopgap the rule is
+currently downgraded to **`warn`** in `eslint.config.js` (alongside the other
+React Compiler rules) so it does not block CI — this is explicitly **temporary**.
+
+- **Files:** `src/app/editor/_components/quotation-canvas.tsx`,
+  `src/app/editor/_hooks/use-canvas-stage.ts` (post Task 3.0 move),
+  `eslint.config.js`.
+- **Change:** stop accessing ref values during render. The `useCanvasStage`
+  return bundles refs (`stageRef`, `containerRef`, `pastePositionRef`) with state
+  (`selectedId`, `stageSize`); the lint can't prove render-time `stage.*` reads
+  aren't ref reads. Separate refs from render-safe state (or read refs only in
+  handlers/effects) so the rule is satisfied at the root. Then **re-upgrade
+  `react-hooks/refs` from `warn` back to `error`** in `eslint.config.js` and
+  remove the TEMPORARY comment.
+- **Acceptance:** `pnpm lint` passes with `react-hooks/refs` set to `error` again;
+  canvas selection / paste-position / scroll behaviour unchanged.
+- **Effort:** medium. **Risk:** medium (touches a 585-line untested component —
+  pairs well with the Phase 3 decomposition + any tests added there).
+- **Do before Task 4.1** (same file + ref area); the warn→error flip is the
+  completion signal.
+
 ### Task 4.1 — Stabilize per-element handlers & `dragBoundFunc` (2.2)
 
 - **Files:** `canvas-page-renderer.tsx`, `quotation-canvas.tsx`.
