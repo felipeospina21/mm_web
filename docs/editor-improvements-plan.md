@@ -125,7 +125,7 @@ not require touching the editor's component structure.
 - **Effort:** small–medium. **Risk:** low–medium (confirm the upload flow only
   emits `data:` URLs so nothing legitimate breaks).
 
-### Task 2.3 — Required-elements enforcement (separate from storage schema)
+### Task 2.3 — Required-elements enforcement (DEFERRED to the quotation module)
 
 Some elements must always be present regardless of template: the non-editable
 header fields and the final policies page. This is a **template/application
@@ -134,14 +134,31 @@ the lossless round-trip and open-editor goals are not compromised — a schema t
 rejected documents missing a header would make variant/edge-case snapshots
 unloadable and unsavable.
 
-- **When:** alongside the upcoming **quotation module** iteration (load / edit /
-  delete saved quotations), not necessarily before Task 2.2.
-- **Files:** a new validator (e.g. `_components/required-elements.ts` or a
-  template-scoped rule) + wherever enforced-template save/load flows live.
-- **Change:** a `requiredElementsPresent(doc)` (or template-scoped) check run in
-  the flows that demand it — enforced-template creation and the quotation module's
-  save path — surfacing a clear user-facing error, not a 500.
-- **Acceptance:**
+> **Status: deferred — do NOT build yet.** The quotation module
+> (`src/app/_my-quotations/`) that owns the enforced load/edit/save flows is
+> currently **feature-flagged off** (`ENABLE_QUOTATIONS_PAGE = false`, redirects
+> to `/`) and its enforced-template save/load path does not exist. Both the
+> validator primitive **and** its wiring are deferred to that iteration, so the
+> enforcement can be built and verified against a real flow instead of a
+> speculative one. Nothing lands on the universal save path.
+
+- **When:** with the quotation-module iteration (load / edit / delete saved
+  quotations). Not before.
+- **Required element IDs (from the current master template** —
+  `src/app/editor/_lib/template-data.ts`**):** `customer-name`, `company-name`,
+  `quotation-number`, `representative-info`, `footer`, and the final-page
+  `policies-body`. Record these as named constants when built; re-verify against
+  the template at build time (templates may evolve).
+- **Two parts, both deferred:**
+  1. **Pure validator primitive:** `findMissingRequiredElements(doc)` /
+     `requiredElementsPresent(doc)` + `REQUIRED_ELEMENT_IDS` constants, in
+     `_components` or `_lib`. Pure, unit-tested (present → ok; missing a header
+     field → reported; missing policies → reported; free-form → reports missing
+     without throwing).
+  2. **Wiring:** call the primitive only in the enforced-template creation and
+     the quotation module's save path, surfacing a clear user-facing error (not a
+     500).
+- **Acceptance (when built):**
   - A document missing the header fields or policies page fails the enforced-flow
     check with an actionable message.
   - A free-form document still **saves fine** through the universal path (the
@@ -150,7 +167,7 @@ unloadable and unsavable.
 - **Effort:** medium. **Risk:** medium — must not leak into the universal save
   path and break free-form/round-trip saves.
 - **Depends on:** Task 2.1 (shares the element model) and the quotation-module
-  work.
+  work being un-flagged.
 
 ---
 
