@@ -20,7 +20,7 @@ import type {
   QuotationData,
   TemplateElement,
 } from "./_components/types";
-import { ActionsMenu } from "./_components/actions-menu";
+import { EditorToolbar } from "./_components/editor-toolbar";
 import {
   getQuotationProducts,
   type QuotationProduct,
@@ -742,70 +742,25 @@ export default function EditorPage() {
       {/* Slim editor toolbar. The global navbar (Catalog / Editor / Sign
           out) is rendered above this by the layout, so we only keep the
           editor-specific actions here — collapsed into a dropdown. */}
-      <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-y-2 border-b border-neutral-200 bg-white px-2 py-2 sm:h-12 sm:flex-nowrap sm:px-4 sm:py-0">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <h1 className="truncate text-sm font-semibold sm:text-base">
-            {t("editor.title")}
-          </h1>
-          {/* Draft until saved; shows the DB-assigned number once persisted. */}
-          {saved ? (
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-green-800 sm:px-2.5 sm:text-xs">
-              {t("editor.quotationNumber", { number: saved.quotationNumber })}
-            </span>
-          ) : (
-            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-neutral-500 sm:px-2.5 sm:text-xs">
-              {t("editor.draft")}
-            </span>
-          )}
-          {/* Unsaved-changes indicator. */}
-          {isDirty && (
-            <span className="hidden items-center gap-1 text-xs font-medium text-amber-600 sm:flex">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-amber-500"
-                aria-hidden="true"
-              />
-              {t("editor.unsaved")}
-            </span>
-          )}
-        </div>
-        <div className="flex w-full items-center justify-end gap-1 sm:w-auto sm:gap-2">
-          <ActionsMenu
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onAddElement={handleAddElement}
-            onAddPage={handleAddPage}
-            onDeletePage={() => handleDeletePage(activePageNumber)}
-            canDeletePage={
-              pages.length > 2 &&
-              pages[activePageNumber - 1]?.elements.some(
-                (element) => element.id === "policies-body",
-              ) !== true &&
-              activePageNumber > 1
-            }
-            onAddProducts={handleAddProducts}
-          />
-          <button
-            onClick={handleSave}
-            disabled={isSaving || !canSave}
-            className="rounded bg-green-600 px-2 py-1.5 text-xs whitespace-nowrap text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
-          >
-            {isSaving
-              ? t("editor.saving")
-              : saved
-                ? t("editor.save")
-                : t("editor.saveQuotation")}
-          </button>
-          <button
-            onClick={handleExportPdf}
-            disabled={!saved || isExporting}
-            className="bg-primary rounded px-2 py-1.5 text-xs whitespace-nowrap text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
-          >
-            {isExporting ? t("editor.exporting") : t("editor.exportPdf")}
-          </button>
-        </div>
-      </header>
+      <EditorToolbar
+        pages={pages}
+        activePageNumber={activePageNumber}
+        saved={saved}
+        isDirty={isDirty}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        canSave={canSave}
+        isSaving={isSaving}
+        isExporting={isExporting}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onAddElement={handleAddElement}
+        onAddPage={handleAddPage}
+        onDeletePage={handleDeletePage}
+        onAddProducts={handleAddProducts}
+        onSave={handleSave}
+        onExportPdf={handleExportPdf}
+      />
 
       <div className="min-h-0 flex-1">
         <QuotationCanvas
