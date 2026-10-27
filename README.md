@@ -124,21 +124,19 @@ erDiagram
 
 ## Database & environments
 
-The app uses **PostgreSQL** via Drizzle, with this split:
+The app uses **PostgreSQL** (Supabase) via Drizzle, with this split:
 
 | Role           | Where                        | Purpose                                               |
 | -------------- | ---------------------------- | ----------------------------------------------------- |
 | **Production** | Supabase (prod project)      | Real app + data                                       |
 | **Dev**        | Supabase (dev project/branch)| Day-to-day development — identical to prod, only data differs |
-| **Test**       | Docker Postgres (ephemeral)  | SQL/ORM integration tests; migrated fresh, then discarded |
 
 Dev and prod both run on Supabase so there are **no behavioral differences**
-(connection pooling, SSL, limits) between them — only the data differs. Docker
-Postgres is kept purely as a fast, throwaway database for integration tests.
+(connection pooling, SSL, limits) between them — only the data differs. The
+automated tests are plain unit tests and do **not** require a database.
 
-The schema is identical everywhere because it comes from one source of truth —
-the Drizzle migrations in `drizzle/`. Whatever database `pnpm db:migrate` points
-at gets the same tables.
+The schema comes from one source of truth — the Drizzle migrations in
+`drizzle/`. Whatever database the migrate command points at gets the same tables.
 
 ### Connection URLs
 
@@ -149,75 +147,15 @@ Two connection strings drive this (see `.env.example`):
   `prepare: false` so pooled connections work; this is a no-op on plain Postgres.
 - `DIRECT_URL` — **direct**, non-pooled connection (Supabase port 5432) used only
   for migrations and Drizzle Studio. Optional — falls back to `DATABASE_URL` when
-  unset (e.g. a local Docker Postgres with no separate direct endpoint).
+  unset.
 
-## Run everything with one command (Docker — test DB)
+## Deployment
 
-> Docker is kept as an **ephemeral test database**, not the app's primary store.
-> For normal development, run the app against Supabase (see
-> [Local development](#local-development)).
-
-Requires Docker with Compose v2 (`docker compose`).
-
-`AUTH_SECRET` is **required** — there is no committed default (it is the key that
-signs/encrypts session tokens). Generate one and pass it in:
-
-```bash
-AUTH_SECRET="$(openssl rand -base64 33)" docker compose up --build
-```
-
-This will:
-
-1. Start PostgreSQL (data persisted in the `db-data` volume).
-2. Wait for the database to be healthy, then apply Drizzle migrations.
-3. Start the Next.js app on http://localhost:3000 once migrations succeed.
-
-The app opens on the **login page** (`/`). After signing in you see the **product
-catalog**; open the **editor** (`/editor`) from the nav bar.
-
-### Create a login user
-
-The app has no public sign-up, so seed a user once the stack is running:
-
-```bash
-docker compose run --rm migrate pnpm db:seed you@company.com "your-password" "Your Name"
-```
-
-Optionally seed demo catalog products:
-
-```bash
-docker compose run --rm migrate pnpm db:seed:products
-```
-
-### Hot reload (Docker Compose Watch)
-
-For development with hot module reload, run the `dev` service instead of `app`:
-
-```bash
-AUTH_SECRET="$(openssl rand -base64 33)" pnpm docker:dev
-```
-
-This starts Postgres, applies migrations, then boots the Next.js **dev** server
-(HMR) on http://localhost:3000 and watches the project:
-
-- **Source edits** are synced into the container and hot-reload — no rebuild.
-- **Dependency changes** (`package.json` / `pnpm-lock.yaml`) or `Dockerfile`
-  edits trigger an image rebuild and a service restart.
-
-Watch requires Docker Compose v2.22+. To stop, press `Ctrl+C` (or
-`pnpm docker:down` in another terminal). Tail the dev logs with
-`pnpm docker:dev:logs`.
-
-### Configuration
-
-Environment variables read by Compose:
-
-- `AUTH_SECRET` — **required**, no default. NextAuth signing/encryption key.
-  Generate with `openssl rand -base64 33`. If missing, `docker compose up` fails
-  with a clear message.
-- `POSTGRES_PASSWORD` — Postgres password. Defaults to `postgres` for local dev
-  only; set a strong value in production.
-- `AUTH_URL` — public URL the browser uses (default `http://localhost:3000`).
+The app is deployed on **Vercel** (build from source — no container image). Set
+the environment variables from `.env.example` (`DATABASE_URL`, `DIRECT_URL`,
+`AUTH_SECRET`, the `AUTH_MICROSOFT_ENTRA_ID_*` and `EXTERNAL_API_*` values) in the
+Vercel project settings, pointed at the Supabase **prod** project. Migrations are
+applied with `pnpm db:migrate:prod` (against `.env.production`).
 
 ## Local development
 
@@ -232,13 +170,13 @@ cp .env.example .env
 #    - DIRECT_URL   -> Supabase direct (5432)
 #    - AUTH_SECRET  -> openssl rand -base64 33
 # 2. Apply migrations (uses DIRECT_URL) and seed a login user
-pnpm db:migrate
-pnpm db:seed you@company.com "your-password" "Your Name"
+pnpm db:migrate:dev
+pnpm db:seed:dev you@company.com "your-password" "Your Name"
 # 3. Run the dev server
 pnpm dev
 ```
 
-The app has no public sign-up, so `pnpm db:seed` is how you create a login user.
+The app has no public sign-up, so `pnpm db:seed:dev` is how you create a login user.
 
 To create or update multiple users, prepare a UTF-8 CSV with `email` and
 `password` columns. Optional columns are `name`, `alias`, `phone`, `phone_ext`,
@@ -253,32 +191,28 @@ sam@example.com,ChangeMe-456,Sam Lee,Sam,,,
 Then run the bulk seeder against the database configured in `.env`:
 
 ```bash
-pnpm db:seed:users ./users.csv
+pnpm db:seed:users:dev ./users.csv
 ```
 
 Passwords are hashed with Argon2id. Existing users with a matching email are
 updated; blank optional fields leave existing values unchanged. The import is
 transactional, so invalid rows or database errors leave the batch unchanged.
 
-> **Tests** use an ephemeral Docker Postgres instead of Supabase — see
-> [Run everything with one command (Docker — test DB)](#run-everything-with-one-command-docker--test-db).
-> `./start-database.sh` still spins up a local Postgres container for that purpose.
+> **Tests** (`pnpm test`) are plain unit tests (Vitest) and do not require a
+> database.
 
 ## Useful scripts
 
 - `pnpm dev` — start the dev server
-- `pnpm docker:dev` — run the stack in Docker with hot reload (Compose Watch)
-- `pnpm docker:dev:logs` — tail the Docker dev service logs
 - `pnpm build` / `pnpm start` — production build and serve
 - `pnpm db:generate` — generate a migration from schema changes
-- `pnpm db:migrate` — apply migrations
-- `pnpm db:push` — push schema directly (dev convenience)
-- `pnpm db:seed <email> <password> [name]` — create/update a login user
-- `pnpm db:seed:users <csv-file>` — bulk create/update login users from CSV
-- `pnpm db:seed:products` — seed demo catalog products
-- `pnpm db:studio` — open Drizzle Studio
+- `pnpm db:migrate:dev` / `pnpm db:migrate:prod` — apply migrations
+- `pnpm db:push:dev` / `pnpm db:push:prod` — push schema directly (dev convenience)
+- `pnpm db:seed:dev <email> <password> [name]` — create/update a login user
+- `pnpm db:seed:users:dev <csv-file>` — bulk create/update login users from CSV
+- `pnpm db:seed:products:dev` — seed demo catalog products
+- `pnpm db:studio:dev` / `pnpm db:studio:prod` — open Drizzle Studio
+- `pnpm test` — run unit tests (Vitest)
 - `pnpm typecheck` — TypeScript check
 - `pnpm lint` / `pnpm lint:fix` — ESLint
-
-See `docs/docker-optimizations.md` for Docker build-performance notes.
 ```

@@ -1,12 +1,12 @@
 /**
- * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
- * for Docker builds.
+ * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
  */
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
 const config = {
-  // Produce a self-contained server bundle for slim Docker images.
+  // Self-contained server bundle. Harmless on Vercel (which handles output
+  // itself); kept so the app can also be built/run standalone if needed.
   output: "standalone",
   // Pin the workspace root: a stray pnpm-lock.yaml in ~/ makes Next
   // infer the wrong root otherwise.
