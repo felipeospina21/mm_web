@@ -2,18 +2,15 @@ import { and, count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { type PageData } from "@/app/editor/_components/types";
+import { quotationDocumentInput } from "@/app/editor/_components/quotation-schema";
 import { canAccessAllQuotations } from "@/server/auth/access";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { clients, quotations, users } from "@/server/db/schema";
 
-const quotationPages = z.custom<PageData[]>(Array.isArray, {
-  message: "Quotation pages must be an array",
-});
-
 const saveInput = z.object({
   id: z.string().uuid().optional(),
   clientId: z.string().uuid(),
-  data: quotationPages,
+  data: quotationDocumentInput,
 });
 
 const listInput = z.object({
