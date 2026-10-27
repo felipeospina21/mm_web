@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { exportPagesToPdf } from "./_lib/pdf-export";
 import { useEditorKeyboardShortcuts } from "./_hooks/use-editor-keyboard-shortcuts";
 import { useQuotationHistory } from "./_hooks/use-quotation-history";
+import { useQuotationPersistence } from "./_hooks/use-quotation-persistence";
 import {
   buildPagesFromQuotation,
   buildProductPage,
@@ -158,35 +159,26 @@ export default function EditorPage() {
 
   const [isExporting, setIsExporting] = useState(false);
 
-  // Saved identity: null while a draft, { id, quotationNumber } once persisted.
-  const [saved, setSaved] = useState<{
-    id: string;
-    quotationNumber: string;
-  } | null>(null);
-
-  const saveMutation = api.quotation.save.useMutation({
-    onSuccess: (result) => {
-      setSaved(result);
-      // Keep edits made while this request was in flight; the response only
-      // contains the earlier snapshot that was submitted.
-      if (editRevisionRef.current !== saveRevisionRef.current) return;
-      // The server returns the saved document with the number assigned by
-      // the database. Keep the canvas and its undo baseline in sync with it.
-      replacePages(result.data);
-      resetHistory(result.data);
-      setIsDirty(false);
-    },
-    onError: (error) => {
-      console.error("Save failed:", error);
-      alert(t("editor.saveFailed", { error: error.message }));
-    },
+  // Persistence: saved identity + the save mutation + the save action.
+  const {
+    saved,
+    setSaved,
+    savedData,
+    isSaving,
+    canSave,
+    handleSave,
+  } = useQuotationPersistence({
+    selectedClientId,
+    pagesRef,
+    editRevisionRef,
+    saveRevisionRef,
+    canSaveWhen: isManualStart || hasInitialProducts || isDirty,
+    replacePages,
+    resetHistory,
+    setIsDirty,
   });
 
   const clientsQuery = api.customer.list.useQuery();
-  const canSave = Boolean(
-    selectedClientId &&
-    (isManualStart || saved || hasInitialProducts || isDirty),
-  );
 
   const handleAddProducts = useCallback(() => {
     setIsAddProductsOpen(true);
@@ -299,17 +291,6 @@ export default function EditorPage() {
     },
     [setPagesWithHistory, pagesRef],
   );
-  const handleSave = useCallback(() => {
-    if (!canSave || !selectedClientId) return;
-    saveRevisionRef.current = editRevisionRef.current;
-    const currentPages = pagesRef.current;
-
-    saveMutation.mutate({
-      id: saved?.id,
-      clientId: selectedClientId,
-      data: currentPages,
-    });
-  }, [canSave, saveMutation, saved?.id, selectedClientId, pagesRef]);
 
   // ---- Load a saved quotation (handed off from the My Quotations page) ----
 
@@ -469,7 +450,7 @@ export default function EditorPage() {
       setSaved({ id: row.id, quotationNumber: row.quotationNumber });
       setIsDirty(false);
     },
-    [replacePages, resetHistory],
+    [replacePages, resetHistory, setSaved],
   );
 
   // Apply the loaded quotation when clean. The dirty case is represented
@@ -769,8 +750,8 @@ export default function EditorPage() {
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
     try {
       const fileName = getFileName(
-        saveMutation.data?.quotationNumber,
-        saveMutation.data?.clientName,
+        savedData?.quotationNumber,
+        savedData?.clientName,
       );
       await exportPagesToPdf(pages, fileName);
     } catch (error) {
@@ -779,7 +760,7 @@ export default function EditorPage() {
     } finally {
       setIsExporting(false);
     }
-  }, [pages, saveMutation.data]);
+  }, [pages, savedData]);
 
   return (
     // h-screen minus the 56px global navbar rendered above by the layout,
@@ -834,10 +815,10 @@ export default function EditorPage() {
           />
           <button
             onClick={handleSave}
-            disabled={saveMutation.isPending || !canSave}
+            disabled={isSaving || !canSave}
             className="rounded bg-green-600 px-2 py-1.5 text-xs whitespace-nowrap text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
           >
-            {saveMutation.isPending
+            {isSaving
               ? t("editor.saving")
               : saved
                 ? t("editor.save")
