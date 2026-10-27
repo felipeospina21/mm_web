@@ -31,6 +31,14 @@ export default tseslint.config(
         { argsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/require-await": "off",
+      // The recommendedTypeChecked preset turns this on as an error. For
+      // boolean operands `||` is the correct, intended operator (`??` only
+      // falls back on null/undefined) — autofixing `||`→`??` here silently
+      // changes logic. Exempt booleans so the rule stops nudging toward bugs.
+      "@typescript-eslint/prefer-nullish-coalescing": [
+        "error",
+        { ignorePrimitives: { boolean: true } },
+      ],
       "@typescript-eslint/no-misused-promises": [
         "error",
         { checksVoidReturn: { attributes: false } },

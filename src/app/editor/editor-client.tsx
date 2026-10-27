@@ -897,7 +897,7 @@ export default function EditorPage() {
           />
           <button
             onClick={handleSave}
-            disabled={saveMutation.isPending ?? !canSave}
+            disabled={saveMutation.isPending || !canSave}
             className="rounded bg-green-600 px-2 py-1.5 text-xs whitespace-nowrap text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
           >
             {saveMutation.isPending
