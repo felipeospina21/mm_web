@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { exportPagesToPdf } from "./_lib/pdf-export";
+import { useEditorKeyboardShortcuts } from "./_hooks/use-editor-keyboard-shortcuts";
 import {
   buildPagesFromQuotation,
   buildProductPage,
@@ -796,35 +797,14 @@ export default function EditorPage() {
     selectedIdRef.current = id;
   }, []);
 
-  // Keyboard shortcuts: undo/redo, delete, duplicate
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        if (e.shiftKey) {
-          handleRedo();
-        } else {
-          handleUndo();
-        }
-      } else if (e.key === "Delete" || e.key === "Backspace") {
-        // Only delete when not typing in an input/textarea
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA") return;
-        if (selectedIdRef.current) {
-          e.preventDefault();
-          handleDeleteElement(selectedIdRef.current);
-        }
-      } else if (mod && e.key.toLowerCase() === "d") {
-        e.preventDefault();
-        if (selectedIdRef.current) {
-          handleDuplicateElement(selectedIdRef.current);
-        }
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [handleUndo, handleRedo, handleDeleteElement, handleDuplicateElement]);
+  // Keyboard shortcuts: undo/redo, delete, duplicate (see _lib/keyboard.ts).
+  useEditorKeyboardShortcuts({
+    selectedIdRef,
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onDeleteElement: handleDeleteElement,
+    onDuplicateElement: handleDuplicateElement,
+  });
 
   const handleExportPdf = useCallback(async () => {
     setIsExporting(true);
