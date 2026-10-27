@@ -6,6 +6,7 @@ import { exportPagesToPdf } from "./_lib/pdf-export";
 import { useEditorKeyboardShortcuts } from "./_hooks/use-editor-keyboard-shortcuts";
 import { useQuotationHistory } from "./_hooks/use-quotation-history";
 import { useQuotationPersistence } from "./_hooks/use-quotation-persistence";
+import { useQuotationLoad } from "./_hooks/use-quotation-load";
 import {
   buildPagesFromQuotation,
   buildProductPage,
@@ -29,7 +30,6 @@ import {
   takePendingQuotationContact,
   takePendingManualQuotation,
   takePendingQuotationLoad,
-  clearPendingQuotationLoad,
 } from "@/lib/quotation-load";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
 import { AddProductModal } from "./_components/add-product-modal";
@@ -366,19 +366,6 @@ export default function EditorPage() {
     resetHistory,
   ]);
 
-  const loadQuery = api.quotation.byId.useQuery(
-    { id: pendingLoadId ?? "" },
-    { enabled: !!pendingLoadId },
-  );
-
-  // When a dirty editor would be overwritten by a load, hold the row here
-  // and show the confirm modal before applying it.
-  const [dismissedLoadId, setDismissedLoadId] = useState<string | null>(null);
-  const confirmLoad =
-    isDirty && loadQuery.data && loadQuery.data.id !== dismissedLoadId
-      ? loadQuery.data
-      : null;
-
   /** Replace the editor contents with a loaded quotation and mark it saved. */
   const hydrateFromRow = useCallback(
     (row: QuotationRow) => {
@@ -453,23 +440,9 @@ export default function EditorPage() {
     [replacePages, resetHistory, setSaved],
   );
 
-  // Apply the loaded quotation when clean. The dirty case is represented
-  // directly by `confirmLoad`, so this effect does not mirror query state.
-  const hydratedLoadIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const row = loadQuery.data;
-    if (!row) return;
-    clearPendingQuotationLoad(row.id);
-    if (
-      isDirty ||
-      row.id === dismissedLoadId ||
-      hydratedLoadIdRef.current === row.id
-    ) {
-      return;
-    }
-    hydratedLoadIdRef.current = row.id;
-    hydrateFromRow(row);
-  }, [loadQuery.data, isDirty, dismissedLoadId, hydrateFromRow]);
+  // Load orchestration (query, auto-apply when clean, confirm-on-dirty).
+  const { confirmLoad, acceptConfirmLoad, dismissConfirmLoad } =
+    useQuotationLoad({ pendingLoadId, isDirty, hydrateFromRow });
 
   // ---- Undo/redo history ----
 
@@ -862,16 +835,8 @@ export default function EditorPage() {
         message={t("editor.discardMessage")}
         confirmLabel={t("editor.discardAndLoad")}
         cancelLabel={t("editor.keepEditing")}
-        onConfirm={() => {
-          if (confirmLoad) {
-            hydratedLoadIdRef.current = confirmLoad.id;
-            hydrateFromRow(confirmLoad);
-            setDismissedLoadId(confirmLoad.id);
-          }
-        }}
-        onCancel={() => {
-          if (confirmLoad) setDismissedLoadId(confirmLoad.id);
-        }}
+        onConfirm={acceptConfirmLoad}
+        onCancel={dismissConfirmLoad}
       />
     </div>
   );
