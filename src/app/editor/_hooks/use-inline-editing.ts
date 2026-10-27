@@ -5,12 +5,12 @@ import type { KeyboardEvent } from "react";
 import type Konva from "konva";
 import type { PageData, TemplateElement } from "../_components/types";
 import type { EditingBox } from "../_components/inline-text-editor";
-import { getPageOffset } from "./quotation-canvas-geometry";
+import { getPageOffset } from "../_lib/quotation-canvas-geometry";
 import {
   LINE_ITEM_COLS,
   formatEditedCell,
   setLineItemSubtotal,
-} from "./line-items";
+} from "../_lib/line-items";
 
 interface InlineEditingOptions {
   pages: PageData[];

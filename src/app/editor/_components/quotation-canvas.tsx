@@ -7,9 +7,9 @@ import type Konva from "konva";
 import FloatingToolbar from "./floating-toolbar";
 import { InlineTextEditor } from "./inline-text-editor";
 import { CanvasPageRenderer } from "./canvas-page-renderer";
-import { useInlineEditing } from "../_lib/use-inline-editing";
-import { useCanvasStage } from "../_lib/use-canvas-stage";
-import { useTableSelection } from "../_lib/use-table-selection";
+import { useInlineEditing } from "../_hooks/use-inline-editing";
+import { useCanvasStage } from "../_hooks/use-canvas-stage";
+import { useTableSelection } from "../_hooks/use-table-selection";
 import type { PageData, TemplateElement } from "./types";
 import { PAGE_GAP, PAGE_HEIGHT, PAGE_WIDTH, STAGE_BG } from "./types";
 import {

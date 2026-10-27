@@ -6,7 +6,7 @@ import {
   PAGE_WIDTH,
   type PageData,
 } from "../_components/types";
-import { getPageOffset } from "./quotation-canvas-geometry";
+import { getPageOffset } from "../_lib/quotation-canvas-geometry";
 
 export interface PastePosition {
   pageNumber: number;
