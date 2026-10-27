@@ -41,6 +41,9 @@
   helper (15 tests). (`2b0579d`)
 - ✅ **Task 3.2** — `pages`/undo-redo history extracted to `useQuotationHistory` +
   pure `_lib/history` reducer (9 tests). (`76e289b`)
+- ✅ **Task 3.3** — Persistence extracted to `useQuotationPersistence` (`d079212`)
+  and load orchestration to `useQuotationLoad` (`4f0de7e`). Load path is
+  flag-gated off, so that half is extraction-only (not reachable yet).
 
 **Deferred:**
 
@@ -48,10 +51,10 @@
   iteration (module is feature-flagged off; see the task for details). Plan text
   retained below.
 
-**Not started** (full detail retained in the sections below): Task 3.3,
-3.4, 3.5, 3.6; Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
+**Not started** (full detail retained in the sections below): Task 3.4,
+3.5, 3.6; Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
 
-**Next up:** Task 3.3 — `useQuotationLoad` + `useQuotationPersistence`.
+**Next up:** Task 3.4 — `EditorToolbar` component + `floating-toolbar` split.
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -165,18 +168,17 @@ delegating the stack math to a pure `_lib/history.ts` reducer (9 unit tests).
 Dirty/save-race bookkeeping stays in the client via an `onEdit` seam; the four
 inline baseline resets now call the hook's `resetHistory`. Behaviour preserved.
 
-### Task 3.3 — `useQuotationLoad` + `useQuotationPersistence` (1.1)
+### Task 3.3 — `useQuotationLoad` + `useQuotationPersistence` (1.1) — ✅ DONE (`d079212`, `4f0de7e`)
 
-- **Files:** new hooks under `src/app/editor/_hooks/`; update `editor-client.tsx`.
-- **Change:** extract the load query + `hydrateFromRow` + confirm-discard flow
-  (`useQuotationLoad`), and the save mutation + dirty / revision refs +
-  `beforeunload` (`useQuotationPersistence`).
-- **Acceptance:**
-  - Tests for the hydration mapping (company/customer capitalization, line-item
-    subtotal recompute, logo backfill) as a pure transform where possible.
-  - Manual: save, reload a saved quotation, and the dirty-overwrite confirm modal
-    all behave as before.
-- **Effort:** medium–large. **Risk:** medium.
+Split in two commits: `useQuotationPersistence` (saved identity + `quotation.save`
+mutation + `canSave` + `handleSave`; live, verifiable) and `useQuotationLoad`
+(`byId` query + auto-apply-when-clean + dirty-overwrite confirm; the page
+transforms stay in the client as an injected `hydrateFromRow`). The load path's
+entry point (My Quotations) is feature-flagged off, so that half is a
+behaviour-preserving extraction not reachable end-to-end yet. The `beforeunload`
+dirty-guard stayed in `editor-client.tsx` (separate concern). Pure hydration-
+transform tests were NOT added (transform left inline); revisit if that logic is
+later extracted. typecheck/lint/test unchanged.
 
 ### Task 3.4 — `EditorToolbar` component + `floating-toolbar` split (1.1, 1.6)
 
