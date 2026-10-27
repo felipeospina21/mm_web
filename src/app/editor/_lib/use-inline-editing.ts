@@ -6,6 +6,11 @@ import type Konva from "konva";
 import type { PageData, TemplateElement } from "../_components/types";
 import type { EditingBox } from "../_components/inline-text-editor";
 import { getPageOffset } from "./quotation-canvas-geometry";
+import {
+  LINE_ITEM_COLS,
+  formatEditedCell,
+  setLineItemSubtotal,
+} from "./line-items";
 
 interface InlineEditingOptions {
   pages: PageData[];
@@ -23,32 +28,6 @@ interface InlineEditingOptions {
   ) => void;
 }
 
-function formatEditedCell(
-  value: string,
-  row: number,
-  col: number,
-  isLineItemsTable: boolean,
-): string {
-  if (row === 0 || !isLineItemsTable) return value;
-  if (col === 0) return value.replace(/\D/g, "");
-  if (col === 3) {
-    const amount = Number(value.replace(/\D/g, ""));
-    return value.trim() === "" || !Number.isFinite(amount)
-      ? ""
-      : `$ ${amount.toLocaleString("es-CO")}`;
-  }
-  return value;
-}
-
-function setLineItemSubtotal(row: string[]): void {
-  const quantity = row[0]?.replace(/\D/g, "") ?? "";
-  const price = row[3]?.replace(/\D/g, "") ?? "";
-  row[4] =
-    quantity && price
-      ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
-      : "";
-}
-
 function getCellInputValue(
   value: string,
   element: TemplateElement,
@@ -56,8 +35,8 @@ function getCellInputValue(
   col: number,
 ): string {
   if (!element.id.startsWith("line-items-") || row === 0) return value;
-  if (col === 0) return value.replace(/\D/g, "");
-  if (col === 3) return value.replace(/[^\d-]/g, "");
+  if (col === LINE_ITEM_COLS.quantity) return value.replace(/\D/g, "");
+  if (col === LINE_ITEM_COLS.price) return value.replace(/[^\d-]/g, "");
   return value;
 }
 
@@ -143,7 +122,8 @@ export function useInlineEditing({
     (page: PageData, element: TemplateElement, row: number, col: number) => {
       const stage = stageRef.current;
       if (!stage || !element.table || !element.isEditable) return;
-      if (element.id.startsWith("line-items-") && col === 4) return;
+      if (element.id.startsWith("line-items-") && col === LINE_ITEM_COLS.subtotal)
+        return;
       const stageBox = stage.container().getBoundingClientRect();
       const offset = getPageOffset(page.pageNumber);
       const scrollTop = scrollTopRef.current;
@@ -222,7 +202,9 @@ export function useInlineEditing({
       const lineItems =
         editingId?.startsWith("line-items-") && editingCell.row > 0;
       const value =
-        lineItems && (editingCell.col === 0 || editingCell.col === 3)
+        lineItems &&
+        (editingCell.col === LINE_ITEM_COLS.quantity ||
+          editingCell.col === LINE_ITEM_COLS.price)
           ? raw.replace(/\D/g, "")
           : raw;
       editingCellValueRef.current = value;
@@ -259,7 +241,12 @@ export function useInlineEditing({
             nextRow = 0;
             nextCol = 0;
           }
-          if (!(element.id.startsWith("line-items-") && nextCol === 4)) {
+          if (
+            !(
+              element.id.startsWith("line-items-") &&
+              nextCol === LINE_ITEM_COLS.subtotal
+            )
+          ) {
             foundNextCell = true;
             break;
           }
@@ -336,7 +323,8 @@ export function useInlineEditing({
       editingCell &&
       editingId?.startsWith("line-items-") &&
       editingCell.row > 0 &&
-      (editingCell.col === 0 || editingCell.col === 3)
+      (editingCell.col === LINE_ITEM_COLS.quantity ||
+        editingCell.col === LINE_ITEM_COLS.price)
         ? ("numeric" as const)
         : undefined,
     editorValue: editingCell ? editingCellValue : editingTextValue,

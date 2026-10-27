@@ -1,4 +1,9 @@
 import type { PageData, TableData, TemplateElement } from "../_components/types";
+import {
+  LINE_ITEM_COLS,
+  formatEditedCell,
+  setLineItemSubtotal,
+} from "./line-items";
 
 export interface TableSelection {
   rows: number[];
@@ -95,32 +100,6 @@ function parseClipboardRows(text: string): string[][] {
     .map((row) => row.split("\t"));
 }
 
-function formatEditedCell(
-  value: string,
-  row: number,
-  col: number,
-  isLineItemsTable: boolean,
-): string {
-  if (row === 0 || !isLineItemsTable) return value;
-  if (col === 0) return value.replace(/\D/g, "");
-  if (col === 3) {
-    const amount = Number(value.replace(/\D/g, ""));
-    return value.trim() === "" || !Number.isFinite(amount)
-      ? ""
-      : `$ ${amount.toLocaleString("es-CO")}`;
-  }
-  return value;
-}
-
-function updateLineItemSubtotal(row: string[]): void {
-  const quantity = row[0]?.replace(/\D/g, "") ?? "";
-  const price = row[3]?.replace(/\D/g, "") ?? "";
-  row[4] =
-    quantity && price
-      ? `$ ${(Number(quantity) * Number(price)).toLocaleString("es-CO")}`
-      : "";
-}
-
 export function pasteIntoTable(
   text: string,
   table: TableData,
@@ -145,9 +124,10 @@ export function pasteIntoTable(
           cells.push(Array.from({ length: columnCount }, () => ""));
         }
         const row = cells[rowIndex];
-        if (!row || (isLineItemsTable && colIndex === 4)) return;
+        if (!row || (isLineItemsTable && colIndex === LINE_ITEM_COLS.subtotal))
+          return;
         row[colIndex] = formatEditedCell(value, rowIndex, colIndex, isLineItemsTable);
-        if (isLineItemsTable) updateLineItemSubtotal(row);
+        if (isLineItemsTable) setLineItemSubtotal(row);
       });
     });
     return { cells, clearSelectedCells: true };
@@ -164,10 +144,14 @@ export function pasteIntoTable(
       if (!row) return;
       sourceRow.forEach((value, colOffset) => {
         const colIndex = startColumn + colOffset;
-        if (colIndex >= columnCount || (isLineItemsTable && colIndex === 4)) return;
+        if (
+          colIndex >= columnCount ||
+          (isLineItemsTable && colIndex === LINE_ITEM_COLS.subtotal)
+        )
+          return;
         row[colIndex] = formatEditedCell(value, rowIndex, colIndex, isLineItemsTable);
       });
-      if (isLineItemsTable) updateLineItemSubtotal(row);
+      if (isLineItemsTable) setLineItemSubtotal(row);
     });
     return { cells, height: table.rowHeight * cells.length };
   }
@@ -182,10 +166,10 @@ export function pasteIntoTable(
       const row = cells[rowIndex];
       if (!row) return;
       sourceRow.slice(0, columnCount).forEach((value, colIndex) => {
-        if (isLineItemsTable && colIndex === 4) return;
+        if (isLineItemsTable && colIndex === LINE_ITEM_COLS.subtotal) return;
         row[colIndex] = formatEditedCell(value, rowIndex, colIndex, isLineItemsTable);
       });
-      if (isLineItemsTable) updateLineItemSubtotal(row);
+      if (isLineItemsTable) setLineItemSubtotal(row);
     });
     return {
       cells,
