@@ -39,6 +39,8 @@
 - ✅ **Task 3.0** — Custom hooks consolidated into `_hooks/`. (`f3ffce5`)
 - ✅ **Task 3.1** — Keyboard shortcuts extracted to a hook + pure `decideShortcut`
   helper (15 tests). (`2b0579d`)
+- ✅ **Task 3.2** — `pages`/undo-redo history extracted to `useQuotationHistory` +
+  pure `_lib/history` reducer (9 tests). (`76e289b`)
 
 **Deferred:**
 
@@ -46,10 +48,10 @@
   iteration (module is feature-flagged off; see the task for details). Plan text
   retained below.
 
-**Not started** (full detail retained in the sections below): Task 3.2,
-3.3, 3.4, 3.5, 3.6; Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
+**Not started** (full detail retained in the sections below): Task 3.3,
+3.4, 3.5, 3.6; Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
 
-**Next up:** Task 3.2 — `useQuotationHistory`.
+**Next up:** Task 3.3 — `useQuotationLoad` + `useQuotationPersistence`.
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -71,12 +73,12 @@ Highest impact-per-effort after the quick wins. Both are mostly additive and do
 not require touching the editor's component structure.
 
 > **Design constraint — lossless round-trip.** A coming quotation module will
-> load saved quotations *back into the editor* for editing, so stored `data` is
+> load saved quotations _back into the editor_ for editing, so stored `data` is
 > a faithful **snapshot**: every element, position, size, style, and config must
 > survive save→load exactly — whether the user used the default template, a fully
 > custom one, or added/removed elements. The editor must also stay **open**
 > (multiple/free-form templates). Therefore the storage schema validates
-> *structure, types, and bounds* but is **template-agnostic** and **lossless**
+> _structure, types, and bounds_ but is **template-agnostic** and **lossless**
 > (preserves unknown keys) — it must not require any specific element IDs and
 > must not strip fields it did not model. The "some elements are always present"
 > rule (header + policies page) is enforced **separately** (see Task 2.3), not in
@@ -96,7 +98,7 @@ canvas). See the Status section above.
 
 Some elements must always be present regardless of template: the non-editable
 header fields and the final policies page. This is a **template/application
-invariant**, deliberately kept *out* of the universal `save` schema (Task 2.1) so
+invariant**, deliberately kept _out_ of the universal `save` schema (Task 2.1) so
 the lossless round-trip and open-editor goals are not compromised — a schema that
 rejected documents missing a header would make variant/edge-case snapshots
 unloadable and unsavable.
@@ -156,19 +158,12 @@ Extracted the global `keydown` effect into `_hooks/use-editor-keyboard-shortcuts
 and the pure `decideShortcut()` into `_lib/keyboard.ts` (15 unit tests). Behaviour
 preserved exactly, incl. the Cmd/Ctrl+D quirk (unconditional preventDefault).
 
-### Task 3.2 — `useQuotationHistory` (1.1, 1.3)
+### Task 3.2 — `useQuotationHistory` (1.1, 1.3) — ✅ DONE (`76e289b`)
 
-- **Files:** new `src/app/editor/_hooks/use-quotation-history.ts`; update
-  `editor-client.tsx`.
-- **Change:** move `historyRef` / `historyIndexRef` / `commitHistory` / `undo` /
-  `redo` / `canUndo` / `canRedo` into a hook. Keep the `pages`/`pagesRef` mirror
-  behaviour for now (a `useReducer` migration is a later, separate step — note it
-  but don't bundle it).
-- **Acceptance:**
-  - Unit tests: push → undo → redo sequences, boundary conditions (undo at index
-    0, redo at end), `canUndo/canRedo` flags.
-  - Manual: undo/redo + the dirty indicator behave as before.
-- **Effort:** medium. **Risk:** medium (shared refs) — tests are the safety net.
+Extracted `pages` state + undo/redo stack into `_hooks/use-quotation-history.ts`,
+delegating the stack math to a pure `_lib/history.ts` reducer (9 unit tests).
+Dirty/save-race bookkeeping stays in the client via an `onEdit` seam; the four
+inline baseline resets now call the hook's `resetHistory`. Behaviour preserved.
 
 ### Task 3.3 — `useQuotationLoad` + `useQuotationPersistence` (1.1)
 
@@ -248,7 +243,8 @@ stateful and would be better as pure, testable helpers:
 ## Phase 4 — Performance (ride on the cleaner, tested code)
 
 Do after Phase 3: `React.memo` is blocked by unstable props, and stabilizing them
-is easier post-decomposition.
+is easier post-decomposition. We need metrics for before/after to measure implementation
+impact.
 
 ### Task 4.0 — Fix refs-during-render & re-upgrade the lint rule (3.7)
 
