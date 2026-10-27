@@ -72,30 +72,45 @@ refactor and test).
 Highest impact-per-effort after the quick wins. Both are mostly additive and do
 not require touching the editor's component structure.
 
-### Task 2.1 — Real Zod schema for persisted quotation `data` (4.1)
+> **Design constraint — lossless round-trip.** A coming quotation module will
+> load saved quotations *back into the editor* for editing, so stored `data` is
+> a faithful **snapshot**: every element, position, size, style, and config must
+> survive save→load exactly — whether the user used the default template, a fully
+> custom one, or added/removed elements. The editor must also stay **open**
+> (multiple/free-form templates). Therefore the storage schema validates
+> *structure, types, and bounds* but is **template-agnostic** and **lossless**
+> (preserves unknown keys) — it must not require any specific element IDs and
+> must not strip fields it did not model. The "some elements are always present"
+> rule (header + policies page) is enforced **separately** (see Task 2.3), not in
+> this universal schema.
 
-- **Files:** `src/server/api/routers/quotation.ts` (the `saveInput` at ~line 13);
-  likely a new `src/app/editor/_components/types-schema.ts` (or colocated) holding
-  the Zod schemas; keep `types.ts` as the inferred-type source.
-- **Change:** replace `data: z.custom<PageData[]>(Array.isArray)` with a real
-  schema for `PageData[]` / `TemplateElement` / `TableData` that validates element
-  `type`, required numeric geometry, bounded string lengths, and the known shapes.
-  Derive the TS types from the schema (`z.infer`) so `types.ts` and the validator
-  cannot drift.
+### Task 2.1 — Real (lossless) Zod schema for persisted quotation `data` (4.1)
+
+- **Files:** `src/server/api/routers/quotation.ts` (the `saveInput` ~line 13);
+  new `src/app/editor/_components/quotation-schema.ts` holding the Zod schemas;
+  re-export inferred types so `types.ts` and the validator cannot drift.
+- **Change:** replace `data: z.custom<PageData[]>(Array.isArray)` with real
+  schemas for `PageData` / `TemplateElement` / `TableData` that validate element
+  `type` (enum), numeric geometry, and **generous** string/array bounds (bounds
+  exist to stop absurd abuse, not to constrain real content). Each object schema
+  uses **`.passthrough()`** so unknown/future keys are preserved (lossless) —
+  never `.strip()`. No required "magic" IDs anywhere. Leave `src` loosely typed
+  here; Task 2.2 tightens it.
 - **Acceptance:**
-  - `save` rejects malformed `data` (missing `type`, non-array cells, absurd
-    sizes) with a Zod error; accepts a real editor document.
-  - New test in `src/server/api/routers/` (or a schema test) covering a valid
-    document, a malformed element, and a malformed table.
-  - A round-trip save → `byId` still returns the same document for a valid payload
-    (no false rejections of real data — test with a fixture captured from the
-    editor).
-- **Effort:** medium. **Risk:** medium — **must not reject legitimate existing
-  documents**. Capture a real saved `data` fixture first and assert it parses.
+  - `save` rejects non-structural garbage (non-array `data`, element missing
+    `type`, non-array `cells`, absurd sizes) with a Zod error.
+  - **Lossless proof:** an element carrying an extra unmodeled key round-trips
+    through `parse()` with that key intact.
+  - Fixtures parse: (1) the current default-template document, (2) a free-form
+    document with none of the standard IDs, (3) the lossless-extra-key case.
+  - No required-element checks in this schema (that is Task 2.3).
+- **Effort:** medium. **Risk:** medium — **must not reject or mutate legitimate
+  documents**. Capture a real default-template `data` fixture first and assert it
+  parses unchanged.
 
 ### Task 2.2 — Constrain image `src` (4.2)
 
-- **Files:** the new schema from Task 2.1 (element `src` field);
+- **Files:** the schema from Task 2.1 (element `src` field);
   `src/app/editor/_lib/pdf-export.ts` (the `fetch(new URL(src, …))` path);
   optionally `canvas-page-renderer.tsx` (`new Image().src`).
 - **Change:** restrict `src` to `data:` URLs (the upload path already produces
@@ -109,6 +124,33 @@ not require touching the editor's component structure.
   - Test covering allowed vs disallowed `src`.
 - **Effort:** small–medium. **Risk:** low–medium (confirm the upload flow only
   emits `data:` URLs so nothing legitimate breaks).
+
+### Task 2.3 — Required-elements enforcement (separate from storage schema)
+
+Some elements must always be present regardless of template: the non-editable
+header fields and the final policies page. This is a **template/application
+invariant**, deliberately kept *out* of the universal `save` schema (Task 2.1) so
+the lossless round-trip and open-editor goals are not compromised — a schema that
+rejected documents missing a header would make variant/edge-case snapshots
+unloadable and unsavable.
+
+- **When:** alongside the upcoming **quotation module** iteration (load / edit /
+  delete saved quotations), not necessarily before Task 2.2.
+- **Files:** a new validator (e.g. `_components/required-elements.ts` or a
+  template-scoped rule) + wherever enforced-template save/load flows live.
+- **Change:** a `requiredElementsPresent(doc)` (or template-scoped) check run in
+  the flows that demand it — enforced-template creation and the quotation module's
+  save path — surfacing a clear user-facing error, not a 500.
+- **Acceptance:**
+  - A document missing the header fields or policies page fails the enforced-flow
+    check with an actionable message.
+  - A free-form document still **saves fine** through the universal path (the
+    invariant applies only to enforced-template flows).
+  - Tests for present / missing header / missing policies.
+- **Effort:** medium. **Risk:** medium — must not leak into the universal save
+  path and break free-form/round-trip saves.
+- **Depends on:** Task 2.1 (shares the element model) and the quotation-module
+  work.
 
 ---
 
