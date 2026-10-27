@@ -118,6 +118,28 @@ The big, higher-risk work. The editor has **no tests**, and state is mirrored
 across refs — so extract one cohesive unit, add its tests, then move on. Do not
 batch these.
 
+### Task 3.0 — Consolidate hooks into `_hooks/` (prerequisite)
+
+The editor's custom hooks are split across two folders: `use-table-selection.ts`,
+`use-canvas-stage.ts`, and `use-inline-editing.ts` live in `_lib/`, while
+`use-representative-profile.ts` already lives in `_hooks/`. The rest of Phase 3
+adds new hooks and assumes `_hooks/` is their home, so settle the convention
+first.
+
+- **Files:** move `src/app/editor/_lib/use-table-selection.ts`,
+  `use-canvas-stage.ts`, and `use-inline-editing.ts` (and their colocated tests,
+  if any) into `src/app/editor/_hooks/`. Keep pure, non-hook helpers
+  (`clipboard.ts`, `line-items.ts`, `quotation-canvas-geometry.ts`,
+  `pdf-export.ts`, …) in `_lib/`.
+- **Change:** `git mv` the files, then fix import paths in the movers and their
+  consumers (`quotation-canvas.tsx`, `editor-client.tsx`, etc.). Pure mechanical
+  move — no logic changes.
+- **Acceptance:** `_lib/` holds only non-hook modules; all `use-*` hooks live in
+  `_hooks/`; `pnpm typecheck && pnpm lint && pnpm test` unchanged.
+- **Effort:** small. **Risk:** low (mechanical; the type/lint pass catches any
+  missed import).
+- **Do this first in Phase 3** so later tasks (3.1–3.5) land hooks in one place.
+
 ### Task 3.1 — `useEditorKeyboardShortcuts` + pure keydown decision helper (1.1, 5)
 
 - **Files:** new `src/app/editor/_hooks/use-editor-keyboard-shortcuts.ts` and a
@@ -188,7 +210,37 @@ batch these.
   - Tests for the role mapping + a loaded-legacy-document fixture.
 - **Effort:** large. **Risk:** high (touches persisted data + 5 files) — depends
   on Task 2.1's schema and should land after the hook extractions so the surface
-  is smaller. **Do this last in Phase 3.**
+  is smaller.
+
+### Task 3.6 — Slim down the `use-inline-editing` hook
+
+`useInlineEditing` is a legitimate hook (it owns editing state via
+`useState`/`useEffect`), but it currently also absorbs two concerns that are not
+stateful and would be better as pure, testable helpers:
+
+1. **Overlay geometry is duplicated 3×.** The `editingBox` math
+   (`stageBox.left + offset.x + element.x + colWidths.slice(0, col).reduce(...)`,
+   `top: contentTopRef.current - scrollTop`) is repeated in `openTextEditor`,
+   `openCellEditor`, and the Tab branch of `handleEditorKeyDown`.
+2. **Table navigation is pure logic in a `useCallback`.** The "find next editable
+   cell, skip the subtotal column, commit current cell, move selection" block in
+   `handleEditorKeyDown` is ~60 lines that use no hook features beyond closing
+   over refs.
+
+- **Files:** `src/app/editor/_hooks/use-inline-editing.ts` (post Task 3.0 move);
+  new pure helpers in `_lib/` (e.g. `editing-geometry.ts` with
+  `computeEditingBox(...)`, and `nextEditableCell(table, cell, isLineItems)` —
+  colocate with `line-items.ts` if it keeps them small).
+- **Change:** extract the box math and the next-cell search into pure functions;
+  the hook keeps the `useState`/`useEffect`/`useCallback` state wiring and
+  delegates. Overlaps with Task 3.1's "extract pure decisions, then test them"
+  approach and benefits from the element-`role` work (Task 3.5) replacing the
+  `startsWith("line-items-")` checks inside it.
+- **Acceptance:** overlay positioning and Tab navigation behave identically; unit
+  tests cover `computeEditingBox` and `nextEditableCell` (including the
+  subtotal-column skip and header-row wrap); hook surface (return shape) is
+  unchanged for `quotation-canvas.tsx`.
+- **Effort:** medium. **Risk:** low–medium (behavior-preserving; now tested).
 
 ---
 
