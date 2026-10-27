@@ -37,6 +37,8 @@
 - ✅ **Lint cleanup** (not a numbered task) — all 16 lint errors cleared; four
   React Compiler rules downgraded to `warn`. (`3158769`)
 - ✅ **Task 3.0** — Custom hooks consolidated into `_hooks/`. (`f3ffce5`)
+- ✅ **Task 3.1** — Keyboard shortcuts extracted to a hook + pure `decideShortcut`
+  helper (15 tests). (`2b0579d`)
 
 **Deferred:**
 
@@ -44,10 +46,10 @@
   iteration (module is feature-flagged off; see the task for details). Plan text
   retained below.
 
-**Not started** (full detail retained in the sections below): Task 3.1, 3.2,
+**Not started** (full detail retained in the sections below): Task 3.2,
 3.3, 3.4, 3.5, 3.6; Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
 
-**Next up:** Task 3.1 — `useEditorKeyboardShortcuts` + pure keydown helper.
+**Next up:** Task 3.2 — `useQuotationHistory`.
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -148,20 +150,11 @@ Moved `use-table-selection`, `use-canvas-stage`, `use-inline-editing` from `_lib
 to `_hooks/` (joining `use-representative-profile`); pure helpers stay in `_lib/`.
 Mechanical `git mv` + import-path fixes; typecheck/lint/test unchanged.
 
-### Task 3.1 — `useEditorKeyboardShortcuts` + pure keydown decision helper (1.1, 5)
+### Task 3.1 — `useEditorKeyboardShortcuts` + pure keydown helper (1.1, 5) — ✅ DONE (`2b0579d`)
 
-- **Files:** new `src/app/editor/_hooks/use-editor-keyboard-shortcuts.ts` and a
-  pure helper (e.g. `_lib/keyboard.ts`); update `editor-client.tsx` to consume it.
-- **Change:** move the window `keydown` effect (undo/redo, delete/backspace with
-  INPUT/TEXTAREA guard, Cmd/Ctrl+D) out of `editor-client.tsx`. Factor the
-  decision ("given this event + focus + selection, what action?") into a pure
-  function.
-- **Acceptance:**
-  - Unit tests on the pure helper: modifier variants, focus in input/textarea
-    (and contenteditable/select), empty selection, `preventDefault` expectations.
-  - Manual: all shortcuts behave exactly as before.
-- **Effort:** small–medium. **Risk:** low (behavior-preserving; now tested).
-- **Start here** in Phase 3: it is the most isolated piece of `editor-client.tsx`.
+Extracted the global `keydown` effect into `_hooks/use-editor-keyboard-shortcuts`
+and the pure `decideShortcut()` into `_lib/keyboard.ts` (15 unit tests). Behaviour
+preserved exactly, incl. the Cmd/Ctrl+D quirk (unconditional preventDefault).
 
 ### Task 3.2 — `useQuotationHistory` (1.1, 1.3)
 
