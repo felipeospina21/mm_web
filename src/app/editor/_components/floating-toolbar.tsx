@@ -9,6 +9,8 @@ import {
   removeRow,
   removeSelectedRows,
 } from "../_lib/table-ops";
+import { TextFormatControls } from "./text-format-controls";
+import { TableControls } from "./table-controls";
 
 interface FloatingToolbarProps {
   pages: PageData[];
@@ -23,17 +25,6 @@ interface FloatingToolbarProps {
   selectedRows: number[];
   onClearSelectedRows: () => void;
 }
-
-const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48];
-const FONT_FAMILIES = [
-  "Arial",
-  "Helvetica",
-  "Times New Roman",
-  "Georgia",
-  "Courier New",
-  "Verdana",
-  "system-ui",
-];
 
 /**
  * Floating toolbar shown when an element is selected.
@@ -108,78 +99,7 @@ export default function FloatingToolbar({
       className="fixed top-28 left-2 z-40 flex max-w-[calc(100vw-16px)] -translate-x-0 items-center gap-2 overflow-x-auto rounded-md bg-white px-2.5 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.35)] sm:top-16 sm:left-1/2 sm:-translate-x-1/2"
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {isText && (
-        <>
-          <label className="flex items-center gap-1 text-xs text-neutral-700">
-            {t("toolbar.font")}
-            <select
-              value={element.fontFamily ?? "Arial"}
-              onChange={(e) => patch({ fontFamily: e.target.value })}
-              className="ml-1 rounded border border-neutral-300 px-1 py-0.5"
-            >
-              {FONT_FAMILIES.map((family) => (
-                <option key={family} value={family}>
-                  {family}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-1 text-xs text-neutral-700">
-            {t("toolbar.size")}
-            <select
-              value={element.fontSize}
-              onChange={(e) => patch({ fontSize: Number(e.target.value) })}
-              className="ml-1 rounded border border-neutral-300 px-1 py-0.5"
-            >
-              {FONT_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
-              element.fontWeight === "bold" ? "font-extrabold" : "font-normal"
-            }`}
-            title={t("toolbar.bold")}
-            onClick={() =>
-              patch({
-                fontWeight: element.fontWeight === "bold" ? "normal" : "bold",
-              })
-            }
-          >
-            B
-          </button>
-          <button
-            className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
-              element.italic ? "italic" : ""
-            }`}
-            title={t("toolbar.italic")}
-            onClick={() => patch({ italic: !element.italic })}
-          >
-            I
-          </button>
-          <button
-            className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
-              element.underline ? "underline" : ""
-            }`}
-            title={t("toolbar.underline")}
-            onClick={() => patch({ underline: !element.underline })}
-          >
-            U
-          </button>
-          <label className="flex items-center gap-1 text-xs text-neutral-700">
-            {t("toolbar.color")}
-            <input
-              type="color"
-              value={element.fill}
-              onChange={(e) => patch({ fill: e.target.value })}
-              className="h-6 w-8 cursor-pointer border-none bg-transparent"
-            />
-          </label>
-        </>
-      )}
+      {isText && <TextFormatControls element={element} patch={patch} />}
 
       {isImage && (
         <label className="flex items-center gap-1 text-xs text-neutral-700">
@@ -193,49 +113,17 @@ export default function FloatingToolbar({
         </label>
       )}
 
-      {isTable && element.isEditable && (
-        <>
-          <span className="text-xs text-neutral-700">{t("toolbar.table")}</span>
-          <button
-            className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-            onClick={() => addRowAction()}
-            title={t("toolbar.addRow")}
-          >
-            + {t("toolbar.row")}
-          </button>
-          <button
-            className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-            onClick={() => removeRowAction()}
-            title={t("toolbar.removeRow")}
-          >
-            − {t("toolbar.row")}
-          </button>
-          <button
-            className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-            onClick={() => addColumnAction()}
-            title={t("toolbar.addColumn")}
-          >
-            + {t("toolbar.column")}
-          </button>
-          <button
-            className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-            onClick={() => removeColumnAction()}
-            title={t("toolbar.removeColumn")}
-          >
-            − {t("toolbar.column")}
-          </button>
-        </>
-      )}
-
-      {isTable && element.isRowDeletable && (
-        <button
-          className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={removeSelectedRowsAction}
-          disabled={selectedRows.length === 0}
-          title={t("toolbar.removeSelectedRows")}
-        >
-          {t("toolbar.removeSelectedRows")}
-        </button>
+      {isTable && (
+        <TableControls
+          isEditable={Boolean(element.isEditable)}
+          isRowDeletable={Boolean(element.isRowDeletable)}
+          selectedRowCount={selectedRows.length}
+          onAddRow={addRowAction}
+          onRemoveRow={removeRowAction}
+          onAddColumn={addColumnAction}
+          onRemoveColumn={removeColumnAction}
+          onRemoveSelectedRows={removeSelectedRowsAction}
+        />
       )}
 
       <span className="h-5 w-px bg-neutral-200" />
