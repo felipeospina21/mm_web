@@ -2,6 +2,13 @@
 
 import type { PageData, TemplateElement } from "./types";
 import { t } from "@/i18n/messages";
+import {
+  addColumn,
+  addRow,
+  removeColumn,
+  removeRow,
+  removeSelectedRows,
+} from "../_lib/table-ops";
 
 interface FloatingToolbarProps {
   pages: PageData[];
@@ -66,61 +73,34 @@ export default function FloatingToolbar({
     reader.readAsDataURL(file);
   };
 
-  const addRow = () => {
+  const addRowAction = () => {
     if (!element.table) return;
-    const cols = element.table.cells[0]?.length ?? 0;
-    patch({
-      table: {
-        ...element.table,
-        cells: [...element.table.cells, Array.from({ length: cols }, () => "")],
-      },
-    });
+    patch(addRow(element.table));
   };
 
-  const removeRow = () => {
-    if (!element.table || element.table.cells.length <= 1) return;
-    patch({
-      table: {
-        ...element.table,
-        cells: element.table.cells.slice(0, -1),
-      },
-    });
+  const removeRowAction = () => {
+    if (!element.table) return;
+    const result = removeRow(element.table);
+    if (result) patch(result);
   };
 
-  const removeSelectedRows = () => {
-    if (!element.table || selectedRows.length === 0) return;
-    const rowsToRemove = new Set(selectedRows);
-    const cells = element.table.cells.filter(
-      (_, index) => index === 0 || !rowsToRemove.has(index),
-    );
-    if (cells.length === element.table.cells.length) return;
-    patch({
-      height: element.table.rowHeight * cells.length,
-      table: { ...element.table, cells },
-    });
+  const removeSelectedRowsAction = () => {
+    if (!element.table) return;
+    const result = removeSelectedRows(element.table, selectedRows);
+    if (!result) return;
+    patch(result);
     onClearSelectedRows();
   };
 
-  const addColumn = () => {
+  const addColumnAction = () => {
     if (!element.table) return;
-    patch({
-      table: {
-        ...element.table,
-        colWidths: [...element.table.colWidths, 120],
-        cells: element.table.cells.map((row) => [...row, ""]),
-      },
-    });
+    patch(addColumn(element.table));
   };
 
-  const removeColumn = () => {
-    if (!element.table || element.table.colWidths.length <= 1) return;
-    patch({
-      table: {
-        ...element.table,
-        colWidths: element.table.colWidths.slice(0, -1),
-        cells: element.table.cells.map((row) => row.slice(0, -1)),
-      },
-    });
+  const removeColumnAction = () => {
+    if (!element.table) return;
+    const result = removeColumn(element.table);
+    if (result) patch(result);
   };
 
   return (
@@ -218,28 +198,28 @@ export default function FloatingToolbar({
           <span className="text-xs text-neutral-700">{t("toolbar.table")}</span>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-            onClick={() => addRow()}
+            onClick={() => addRowAction()}
             title={t("toolbar.addRow")}
           >
             + {t("toolbar.row")}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-            onClick={() => removeRow()}
+            onClick={() => removeRowAction()}
             title={t("toolbar.removeRow")}
           >
             − {t("toolbar.row")}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-            onClick={() => addColumn()}
+            onClick={() => addColumnAction()}
             title={t("toolbar.addColumn")}
           >
             + {t("toolbar.column")}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-            onClick={() => removeColumn()}
+            onClick={() => removeColumnAction()}
             title={t("toolbar.removeColumn")}
           >
             − {t("toolbar.column")}
@@ -250,7 +230,7 @@ export default function FloatingToolbar({
       {isTable && element.isRowDeletable && (
         <button
           className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={removeSelectedRows}
+          onClick={removeSelectedRowsAction}
           disabled={selectedRows.length === 0}
           title={t("toolbar.removeSelectedRows")}
         >
