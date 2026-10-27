@@ -24,6 +24,24 @@ import type { PageData, TableData, TemplateElement } from "./types";
 /** Element `type` discriminator — the one closed enum in the document. */
 const elementTypeSchema = z.enum(["text", "rect", "image", "table"]);
 
+/**
+ * Allow an image `src` only if it is one of the values the app legitimately
+ * produces, closing the SSRF/content-injection vector where a persisted `src`
+ * is later `fetch()`ed (pdf-export) or loaded (`new Image()`):
+ *   - `""`                 — the empty placeholder
+ *   - `data:image/...`     — uploads (FileReader.readAsDataURL)
+ *   - same-origin relative — e.g. the template logo "/mmedios_logo.jpg"
+ *                            (single leading slash, not protocol-relative "//")
+ * Everything else (http(s):, //host, javascript:, blob:, …) is rejected.
+ */
+export function isAllowedImageSrc(src: string): boolean {
+  if (src === "") return true;
+  if (/^data:image\//i.test(src)) return true;
+  // relative, root-absolute path on our own origin — but NOT "//host" (protocol-relative)
+  if (src.startsWith("/") && !src.startsWith("//")) return true;
+  return false;
+}
+
 export const tableDataSchema = z
   .object({
     colWidths: z.array(z.number()).max(100),
@@ -57,9 +75,15 @@ export const templateElementSchema = z
     isDeletable: z.boolean().optional(),
     isRowDeletable: z.boolean().optional(),
     table: tableDataSchema.optional(),
-    // `src` is left permissive here; Task 2.2 constrains it to data:/allowlisted
-    // URLs in this same schema.
-    src: z.string().max(5_000_000).optional(),
+    // Constrained to the values the app produces (data: uploads, same-origin
+    // paths, or empty) to block SSRF / content injection via a persisted URL.
+    src: z
+      .string()
+      .max(5_000_000)
+      .refine(isAllowedImageSrc, {
+        message: "Image src must be a data: URL, a same-origin path, or empty",
+      })
+      .optional(),
   })
   .passthrough();
 

@@ -5,7 +5,10 @@ import {
   makeMasterTemplate,
 } from "../_lib/template-data";
 import type { PageData } from "./types";
-import { quotationDocumentSchema } from "./quotation-schema";
+import {
+  isAllowedImageSrc,
+  quotationDocumentSchema,
+} from "./quotation-schema";
 
 describe("quotationDocumentSchema — real editor output (lossless round-trip)", () => {
   it("accepts the master template page unchanged", () => {
@@ -165,5 +168,59 @@ describe("quotationDocumentSchema — rejects structural garbage", () => {
       },
     ];
     expect(() => quotationDocumentSchema.parse(bad)).toThrow();
+  });
+});
+
+describe("isAllowedImageSrc (image src allowlist)", () => {
+  it("allows empty, data:image, and same-origin paths", () => {
+    expect(isAllowedImageSrc("")).toBe(true);
+    expect(isAllowedImageSrc("data:image/png;base64,AAAA")).toBe(true);
+    expect(isAllowedImageSrc("data:image/jpeg;base64,/9j/")).toBe(true);
+    expect(isAllowedImageSrc("/mmedios_logo.jpg")).toBe(true);
+  });
+
+  it("rejects remote, protocol-relative, and dangerous schemes", () => {
+    expect(isAllowedImageSrc("http://evil.example/x.png")).toBe(false);
+    expect(isAllowedImageSrc("https://evil.example/x.png")).toBe(false);
+    expect(isAllowedImageSrc("//evil.example/x.png")).toBe(false);
+    expect(isAllowedImageSrc("javascript:alert(1)")).toBe(false);
+    expect(isAllowedImageSrc("blob:https://evil.example/abc")).toBe(false);
+    expect(isAllowedImageSrc("data:text/html,<script>")).toBe(false);
+  });
+});
+
+describe("quotationDocumentSchema — image src enforcement", () => {
+  const docWithSrc = (src: string) => [
+    {
+      id: "p1",
+      pageNumber: 1,
+      elements: [
+        {
+          id: "logo",
+          type: "image",
+          x: 0,
+          y: 0,
+          width: 10,
+          height: 10,
+          text: "",
+          fontSize: 0,
+          fill: "#000",
+          isDraggable: false,
+          src,
+        },
+      ],
+    },
+  ];
+
+  it("accepts a data: image src", () => {
+    expect(() =>
+      quotationDocumentSchema.parse(docWithSrc("data:image/png;base64,AAAA")),
+    ).not.toThrow();
+  });
+
+  it("rejects a remote http(s) image src", () => {
+    expect(() =>
+      quotationDocumentSchema.parse(docWithSrc("http://evil.example/x.png")),
+    ).toThrow();
   });
 });

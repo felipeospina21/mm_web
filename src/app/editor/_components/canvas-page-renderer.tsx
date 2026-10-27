@@ -7,6 +7,7 @@ import TableNode from "./table-node";
 import type { PageData, TemplateElement } from "./types";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./types";
 import { getPageOffset } from "../_lib/quotation-canvas-geometry";
+import { isAllowedImageSrc } from "./quotation-schema";
 import { theme } from "@/lib/theme";
 import { t } from "@/i18n/messages";
 
@@ -283,6 +284,9 @@ function useLoadedImage(src: string | undefined): LoadedImageState {
   const retry = useCallback(() => setRetryCount((count) => count + 1), []);
   useEffect(() => {
     if (!src) return;
+    // Defense-in-depth: do not load a disallowed src (blocks SSRF/beacon via a
+    // persisted URL). Mirror the allowlist enforced by the save schema.
+    if (!isAllowedImageSrc(src)) return;
     let active = true;
     const image = new window.Image();
     image.crossOrigin = "anonymous";
@@ -300,6 +304,8 @@ function useLoadedImage(src: string | undefined): LoadedImageState {
     };
   }, [src, retryCount, retry]);
   if (!src) return { src: "", image: null, status: "idle", retry };
+  if (!isAllowedImageSrc(src))
+    return { src, image: null, status: "error", retry };
   return state.src === src
     ? state
     : { src, image: null, status: "loading", retry };

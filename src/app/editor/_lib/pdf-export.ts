@@ -5,6 +5,7 @@ import type {
   TemplateElement,
 } from "../_components/types";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "../_components/types";
+import { isAllowedImageSrc } from "../_components/quotation-schema";
 
 const PX_TO_PT = 0.75;
 const PDF_TEXT_SCALE = 1.5;
@@ -166,6 +167,13 @@ function drawTable(
 
 async function loadImageData(src: string): Promise<string> {
   if (src.startsWith("data:")) return src;
+
+  // Defense-in-depth: never fetch a src that isn't an allowed same-origin path
+  // (the schema blocks persisting bad values; this also protects any already
+  // stored data and non-schema code paths from SSRF-adjacent fetches).
+  if (!isAllowedImageSrc(src)) {
+    throw new Error("Refusing to load a disallowed image src");
+  }
 
   const response = await fetch(new URL(src, window.location.href));
   if (!response.ok) {
