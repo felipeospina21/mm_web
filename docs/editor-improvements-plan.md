@@ -168,6 +168,14 @@ delegating the stack math to a pure `_lib/history.ts` reducer (9 unit tests).
 Dirty/save-race bookkeeping stays in the client via an `onEdit` seam; the four
 inline baseline resets now call the hook's `resetHistory`. Behaviour preserved.
 
+> **Candidate follow-up (not committed):** `useQuotationHistory` currently holds
+> the stack in a `historyRef` + `useState` flags. Because the stack math already
+> lives in the pure, unit-tested `_lib/history.ts`, converting the hook internals
+> to `useReducer(historyReducer, …)` would be a clean, isolated improvement with
+> **no new dependency** and no behaviour change (tests already cover the reducer).
+> Low priority; do it only if it simplifies a later task. This is the narrowest
+> "reducer/store" step — see Task 4.0a for the broader client-store decision.
+
 ### Task 3.3 — `useQuotationLoad` + `useQuotationPersistence` (1.1) — ✅ DONE (`d079212`, `4f0de7e`)
 
 Split in two commits: `useQuotationPersistence` (saved identity + `quotation.save`
@@ -247,6 +255,32 @@ stateful and would be better as pure, testable helpers:
 Do after Phase 3: `React.memo` is blocked by unstable props, and stabilizing them
 is easier post-decomposition. We need metrics for before/after to measure implementation
 impact.
+
+### Task 4.0a — Decision point: do we need a client store? (architecture)
+
+Before the memoization work, make an explicit, evidence-based call on whether the
+editor's shared client state warrants a store (Zustand / `useSyncExternalStore` /
+Context+reducer) instead of the current container-owned state + prop passing.
+
+- **Context:** after Phase 3 the real domain state (`pages` + undo/redo) lives in
+  `useQuotationHistory`; server state is TanStack Query; the tree is shallow
+  (`editor-client` → `QuotationCanvas` is one hop, ~10 props — a container/child
+  boundary, not deep drilling). So today a store would mostly *relocate* state,
+  not cut coupling, while adding a second state paradigm and a re-render footgun
+  that matters for the Konva canvas.
+- **Decide with real data from 4.0/4.1/4.2:** adopt a store **only if** the
+  memoization work shows that *multiple sibling components* (canvas, floating
+  toolbar, future `EditorToolbar`, inline editors) independently need to
+  read/write shared `selectedId`/`pages`/selection, and props can't be stabilized
+  cleanly. A store's main win here is selector-based subscriptions that avoid
+  whole-tree re-renders — a performance concern, hence its placement in Phase 4.
+- **If adopted:** prefer the narrowest fit. `useSyncExternalStore` or a tiny
+  Context+reducer may suffice before reaching for Zustand; weigh the extra
+  dependency against the selector ergonomics.
+- **Anti-goal:** do **not** adopt a store mid-decomposition — it tends to freeze
+  the current state shape into the store API and make later refactors harder.
+- **Outcome:** record the decision (adopt / defer / reject) with the metric that
+  drove it, then proceed.
 
 ### Task 4.0 — Fix refs-during-render & re-upgrade the lint rule (3.7)
 
