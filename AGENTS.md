@@ -40,3 +40,28 @@ hippo capture --stdin <<< '<decisions, errors, lessons: 2-5 bullets>'
 - prefer interfaces over type alias unless strcitly necesary or some value out of it.
 - avoid huge components with a lot of markup and logic, divide in smaller reusable components.
 - create custom hooks to consolidate hooks logic, ex: a useState and a useEffect are related.
+
+## Editor refactor effort (docs/editor-improvements-plan.md)
+
+- Work the plan task-by-task. For each task, briefly discuss problem/fix/
+  architecture and wait for explicit confirmation before coding. Keep
+  explanations brief.
+- Commit directly to `main`, one self-contained commit per task; keep unrelated
+  concerns in separate commits. After each task, mark it done in the plan's
+  Status block (the source of truth) and collapse the finished task section to a
+  one-line reference with its commit SHA.
+- Layout: custom hooks live in `src/app/editor/_hooks/` (`use-*`); pure
+  decision/transform logic lives in `src/app/editor/_lib/` WITH unit tests
+  (e.g. history.ts, keyboard.ts, table-ops.ts, line-items.ts). Hooks stay thin;
+  keep cross-cutting concerns (dirty flag, save-race `editRevisionRef`) in the
+  caller via injected callbacks/seams (e.g. `onEdit`).
+- Extractions must be behaviour-preserving and verified: always
+  `rm -rf .next/types && pnpm typecheck`, then `pnpm lint`, then `pnpm test`.
+- Verification baselines (don't chase these): `pnpm lint` = 0 errors / 12
+  warnings (React Compiler rules intentionally downgraded to `warn`;
+  `react-hooks/refs` MUST be re-upgraded to error after the Task 4.0 root fix);
+  `pnpm test` has ONE pre-existing unrelated failure in
+  `src/server/external/schema.test.ts`.
+- The quotation module (`src/app/_my-quotations/`) is feature-flagged OFF, so the
+  editor's load-saved-quotation path is not reachable end-to-end — enforcement/
+  load work that depends on it is deferred (see plan Tasks 2.3, 3.3).
