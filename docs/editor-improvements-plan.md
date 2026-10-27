@@ -48,54 +48,17 @@
 
 **Next up:** Task 3.0 — consolidate hooks into `_hooks/`.
 
-> Phase 1 & 2 task sections below are kept for historical reference; the Status
-> block above is the source of truth for what is done.
+> Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
+> below; this Status block is the source of truth. Full detail remains for the
+> deferred 2.3 and all not-started tasks.
 
 ---
 
-## Phase 1 — Quick wins & correctness (low risk, high leverage)
+## Phase 1 — Quick wins & correctness — ✅ COMPLETE
 
-These are cheap, safe, and some fix real bugs. Doing them first also makes the
-later architecture/testing work cleaner (one canonical line-item module to
-refactor and test).
-
-### Task 1.1 — Fix the Save-button disable bug (3.6) — ✅ DONE (`7d5aed4`)
-
-- **File:** `src/app/editor/editor-client.tsx` (~line 900).
-- **Change:** `disabled={saveMutation.isPending ?? !canSave}` →
-  `disabled={saveMutation.isPending || !canSave}`. `isPending` is always a
-  boolean, so `??` never falls through and `!canSave` is currently dead — the
-  button is not disabled when the form can't be saved.
-- **Acceptance:**
-  - With no client selected / nothing dirty (`canSave === false`) and no save in
-    flight, the Save button renders `disabled`.
-  - While a save is in flight, it is still `disabled`.
-  - Manual: selecting a client + making an edit enables it.
-- **Effort:** trivial. **Risk:** none.
-
-### Task 1.2 — Extract shared line-item logic (3.1) + name column indices (3.2) — ✅ DONE (`965f34c`)
-
-- **Files:** new `src/app/editor/_lib/line-items.ts`; update
-  `src/app/editor/_lib/use-inline-editing.ts` and
-  `src/app/editor/_lib/clipboard.ts`.
-- **Change:**
-  - Create `line-items.ts` exporting `formatEditedCell`, `setLineItemSubtotal`
-    (pick one name — `clipboard.ts` currently calls it `updateLineItemSubtotal`),
-    and `export const LINE_ITEM_COLS = { quantity: 0, price: 3, subtotal: 4 } as const`.
-  - Replace the duplicated copies in `use-inline-editing.ts` and `clipboard.ts`
-    with imports from the new module.
-  - Replace magic `0 / 3 / 4` column checks across the editor with
-    `LINE_ITEM_COLS.*`.
-- **Acceptance:**
-  - No duplicate `formatEditedCell` / subtotal definitions remain
-    (grep confirms a single source).
-  - New unit test `src/app/editor/_lib/line-items.test.ts` covers: header row
-    passthrough, quantity digit-stripping (col 0), price formatting to
-    `$ x.xxx` COP (col 3), empty/invalid price → `""`, subtotal =
-    quantity × price.
-  - `pnpm test` green; editing a line-item quantity/price still recomputes the
-    subtotal in the UI (manual check).
-- **Effort:** small. **Risk:** low (pure functions; covered by new tests).
+Task 1.1 (Save-button disable bug, `7d5aed4`) and Task 1.2 (shared
+`_lib/line-items.ts` + `LINE_ITEM_COLS`, `965f34c`) are done. See the Status
+section above for details.
 
 ---
 
@@ -116,46 +79,15 @@ not require touching the editor's component structure.
 > rule (header + policies page) is enforced **separately** (see Task 2.3), not in
 > this universal schema.
 
-### Task 2.1 — Real (lossless) Zod schema for persisted quotation `data` (4.1) — ✅ DONE (`0fe83fe`)
+### Task 2.1 — Lossless Zod schema for persisted `data` (4.1) — ✅ DONE (`0fe83fe`)
 
-- **Files:** `src/server/api/routers/quotation.ts` (the `saveInput` ~line 13);
-  new `src/app/editor/_components/quotation-schema.ts` holding the Zod schemas;
-  re-export inferred types so `types.ts` and the validator cannot drift.
-- **Change:** replace `data: z.custom<PageData[]>(Array.isArray)` with real
-  schemas for `PageData` / `TemplateElement` / `TableData` that validate element
-  `type` (enum), numeric geometry, and **generous** string/array bounds (bounds
-  exist to stop absurd abuse, not to constrain real content). Each object schema
-  uses **`.passthrough()`** so unknown/future keys are preserved (lossless) —
-  never `.strip()`. No required "magic" IDs anywhere. Leave `src` loosely typed
-  here; Task 2.2 tightens it.
-- **Acceptance:**
-  - `save` rejects non-structural garbage (non-array `data`, element missing
-    `type`, non-array `cells`, absurd sizes) with a Zod error.
-  - **Lossless proof:** an element carrying an extra unmodeled key round-trips
-    through `parse()` with that key intact.
-  - Fixtures parse: (1) the current default-template document, (2) a free-form
-    document with none of the standard IDs, (3) the lossless-extra-key case.
-  - No required-element checks in this schema (that is Task 2.3).
-- **Effort:** medium. **Risk:** medium — **must not reject or mutate legitimate
-  documents**. Capture a real default-template `data` fixture first and assert it
-  parses unchanged.
+`quotation-schema.ts` (template-agnostic, `.passthrough()` lossless, drift guard,
+`quotationDocumentInput`) wired into `save`. See the Status section above.
 
 ### Task 2.2 — Constrain image `src` (4.2) — ✅ DONE (`83c490f`)
 
-- **Files:** the schema from Task 2.1 (element `src` field);
-  `src/app/editor/_lib/pdf-export.ts` (the `fetch(new URL(src, …))` path);
-  optionally `canvas-page-renderer.tsx` (`new Image().src`).
-- **Change:** restrict `src` to `data:` URLs (the upload path already produces
-  these) or an explicit allowlist of trusted hosts. Validate in the schema so bad
-  `src` values can never be persisted; defensively guard the `fetch`/`Image` paths
-  too.
-- **Acceptance:**
-  - Schema rejects `http(s)://` (or non-allowlisted) `src`; accepts `data:image/*`.
-  - `exportPagesToPdf` never fetches an arbitrary origin; a disallowed `src`
-    degrades to the existing placeholder rather than making a network request.
-  - Test covering allowed vs disallowed `src`.
-- **Effort:** small–medium. **Risk:** low–medium (confirm the upload flow only
-  emits `data:` URLs so nothing legitimate breaks).
+`isAllowedImageSrc` allowlist enforced in the schema + both sinks (pdf-export,
+canvas). See the Status section above.
 
 ### Task 2.3 — Required-elements enforcement (DEFERRED to the quotation module)
 
