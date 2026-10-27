@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { exportPagesToPdf } from "./_lib/pdf-export";
 import { useEditorKeyboardShortcuts } from "./_hooks/use-editor-keyboard-shortcuts";
+import { useQuotationHistory } from "./_hooks/use-quotation-history";
 import {
   buildPagesFromQuotation,
   buildProductPage,
@@ -48,8 +49,6 @@ const QuotationCanvas = dynamic(
 type QuotationRow = NonNullable<RouterOutputs["quotation"]["byId"]>;
 
 export default function EditorPage() {
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
   // Unsaved-changes flag: true after any edit, cleared on successful save.
   const [isDirty, setIsDirty] = useState(false);
   const editRevisionRef = useRef(0);
@@ -131,66 +130,32 @@ export default function EditorPage() {
   const [hasInitialProducts] = useState(
     () => getQuotationProducts().length > 0,
   );
-  const [pages, setPages] = useState<PageData[]>(makeInitialPages);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(() =>
     takePendingQuotationClient(),
   );
   const pendingHomeContactIdRef = useRef(takePendingQuotationContact());
-  const pagesRef = useRef(pages);
-  const replacePages = useCallback((next: PageData[]) => {
-    pagesRef.current = next;
-    setPages(next);
-  }, []);
-  const historyRef = useRef<PageData[][]>([pages]);
-  const historyIndexRef = useRef(0);
 
-  /** Push a new state snapshot onto the history stack */
-  const commitHistory = useCallback((next: PageData[]) => {
-    historyIndexRef.current += 1;
-    historyRef.current = historyRef.current.slice(0, historyIndexRef.current);
-    historyRef.current.push(next);
-    setCanUndo(true);
-    setCanRedo(false);
-  }, []);
-
-  const setPagesWithHistory = useCallback(
-    (updater: PageData[] | ((prev: PageData[]) => PageData[])) => {
-      editRevisionRef.current += 1;
-      const next =
-        typeof updater === "function" ? updater(pagesRef.current) : updater;
-      pagesRef.current = next;
-      setPages(next);
-      commitHistory(next);
-      setIsDirty(true);
-    },
-    [commitHistory],
-  );
-
-  const handleUndo = useCallback(() => {
-    if (historyIndexRef.current <= 0) return;
-    historyIndexRef.current -= 1;
-    const snapshot = historyRef.current[historyIndexRef.current];
-    if (!snapshot) return;
+  // `pages` state + undo/redo history live in a dedicated hook; dirty/save-race
+  // bookkeeping stays here via the onEdit seam.
+  const onHistoryEdit = useCallback(() => {
     editRevisionRef.current += 1;
-    pagesRef.current = snapshot;
-    setPages(snapshot);
     setIsDirty(true);
-    setCanUndo(historyIndexRef.current > 0);
-    setCanRedo(true);
   }, []);
+  const {
+    pages,
+    pagesRef,
+    canUndo,
+    canRedo,
+    setPagesWithHistory,
+    replacePages,
+    resetHistory,
+    undo: handleUndo,
+    redo: handleRedo,
+  } = useQuotationHistory({
+    initialPages: makeInitialPages,
+    onEdit: onHistoryEdit,
+  });
 
-  const handleRedo = useCallback(() => {
-    if (historyIndexRef.current >= historyRef.current.length - 1) return;
-    historyIndexRef.current += 1;
-    const snapshot = historyRef.current[historyIndexRef.current];
-    if (!snapshot) return;
-    editRevisionRef.current += 1;
-    pagesRef.current = snapshot;
-    setPages(snapshot);
-    setIsDirty(true);
-    setCanUndo(true);
-    setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
-  }, []);
   const [isExporting, setIsExporting] = useState(false);
 
   // Saved identity: null while a draft, { id, quotationNumber } once persisted.
@@ -208,10 +173,7 @@ export default function EditorPage() {
       // The server returns the saved document with the number assigned by
       // the database. Keep the canvas and its undo baseline in sync with it.
       replacePages(result.data);
-      historyRef.current = [result.data];
-      historyIndexRef.current = 0;
-      setCanUndo(false);
-      setCanRedo(false);
+      resetHistory(result.data);
       setIsDirty(false);
     },
     onError: (error) => {
@@ -335,7 +297,7 @@ export default function EditorPage() {
       activePageNumberRef.current = insertAt + 1;
       setIsAddProductsOpen(false);
     },
-    [setPagesWithHistory],
+    [setPagesWithHistory, pagesRef],
   );
   const handleSave = useCallback(() => {
     if (!canSave || !selectedClientId) return;
@@ -347,7 +309,7 @@ export default function EditorPage() {
       clientId: selectedClientId,
       data: currentPages,
     });
-  }, [canSave, saveMutation, saved?.id, selectedClientId]);
+  }, [canSave, saveMutation, saved?.id, selectedClientId, pagesRef]);
 
   // ---- Load a saved quotation (handed off from the My Quotations page) ----
 
@@ -355,13 +317,6 @@ export default function EditorPage() {
   const [pendingLoadId] = useState<string | null>(() =>
     takePendingQuotationLoad(),
   );
-
-  const resetHistory = useCallback((nextPages: PageData[]) => {
-    historyRef.current = [nextPages];
-    historyIndexRef.current = 0;
-    setCanUndo(false);
-    setCanRedo(false);
-  }, []);
 
   useRepresentativeProfile({
     isDirty,
@@ -409,10 +364,8 @@ export default function EditorPage() {
             ),
           },
     );
-    pagesRef.current = initialPages;
-    setPages(initialPages);
-    historyRef.current = [initialPages];
-    historyIndexRef.current = 0;
+    replacePages(initialPages);
+    resetHistory(initialPages);
     metaRef.current = {
       ...metaRef.current,
       companyName: capitalizeName(client.name),
@@ -423,7 +376,14 @@ export default function EditorPage() {
       ),
     };
     pendingHomeClientIdRef.current = null;
-  }, [clientsQuery.data, pendingLoadId, selectedClientId]);
+  }, [
+    clientsQuery.data,
+    pendingLoadId,
+    selectedClientId,
+    pagesRef,
+    replacePages,
+    resetHistory,
+  ]);
 
   const loadQuery = api.quotation.byId.useQuery(
     { id: pendingLoadId ?? "" },
@@ -505,14 +465,11 @@ export default function EditorPage() {
       pendingHomeClientIdRef.current = null;
       replacePages(pagesWithLogos);
       // Reset history to the loaded state.
-      historyRef.current = [pagesWithLogos];
-      historyIndexRef.current = 0;
-      setCanUndo(false);
-      setCanRedo(false);
+      resetHistory(pagesWithLogos);
       setSaved({ id: row.id, quotationNumber: row.quotationNumber });
       setIsDirty(false);
     },
-    [replacePages],
+    [replacePages, resetHistory],
   );
 
   // Apply the loaded quotation when clean. The dirty case is represented
