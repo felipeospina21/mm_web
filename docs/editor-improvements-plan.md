@@ -36,6 +36,7 @@
   schema + both sinks (pdf-export, canvas). (`83c490f`)
 - ✅ **Lint cleanup** (not a numbered task) — all 16 lint errors cleared; four
   React Compiler rules downgraded to `warn`. (`3158769`)
+- ✅ **Task 3.0** — Custom hooks consolidated into `_hooks/`. (`f3ffce5`)
 
 **Deferred:**
 
@@ -43,10 +44,10 @@
   iteration (module is feature-flagged off; see the task for details). Plan text
   retained below.
 
-**Not started** (full detail retained in the sections below): Task 3.0, 3.1, 3.2,
+**Not started** (full detail retained in the sections below): Task 3.1, 3.2,
 3.3, 3.4, 3.5, 3.6; Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
 
-**Next up:** Task 3.0 — consolidate hooks into `_hooks/`.
+**Next up:** Task 3.1 — `useEditorKeyboardShortcuts` + pure keydown helper.
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -141,27 +142,11 @@ The big, higher-risk work. The editor has **no tests**, and state is mirrored
 across refs — so extract one cohesive unit, add its tests, then move on. Do not
 batch these.
 
-### Task 3.0 — Consolidate hooks into `_hooks/` (prerequisite)
+### Task 3.0 — Consolidate hooks into `_hooks/` (prerequisite) — ✅ DONE (`f3ffce5`)
 
-The editor's custom hooks are split across two folders: `use-table-selection.ts`,
-`use-canvas-stage.ts`, and `use-inline-editing.ts` live in `_lib/`, while
-`use-representative-profile.ts` already lives in `_hooks/`. The rest of Phase 3
-adds new hooks and assumes `_hooks/` is their home, so settle the convention
-first.
-
-- **Files:** move `src/app/editor/_lib/use-table-selection.ts`,
-  `use-canvas-stage.ts`, and `use-inline-editing.ts` (and their colocated tests,
-  if any) into `src/app/editor/_hooks/`. Keep pure, non-hook helpers
-  (`clipboard.ts`, `line-items.ts`, `quotation-canvas-geometry.ts`,
-  `pdf-export.ts`, …) in `_lib/`.
-- **Change:** `git mv` the files, then fix import paths in the movers and their
-  consumers (`quotation-canvas.tsx`, `editor-client.tsx`, etc.). Pure mechanical
-  move — no logic changes.
-- **Acceptance:** `_lib/` holds only non-hook modules; all `use-*` hooks live in
-  `_hooks/`; `pnpm typecheck && pnpm lint && pnpm test` unchanged.
-- **Effort:** small. **Risk:** low (mechanical; the type/lint pass catches any
-  missed import).
-- **Do this first in Phase 3** so later tasks (3.1–3.5) land hooks in one place.
+Moved `use-table-selection`, `use-canvas-stage`, `use-inline-editing` from `_lib/`
+to `_hooks/` (joining `use-representative-profile`); pure helpers stay in `_lib/`.
+Mechanical `git mv` + import-path fixes; typecheck/lint/test unchanged.
 
 ### Task 3.1 — `useEditorKeyboardShortcuts` + pure keydown decision helper (1.1, 5)
 
