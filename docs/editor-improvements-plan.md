@@ -352,6 +352,37 @@ React Compiler rules) so it does not block CI — this is explicitly **temporary
 
 Pick up alongside nearby work rather than as a dedicated push.
 
+### Review-later notes (added 2026-10-29)
+
+Captured from a bug-fix / small-feature session. None block anything today; each
+needs a second look in the stage noted.
+
+- **Draft protection is an in-session band-aid — revisit with the quotation
+  module.** `editor-client.tsx` derives `isDraft` ("unsaved content worth
+  protecting") and guards `beforeunload` + in-app nav (`a5aecac`). But draft-ness
+  is inferred from **consume-on-read `sessionStorage` handoffs**
+  (`takePendingManualQuotation` clears on read; product selection is read at
+  mount) captured once at mount, so it is fragile across **tab
+  duplicate/clone/refresh** (storage is copied at clone time; the manual flag may
+  already be consumed). The durable fix is real **draft persistence** (the
+  feature-flagged `_my-quotations` module): persist/restore drafts and derive
+  `isDraft` from the loaded content, not one-shot mount flags. Re-evaluate the
+  whole `isDraft` derivation then. `isDraft` was named with that future in mind.
+- **Nav draft-guard scope is intentionally narrow.** `nav-bar.tsx` only
+  intercepts the two nav links (Nueva cotización / Editor) via `EditorDraftProvider`
+  (`editor-draft-context.tsx`). **Sign-out** and the catalog floating
+  "Cargar en el editor" bar (`quotation-bar.tsx`, a plain `<a href>`) are **not**
+  guarded. Sign-out from a dirty editor still discards silently; decide whether
+  to guard it when touching auth/nav. The context is deliberately a tiny
+  state-backed provider (an earlier ref-based version silently de-synced across
+  an editor remount — do not reintroduce a ref here).
+- **`pdf-export.ts` still has no direct unit tests.** The ragged-table export
+  crash (`2e1f841`) was fixed and covered **indirectly** via `table-ops` /
+  `line-items` tests, plus defensive coercion in `drawTable`/`wrapText`. The
+  exporter's own pure helpers (`wrapText`, `parseColor`, `drawTable` cell
+  iteration) remain untested — add a focused test when Task 4.4 (parallelize PDF
+  image loading) touches this file.
+
 - **Replace client-side `alert(...)`** in save `onError` and PDF export with the
   app's modal/toast pattern (3.3).
 - **Logging (3.4):** server paths (tRPC `timingMiddleware`, any server error
