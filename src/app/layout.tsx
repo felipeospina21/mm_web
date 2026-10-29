@@ -6,6 +6,7 @@ import { Geist } from "next/font/google";
 import { TRPCReactProvider } from "@/trpc/react";
 import { defaultLocale, t } from "@/i18n/messages";
 import { NavBar } from "./_components/nav-bar-server";
+import { EditorDraftProvider } from "./_components/editor-draft-context";
 
 export const metadata: Metadata = {
   title: t("metadata.title"),
@@ -25,8 +26,10 @@ export default function RootLayout({
     <html lang={defaultLocale} className={`${geist.variable}`}>
       <body>
         <TRPCReactProvider>
-          <NavBar />
-          {children}
+          <EditorDraftProvider>
+            <NavBar />
+            {children}
+          </EditorDraftProvider>
         </TRPCReactProvider>
       </body>
     </html>

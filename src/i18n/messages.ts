@@ -93,6 +93,10 @@ const es = {
     "Esta cotización tiene cambios sin guardar. Si cargas otra cotización, se perderán. ¿Quieres continuar?",
   "editor.discardAndLoad": "Descartar y cargar",
   "editor.keepEditing": "Seguir editando",
+  "editor.leaveTitle": "¿Salir sin guardar?",
+  "editor.leaveMessage":
+    "Esta cotización tiene cambios sin guardar. Si sales del editor, se perderán. ¿Quieres continuar?",
+  "editor.leaveConfirm": "Salir sin guardar",
   "editor.newText": "Texto nuevo",
   "actions.label": "Acciones",
   "actions.undo": "Deshacer",
@@ -243,6 +247,10 @@ const en: Record<MessageKey, string> = {
     "This quotation has unsaved changes. Loading another quotation will discard them. Do you want to continue?",
   "editor.discardAndLoad": "Discard and load",
   "editor.keepEditing": "Keep editing",
+  "editor.leaveTitle": "Leave without saving?",
+  "editor.leaveMessage":
+    "This quotation has unsaved changes. Leaving the editor will discard them. Do you want to continue?",
+  "editor.leaveConfirm": "Leave without saving",
   "editor.newText": "New text",
   "actions.label": "Actions",
   "actions.undo": "Undo",

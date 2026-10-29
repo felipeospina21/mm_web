@@ -32,6 +32,7 @@ import {
   takePendingQuotationLoad,
 } from "@/lib/quotation-load";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
+import { useEditorDraft } from "@/app/_components/editor-draft-context";
 import { AddProductModal } from "./_components/add-product-modal";
 import { capitalizeLabeledName, capitalizeName } from "@/lib/capitalize-name";
 import { api, type RouterOutputs } from "@/trpc/react";
@@ -57,19 +58,6 @@ export default function EditorPage() {
   const [isAddProductsOpen, setIsAddProductsOpen] = useState(false);
   const activePageNumberRef = useRef(1);
   const [activePageNumber, setActivePageNumber] = useState(1);
-
-  // Warn before leaving/reloading the tab when there are unsaved changes.
-  useEffect(() => {
-    if (!isDirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      // Modern browsers show their own generic message; setting
-      // returnValue is what actually triggers the prompt.
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty]);
 
   /**
    * Builds the initial quotation `meta` (client/company details + the
@@ -183,6 +171,46 @@ export default function EditorPage() {
     resetHistory,
     setIsDirty,
   });
+
+  /**
+   * A draft is any editor state with content that is not persisted — so it is
+   * worth protecting from an accidental refresh / navigation away:
+   *   - never saved yet AND it has content (products loaded via "cargar en el
+   *     editor", a manual start, or any edit) — covers the common case where a
+   *     quotation is loaded but untouched, which `isDirty` alone misses; or
+   *   - saved before but edited since.
+   * A blank, untouched, never-saved editor is NOT a draft (nothing to lose), so
+   * we don't nag on it. `isDirty` stays the precise "edited since baseline" flag
+   * driving the unsaved badge and overwrite confirm.
+   *
+   * NOTE: this is an in-session guard only. When real draft persistence lands,
+   * `isDraft` becomes the signal for what to autosave/restore.
+   */
+  const isDraft = saved
+    ? isDirty
+    : isManualStart || hasInitialProducts || isDirty;
+
+  // Warn before leaving/reloading the tab while there is an unsaved draft.
+  useEffect(() => {
+    if (!isDraft) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Modern browsers show their own generic message; setting
+      // returnValue is what actually triggers the prompt.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDraft]);
+
+  // Publish the draft state so the nav bar can guard in-app navigations
+  // (client route changes never fire `beforeunload`). Clear on unmount so a
+  // stale draft flag doesn't block navigation after the editor is gone.
+  const { setIsDraft } = useEditorDraft();
+  useEffect(() => {
+    setIsDraft(isDraft);
+    return () => setIsDraft(false);
+  }, [isDraft, setIsDraft]);
 
   const clientsQuery = api.customer.list.useQuery();
 
