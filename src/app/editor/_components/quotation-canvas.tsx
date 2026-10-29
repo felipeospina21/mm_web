@@ -20,6 +20,7 @@ import {
   pasteIntoTable,
 } from "../_lib/clipboard";
 import { getPageOffset } from "../_lib/quotation-canvas-geometry";
+import { resizeColumn } from "../_lib/table-ops";
 
 interface QuotationCanvasProps {
   pages: PageData[];
@@ -433,6 +434,22 @@ export default function QuotationCanvas({
     [onActivePageChange, stage, tableSelection],
   );
 
+  const handleResizeColumn = useCallback(
+    (
+      elementId: string,
+      pageNumber: number,
+      colIndex: number,
+      newWidth: number,
+    ) => {
+      const page = pages.find((item) => item.pageNumber === pageNumber);
+      const element = page?.elements.find((item) => item.id === elementId);
+      if (!page || !element?.table) return;
+      const patch = resizeColumn(element.table, colIndex, newWidth);
+      if (patch) onElementChange(page.id, elementId, patch);
+    },
+    [pages, onElementChange],
+  );
+
   return (
     <div
       ref={stage.containerRef}
@@ -519,6 +536,7 @@ export default function QuotationCanvas({
             onSelectRow={handleSelectRow}
             onSelectColumn={handleSelectColumn}
             onSelectCell={handleSelectCell}
+            onResizeColumn={handleResizeColumn}
           />
           <Transformer
             ref={transformerRef}

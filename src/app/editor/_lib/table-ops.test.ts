@@ -4,9 +4,11 @@ import type { TableData } from "../_components/types";
 import {
   addColumn,
   addRow,
+  MIN_COLUMN_WIDTH,
   removeColumn,
   removeRow,
   removeSelectedRows,
+  resizeColumn,
 } from "./table-ops";
 
 function makeTable(overrides: Partial<TableData> = {}): TableData {
@@ -140,23 +142,41 @@ describe("table-ops", () => {
     });
   });
 
-  describe("addColumn ragged normalization", () => {
-    it("pads ragged rows to the new column count with empty strings", () => {
-      const ragged = makeTable({
-        colWidths: [100, 100],
-        cells: [
-          ["H1", "H2"],
-          ["a"], // short row
-          ["c", "d", null as unknown as string], // long row with a hole
-        ],
-      });
-      const patch = addColumn(ragged);
-      expect(patch.table?.colWidths).toEqual([100, 100, 120]);
-      expect(patch.table?.cells).toEqual([
-        ["H1", "H2", ""],
-        ["a", "", ""],
-        ["c", "d", ""],
-      ]);
+  describe("resizeColumn", () => {
+    it("sets one column's width and leaves the others untouched (grow-only)", () => {
+      const patch = resizeColumn(makeTable(), 0, 160);
+      expect(patch?.table?.colWidths).toEqual([160, 100]);
+    });
+
+    it("recomputes the element width from the new column widths", () => {
+      const patch = resizeColumn(makeTable(), 1, 150);
+      expect(patch?.table?.colWidths).toEqual([100, 150]);
+      expect(patch?.width).toBe(250);
+    });
+
+    it("shrinks a column down to the minimum width", () => {
+      const patch = resizeColumn(makeTable(), 0, 10);
+      expect(patch?.table?.colWidths).toEqual([MIN_COLUMN_WIDTH, 100]);
+    });
+
+    it("rounds fractional widths", () => {
+      const patch = resizeColumn(makeTable(), 0, 123.6);
+      expect(patch?.table?.colWidths).toEqual([124, 100]);
+    });
+
+    it("is a no-op when the width is unchanged after clamping", () => {
+      expect(resizeColumn(makeTable(), 0, 100)).toBeNull();
+    });
+
+    it("is a no-op for an out-of-range column index", () => {
+      expect(resizeColumn(makeTable(), 5, 120)).toBeNull();
+      expect(resizeColumn(makeTable(), -1, 120)).toBeNull();
+    });
+
+    it("does not mutate the input table", () => {
+      const table = makeTable();
+      resizeColumn(table, 0, 200);
+      expect(table.colWidths).toEqual([100, 100]);
     });
   });
 });

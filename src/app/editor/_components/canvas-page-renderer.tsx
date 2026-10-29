@@ -60,6 +60,12 @@ export interface CanvasPageRendererProps {
     col: number,
     extend: boolean,
   ) => void;
+  onResizeColumn: (
+    elementId: string,
+    pageNumber: number,
+    colIndex: number,
+    newWidth: number,
+  ) => void;
 }
 
 export function CanvasPageRenderer({
@@ -78,6 +84,7 @@ export function CanvasPageRenderer({
   onSelectRow,
   onSelectColumn,
   onSelectCell,
+  onResizeColumn,
 }: CanvasPageRendererProps) {
   return (
     <>
@@ -100,6 +107,7 @@ export function CanvasPageRenderer({
             onSelectRow={onSelectRow}
             onSelectColumn={onSelectColumn}
             onSelectCell={onSelectCell}
+            onResizeColumn={onResizeColumn}
           />
         ))}
     </>
@@ -126,6 +134,7 @@ function CanvasPage(
     onSelectRow,
     onSelectColumn,
     onSelectCell,
+    onResizeColumn,
   } = props;
   const offset = getPageOffset(page.pageNumber);
   return (
@@ -214,6 +223,9 @@ function CanvasPage(
               onDragEnd={(event) => onDragEnd(page.id, event)}
               onTransformEnd={(event) => onTransformEnd(page.id, event)}
               dragBoundFunc={makeDragBoundFunc(page, element)}
+              onResizeColumn={(colIndex, newWidth) =>
+                onResizeColumn(element.id, page.pageNumber, colIndex, newWidth)
+              }
             />
           );
         if (element.type === "image")

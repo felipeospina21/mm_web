@@ -5,6 +5,14 @@ import type Konva from "konva";
 import type { TableData } from "./types";
 import { theme } from "@/lib/theme";
 
+/** Half the hit-width (px) of a column-resize divider handle. */
+const HANDLE_HALF_WIDTH = 4;
+/**
+ * Inset (px) for the last column's divider so it clears the element
+ * Transformer's right-middle resize anchor on the table's right edge.
+ */
+const HANDLE_INSET = 4;
+
 interface TableNodeProps {
   id: string;
   x: number;
@@ -23,6 +31,8 @@ interface TableNodeProps {
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
   dragBoundFunc: (pos: Konva.Vector2d) => Konva.Vector2d;
+  /** Commit a new width (px) for a single column (grow-only resize). */
+  onResizeColumn: (colIndex: number, newWidth: number) => void;
 }
 
 /**
@@ -48,6 +58,7 @@ export default function TableNode({
   onDragEnd,
   onTransformEnd,
   dragBoundFunc,
+  onResizeColumn,
 }: TableNodeProps) {
   const {
     colWidths,
@@ -217,6 +228,65 @@ export default function TableNode({
           listening={false}
         />
       ))}
+      {/* Per-column resize dividers (grow-only). One on each column's right
+          edge so the first, middle, and last columns are all resizable.
+          Dragging boundary `col` resizes column `col`. The last divider is
+          inset a few px so it doesn't overlap the element Transformer's
+          right-middle handle. Shown only while the table is selected. */}
+      {isSelected &&
+        colWidths.map((width, col) => {
+          const rightEdge = colWidths
+            .slice(0, col + 1)
+            .reduce((total, value) => total + value, 0);
+          const isLast = col === colWidths.length - 1;
+          const handleX = isLast ? rightEdge - HANDLE_INSET : rightEdge;
+          const tableHeight = rowHeight * cells.length;
+          return (
+            <Rect
+              key={`col-resize-${col}`}
+              x={handleX - HANDLE_HALF_WIDTH}
+              y={0}
+              width={HANDLE_HALF_WIDTH * 2}
+              height={tableHeight}
+              fill="transparent"
+              draggable
+              onMouseEnter={(event) => {
+                const container = event.target.getStage()?.container();
+                if (container) container.style.cursor = "col-resize";
+              }}
+              onMouseLeave={(event) => {
+                const container = event.target.getStage()?.container();
+                if (container) container.style.cursor = "default";
+              }}
+              dragBoundFunc={function (this: Konva.Node, pos) {
+                // Constrain the handle to horizontal movement at the Group's
+                // top. `this` is the handle node; its parent is the table Group.
+                const group = this.getParent();
+                const absY = group ? group.getAbsolutePosition().y : pos.y;
+                return { x: pos.x, y: absY };
+              }}
+              onDragEnd={(event) => {
+                const node = event.target;
+                // The column's left edge, relative to the table Group.
+                const leftEdge = colWidths
+                  .slice(0, col)
+                  .reduce((total, value) => total + value, 0);
+                // node.x() is the handle's left edge; its centre is the divider
+                // line. For the last column the real right edge is the line plus
+                // the inset we rendered it at.
+                const dividerLine = node.x() + HANDLE_HALF_WIDTH;
+                const columnRightEdge = isLast
+                  ? dividerLine + HANDLE_INSET
+                  : dividerLine;
+                onResizeColumn(col, columnRightEdge - leftEdge);
+                // Snap the handle back; the committed table re-renders it.
+                node.position({ x: handleX - HANDLE_HALF_WIDTH, y: 0 });
+                const container = node.getStage()?.container();
+                if (container) container.style.cursor = "default";
+              }}
+            />
+          );
+        })}
     </Group>
   );
 }

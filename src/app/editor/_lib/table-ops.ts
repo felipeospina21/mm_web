@@ -95,3 +95,30 @@ export function removeColumn(table: TableData): TablePatch | null {
 function normalizeRow(row: string[], columnCount: number): string[] {
   return Array.from({ length: columnCount }, (_, index) => row[index] ?? "");
 }
+
+/** Minimum width (px) a single column may be resized to. */
+export const MIN_COLUMN_WIDTH = 30;
+
+/**
+ * Set a single column's width (grow-only model: only this column changes; the
+ * table's total width grows/shrinks by the same delta). Clamps to
+ * `minWidth`. No-op (null) when the index is out of range or the width is
+ * unchanged after clamping. Recomputes the element `width` from the new widths.
+ */
+export function resizeColumn(
+  table: TableData,
+  colIndex: number,
+  newWidth: number,
+  minWidth: number = MIN_COLUMN_WIDTH,
+): TablePatch | null {
+  if (colIndex < 0 || colIndex >= table.colWidths.length) return null;
+  const clamped = Math.max(minWidth, Math.round(newWidth));
+  if (clamped === table.colWidths[colIndex]) return null;
+  const colWidths = table.colWidths.map((width, index) =>
+    index === colIndex ? clamped : width,
+  );
+  return {
+    width: colWidths.reduce((sum, width) => sum + width, 0),
+    table: { ...table, colWidths },
+  };
+}
