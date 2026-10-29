@@ -131,9 +131,15 @@ export default function EditorPage() {
   const [hasInitialProducts] = useState(
     () => getQuotationProducts().length > 0,
   );
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(() =>
-    takePendingQuotationClient(),
-  );
+  // Start null so the server render and the first client render agree (reading
+  // sessionStorage in the initializer would diverge: null on the server, the
+  // stored value on the client, which mismatches the Save button's disabled
+  // state during hydration). The pending draft client is read after mount.
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  useEffect(() => {
+    const pendingClient = takePendingQuotationClient();
+    if (pendingClient) setSelectedClientId(pendingClient);
+  }, []);
   const pendingHomeContactIdRef = useRef(takePendingQuotationContact());
 
   // `pages` state + undo/redo history live in a dedicated hook; dirty/save-race
