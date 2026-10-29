@@ -177,7 +177,8 @@ export function useInlineEditing({
                   editingCell.col,
                   lineItems,
                 );
-                if (lineItems && editingCell.row > 0) setLineItemSubtotal(row);
+                if (lineItems && editingCell.row > 0)
+                  setLineItemSubtotal(row, element.table.colWidths.length);
                 onElementChange(page.id, editingId, {
                   table: { ...element.table, cells },
                 });
@@ -264,7 +265,8 @@ export function useInlineEditing({
             editingCell.col,
             lineItems,
           );
-          if (lineItems && editingCell.row > 0) setLineItemSubtotal(currentRow);
+          if (lineItems && editingCell.row > 0)
+            setLineItemSubtotal(currentRow, table.colWidths.length);
           onElementChange(page.id, element.id, { table: { ...table, cells } });
         }
 

@@ -57,11 +57,16 @@ export function removeSelectedRows(
 
 /** Append a column (default width 120) with an empty cell in every row. */
 export function addColumn(table: TableData): TablePatch {
+  const colWidths = [...table.colWidths, 120];
   return {
     table: {
       ...table,
-      colWidths: [...table.colWidths, 120],
-      cells: table.cells.map((row) => [...row, ""]),
+      colWidths,
+      // Normalize every row to the new column count. Rows that were ragged
+      // (e.g. a copied line-items table with stray trailing slots) become
+      // rectangular, which keeps cells aligned with colWidths and prevents the
+      // orphaned `null`/`undefined` slots that crash PDF export.
+      cells: table.cells.map((row) => normalizeRow(row, colWidths.length)),
     },
   };
 }
@@ -69,11 +74,24 @@ export function addColumn(table: TableData): TablePatch {
 /** Drop the last column. No-op when only one column remains. */
 export function removeColumn(table: TableData): TablePatch | null {
   if (table.colWidths.length <= 1) return null;
+  const colWidths = table.colWidths.slice(0, -1);
   return {
     table: {
       ...table,
-      colWidths: table.colWidths.slice(0, -1),
-      cells: table.cells.map((row) => row.slice(0, -1)),
+      colWidths,
+      // Trim/pad every row to exactly the remaining column count so no row is
+      // left longer than colWidths (which would strand cells past the last real
+      // column — the source of the `null` slots that crash PDF export).
+      cells: table.cells.map((row) => normalizeRow(row, colWidths.length)),
     },
   };
+}
+
+/**
+ * Force a row to exactly `columnCount` string cells: truncate extras and fill
+ * any missing/holey slots with `""`. Keeps table data rectangular and free of
+ * `null`/`undefined` holes.
+ */
+function normalizeRow(row: string[], columnCount: number): string[] {
+  return Array.from({ length: columnCount }, (_, index) => row[index] ?? "");
 }

@@ -53,7 +53,11 @@ function getFontStyle(
 }
 
 function wrapText(pdf: jsPDF, text: string, width: number): string[] {
-  return text.split("\n").flatMap((line): string[] => {
+  // Tolerate malformed cell data: saved quotations can contain `null`/`undefined`
+  // slots (e.g. a copied line-items table shrunk below its subtotal column, then
+  // serialized), which would otherwise throw on `.split`.
+  const safeText = typeof text === "string" ? text : "";
+  return safeText.split("\n").flatMap((line): string[] => {
     if (line.length === 0) return [""];
     // jsPDF's splitTextToSize is typed as `any`; it returns string | string[].
     const split = pdf.splitTextToSize(line, Math.max(width, 1)) as
@@ -111,10 +115,15 @@ function drawTable(
   const tableWidth = table.colWidths.reduce((sum, width) => sum + width, 0);
 
   pdf.setLineWidth(0.6);
+  const columnCount = table.colWidths.length;
   table.cells.forEach((row, rowIndex) => {
     let x = element.x;
     const y = element.y + rowIndex * table.rowHeight;
-    row.forEach((cell, colIndex) => {
+    // Iterate by the table's column count (not the row's length) so ragged rows
+    // — a cell holding `null`/`undefined`, or more/fewer cells than columns —
+    // render the real columns and never feed a non-string into wrapText.
+    for (let colIndex = 0; colIndex < columnCount; colIndex += 1) {
+      const cell = row[colIndex] ?? "";
       const width = table.colWidths[colIndex] ?? 0;
       if (rowIndex === 0) {
         pdf.setFillColor(headerRed, headerGreen, headerBlue);
@@ -146,14 +155,6 @@ function drawTable(
         pdf.text(line, x + 8, firstBaseline + lineIndex * lineHeightPx);
       });
       x += width;
-    });
-    if (row.length < table.colWidths.length) {
-      const missingWidth = table.colWidths
-        .slice(row.length)
-        .reduce((sum, width) => sum + width, 0);
-      pdf.setFillColor(255, 255, 255);
-      pdf.setDrawColor(borderRed, borderGreen, borderBlue);
-      pdf.rect(x, y, missingWidth, table.rowHeight, "FD");
     }
   });
 

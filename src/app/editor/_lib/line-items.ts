@@ -48,8 +48,20 @@ export function formatEditedCell(
 /**
  * Recompute the subtotal cell (col 4) in place from the row's quantity (col 0)
  * and price (col 3). Clears the subtotal when either input is missing.
+ *
+ * The line-item columns are positional, so this is a no-op when the table no
+ * longer has those columns — e.g. a copied line-items table that the user has
+ * shrunk below 5 columns. Writing `row[4]` on such a row would force the
+ * missing in-between slots into existence as holes (serialized to `null` on
+ * save), which later crashes the PDF exporter. `columnCount` lets the rule stay
+ * within the table's real width. When omitted, the legacy full-width behaviour
+ * is preserved.
  */
-export function setLineItemSubtotal(row: string[]): void {
+export function setLineItemSubtotal(row: string[], columnCount?: number): void {
+  // No subtotal (or price) column in the current table → nothing to compute.
+  if (columnCount !== undefined && columnCount <= LINE_ITEM_COLS.subtotal) {
+    return;
+  }
   const quantity = row[LINE_ITEM_COLS.quantity]?.replace(/\D/g, "") ?? "";
   const price = row[LINE_ITEM_COLS.price]?.replace(/\D/g, "") ?? "";
   row[LINE_ITEM_COLS.subtotal] =

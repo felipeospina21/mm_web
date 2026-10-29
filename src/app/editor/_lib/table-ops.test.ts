@@ -111,5 +111,52 @@ describe("table-ops", () => {
       });
       expect(removeColumn(single)).toBeNull();
     });
+
+    it("normalizes ragged rows to the new column count (trims stray slots)", () => {
+      // A copied line-items table shrunk toward 3 columns, but rows still carry
+      // extra slots (incl. a stray `null`). removeColumn must leave every row
+      // exactly colWidths.length long with no holes.
+      const ragged = makeTable({
+        colWidths: [73, 241, 126],
+        cells: [
+          ["CIUDAD", "CIUDAD", "VALOR"],
+          ["1", "MEDELLIN", "$0", null as unknown as string, "", ""],
+          ["2", "BARRANQUILLA", "$ 40.000", null as unknown as string, ""],
+        ],
+      });
+      const patch = removeColumn(ragged);
+      expect(patch?.table?.colWidths).toEqual([73, 241]);
+      expect(patch?.table?.cells).toEqual([
+        ["CIUDAD", "CIUDAD"],
+        ["1", "MEDELLIN"],
+        ["2", "BARRANQUILLA"],
+      ]);
+      // No undefined/null survives.
+      expect(
+        patch?.table?.cells.every((row) =>
+          row.every((cell) => typeof cell === "string"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  describe("addColumn ragged normalization", () => {
+    it("pads ragged rows to the new column count with empty strings", () => {
+      const ragged = makeTable({
+        colWidths: [100, 100],
+        cells: [
+          ["H1", "H2"],
+          ["a"], // short row
+          ["c", "d", null as unknown as string], // long row with a hole
+        ],
+      });
+      const patch = addColumn(ragged);
+      expect(patch.table?.colWidths).toEqual([100, 100, 120]);
+      expect(patch.table?.cells).toEqual([
+        ["H1", "H2", ""],
+        ["a", "", ""],
+        ["c", "d", ""],
+      ]);
+    });
   });
 });

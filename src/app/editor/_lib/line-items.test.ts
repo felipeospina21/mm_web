@@ -81,4 +81,26 @@ describe("setLineItemSubtotal", () => {
     setLineItemSubtotal(row);
     expect(row[LINE_ITEM_COLS.subtotal]).toBe("");
   });
+
+  it("is a no-op when the table has no subtotal column (shrunk below 5 cols)", () => {
+    // A copied line-items table the user shrank to 3 columns. Writing row[4]
+    // here would strand holes at indices 3/4 (serialized to `null`), which
+    // crashes PDF export. With the real column count the rule writes nothing.
+    const row = ["1", "MEDELLIN", "$0"];
+    setLineItemSubtotal(row, 3);
+    expect(row).toEqual(["1", "MEDELLIN", "$0"]);
+    expect(row).toHaveLength(3);
+  });
+
+  it("still computes the subtotal when the subtotal column exists", () => {
+    const row = ["3", "Widget", "", "$ 1.000", ""];
+    setLineItemSubtotal(row, 5);
+    expect(row[LINE_ITEM_COLS.subtotal]).toBe("$ 3.000");
+  });
+
+  it("is a no-op at exactly the subtotal boundary (columnCount === 4)", () => {
+    const row = ["3", "Widget", "", "$ 1.000"];
+    setLineItemSubtotal(row, 4);
+    expect(row).toHaveLength(4);
+  });
 });

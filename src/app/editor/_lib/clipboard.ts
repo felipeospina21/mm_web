@@ -127,7 +127,7 @@ export function pasteIntoTable(
         if (!row || (isLineItemsTable && colIndex === LINE_ITEM_COLS.subtotal))
           return;
         row[colIndex] = formatEditedCell(value, rowIndex, colIndex, isLineItemsTable);
-        if (isLineItemsTable) setLineItemSubtotal(row);
+        if (isLineItemsTable) setLineItemSubtotal(row, columnCount);
       });
     });
     return { cells, clearSelectedCells: true };
@@ -151,7 +151,7 @@ export function pasteIntoTable(
           return;
         row[colIndex] = formatEditedCell(value, rowIndex, colIndex, isLineItemsTable);
       });
-      if (isLineItemsTable) setLineItemSubtotal(row);
+      if (isLineItemsTable) setLineItemSubtotal(row, columnCount);
     });
     return { cells, height: table.rowHeight * cells.length };
   }
@@ -169,7 +169,7 @@ export function pasteIntoTable(
         if (isLineItemsTable && colIndex === LINE_ITEM_COLS.subtotal) return;
         row[colIndex] = formatEditedCell(value, rowIndex, colIndex, isLineItemsTable);
       });
-      if (isLineItemsTable) setLineItemSubtotal(row);
+      if (isLineItemsTable) setLineItemSubtotal(row, columnCount);
     });
     return {
       cells,
