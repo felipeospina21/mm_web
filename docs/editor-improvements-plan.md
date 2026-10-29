@@ -371,6 +371,28 @@ Pick up alongside nearby work rather than as a dedicated push.
   `client-field.tsx` create-client dialog extraction; a shared
   Escape/outside-click hook for the modal components — only if its API stays
   simpler than the current effects.
+- **Audit `useEffect` usage app-wide (keep or replace).** Start with the
+  post-mount effect added in `editor-client.tsx` that reads
+  `takePendingQuotationClient()` from `sessionStorage` into `selectedClientId`
+  (added to fix a Save-button **hydration mismatch**: the old
+  `useState(() => takePendingQuotationClient())` initializer returned `null` on
+  the server but the stored value on the client, so the button's `disabled`/label
+  diverged during hydration). The effect is correct but trips
+  `react-hooks/set-state-in-effect` (a warn under this project's policy). Decide
+  whether to keep it or replace it with a better idiom — `useSyncExternalStore`
+  with a `null` server snapshot, a `mounted` gate, or moving the handoff off
+  `sessionStorage` to a cookie/search param the **server** can read (removes the
+  effect entirely but changes the handoff mechanism). Note `selectedClientId` is
+  also set elsewhere, so a read-only `useSyncExternalStore` doesn't drop in
+  cleanly. Then **sweep every other `useEffect` in the app** (grep) and, for each,
+  decide keep vs. replace: is it a genuine effect (subscription, external sync,
+  imperative DOM), or is it compensating for something that belongs in render, an
+  event handler, derived state, or `useSyncExternalStore`? Record the
+  keep/replace decision per effect. Watch for the same SSR/browser-storage
+  hydration trap in the other storage-reading initializers in `editor-client.tsx`
+  (`isManualStart`, `hasInitialProducts`, `pendingHomeContactIdRef`, and the
+  initial pages/meta via `getQuotationProducts`) — they carry the same latent
+  risk but aren't flagged today because they don't drive a rendered attribute.
 - **Review the i18n implementation — is it needed?** The editor/toolbar use a
   `t(...)` helper from `@/i18n/messages` with a single `defaultLocale`. Assess
   whether full internationalization is actually a requirement: if the app is
