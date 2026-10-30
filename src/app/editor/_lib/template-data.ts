@@ -5,6 +5,7 @@ import type {
   TemplateElement,
 } from "../_components/types";
 import { proxiedImageUrl } from "@/lib/product-image";
+import { elementRole } from "./element-role";
 import { theme } from "@/lib/theme";
 import { formatQuotationFooter } from "@/lib/company-profile";
 import { defaultLocale, t, type Locale } from "@/i18n/messages";
@@ -31,6 +32,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
     makeDocTitle("doc-title"),
     {
       id: "customer-name",
+      role: "customer-name",
       type: "text",
       x: 40,
       y: 100,
@@ -44,6 +46,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
     },
     {
       id: "company-name",
+      role: "company-name",
       type: "text",
       x: 40,
       y: 130,
@@ -79,6 +82,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
     },
     {
       id: "quotation-number",
+      role: "quotation-number",
       type: "text",
       x: 460,
       y: 50,
@@ -92,6 +96,7 @@ function makeFirstPageHeader(locale: Locale): TemplateElement[] {
     },
     {
       id: "representative-info",
+      role: "representative-info",
       type: "text",
       x: 460,
       y: 100,
@@ -115,6 +120,7 @@ function makeProductElements(
   return [
     {
       id: `product-name-${suffix}`,
+      role: "product-name",
       type: "text",
       x: 40,
       y: 220 + verticalOffset,
@@ -128,6 +134,7 @@ function makeProductElements(
     },
     {
       id: `product-reference-${suffix}`,
+      role: "product-reference",
       type: "text",
       x: 40,
       y: 262 + verticalOffset,
@@ -144,6 +151,7 @@ function makeProductElements(
     },
     {
       id: `product-description-${suffix}`,
+      role: "product-description",
       type: "text",
       x: 40,
       y: 290 + verticalOffset,
@@ -159,6 +167,7 @@ function makeProductElements(
       // Product image (bottom-right of the product block). `src` is filled in
       // per-product by buildPagesFromQuotation; empty renders a placeholder.
       id: `product-image-${suffix}`,
+      role: "product-image",
       type: "image",
       x: 360,
       y: 650 + verticalOffset,
@@ -179,6 +188,7 @@ function makeFooter(): TemplateElement[] {
   return [
     {
       id: "footer",
+      role: "footer",
       type: "text",
       x: 40,
       y: 1040,
@@ -207,6 +217,7 @@ function makeFirstPageElements(
     ...(withProduct ? makeProductElements("p1", 0, locale) : []),
     {
       id: `line-items-p1`,
+      role: "line-items",
       type: "table",
       x: 40,
       y: 420,
@@ -264,6 +275,7 @@ function makePoliciesPageElements(): TemplateElement[] {
     makeDocTitle("doc-title-policies"),
     {
       id: "policies-body",
+      role: "policies-body",
       type: "image",
       x: 40,
       y: 100,
@@ -497,7 +509,7 @@ export function buildProductPage(
         ),
       };
     }
-    if (next.type === "image" && next.id.startsWith("product-image-")) {
+    if (next.type === "image" && elementRole(next) === "product-image") {
       next.src = proxiedImageUrl(product.imageUrl);
     }
     return next;
@@ -559,7 +571,7 @@ export function buildPagesFromQuotation(
         // can't be interpolated via {{...}} text placeholders). Route external
         // URLs through our same-origin proxy so they load despite missing CORS
         // headers and keep the canvas exportable to PDF.
-        if (next.type === "image" && next.id.startsWith("product-image-")) {
+        if (next.type === "image" && elementRole(next) === "product-image") {
           next.src = proxiedImageUrl(product.imageUrl);
         }
         return next;
@@ -621,7 +633,7 @@ export function ensurePageLogos(pages: PageData[]): PageData[] {
       element.id.startsWith("doc-title"),
     );
     const elements = page.elements.map((element) => {
-      if (element.id === "footer") {
+      if (elementRole(element) === "footer") {
         return { ...element, lineHeight: 1.5 };
       }
       if (element.id === "page-title" || element.id === "policies-title") {
@@ -659,8 +671,13 @@ export function makeEmptyQuotationPages(
   if (!firstPage) return pages;
 
   const elements = makeFirstPageElements(true, locale).map((element) => {
+    const role = elementRole(element);
     const isProductField =
-      element.id.startsWith("product-") || element.id.startsWith("line-items-");
+      role === "product-name" ||
+      role === "product-reference" ||
+      role === "product-description" ||
+      role === "product-image" ||
+      role === "line-items";
     if (isProductField) {
       return {
         ...element,
@@ -692,7 +709,7 @@ export function makeEmptyQuotationPages(
       cells: inventory.table.cells.map((row) => row.map(() => "")),
     };
   }
-  const footerIndex = elements.findIndex((element) => element.id === "footer");
+  const footerIndex = elements.findIndex((element) => elementRole(element) === "footer");
   elements.splice(
     footerIndex < 0 ? elements.length : footerIndex,
     0,

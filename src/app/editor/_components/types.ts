@@ -7,6 +7,25 @@
 
 export type ElementType = "text" | "rect" | "image" | "table";
 
+/**
+ * Semantic role of a template element, independent of its `id`. Lets the editor
+ * and server reason about an element's purpose without matching id strings.
+ * Optional on `TemplateElement`: legacy documents (and free-form elements) omit
+ * it and resolve via the id back-compat mapping in `_lib/element-role.ts`.
+ */
+export type ElementRole =
+  | "product-name"
+  | "product-reference"
+  | "product-description"
+  | "product-image"
+  | "line-items"
+  | "quotation-number"
+  | "representative-info"
+  | "footer"
+  | "policies-body"
+  | "customer-name"
+  | "company-name";
+
 /** A simple table: grid of cells with per-column widths */
 export interface TableData {
   /** Width of each column in px; sum should equal element width */
@@ -25,6 +44,9 @@ export interface TableData {
 export interface TemplateElement {
   id: string;
   type: ElementType;
+  /** Semantic purpose of the element, independent of `id`. Optional: legacy
+   * documents omit it and are resolved via the id mapping in element-role.ts. */
+  role?: ElementRole;
   /** Position relative to the top-left corner of the parent page */
   x: number;
   y: number;

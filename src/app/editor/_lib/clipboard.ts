@@ -1,4 +1,5 @@
 import type { PageData, TableData, TemplateElement } from "../_components/types";
+import { isLineItems } from "./element-role";
 import {
   LINE_ITEM_COLS,
   formatEditedCell,
@@ -109,7 +110,7 @@ export function pasteIntoTable(
   const rows = parseClipboardRows(text);
   const cells = table.cells.map((row) => [...row]);
   const columnCount = table.colWidths.length;
-  const isLineItemsTable = element.id.startsWith("line-items-");
+  const isLineItemsTable = isLineItems(element);
 
   if (selection.cells.length > 0) {
     const start = [...selection.cells].sort(

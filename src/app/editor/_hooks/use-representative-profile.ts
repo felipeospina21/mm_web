@@ -5,6 +5,7 @@ import { formatQuotationFooter } from "@/lib/company-profile";
 import { t } from "@/i18n/messages";
 import { api } from "@/trpc/react";
 import type { PageData, QuotationData } from "../_components/types";
+import { elementRole } from "../_lib/element-role";
 
 interface UseRepresentativeProfileOptions {
   isDirty: boolean;
@@ -58,10 +59,10 @@ export function useRepresentativeProfile({
     const nextPages = pagesRef.current.map((page) => ({
       ...page,
       elements: page.elements.map((element) => {
-        if (element.id === "representative-info") {
+        if (elementRole(element) === "representative-info") {
           return { ...element, text: representativeText };
         }
-        if (element.id === "footer") {
+        if (elementRole(element) === "footer") {
           return {
             ...element,
             text: formatQuotationFooter({

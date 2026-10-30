@@ -2,6 +2,7 @@
 
 import { t } from "@/i18n/messages";
 import type { PageData } from "./types";
+import { elementRole } from "../_lib/element-role";
 import { ActionsMenu } from "./actions-menu";
 import type { SavedIdentity } from "../_hooks/use-quotation-persistence";
 
@@ -54,7 +55,7 @@ export function EditorToolbar({
   const canDeletePage =
     pages.length > 2 &&
     pages[activePageNumber - 1]?.elements.some(
-      (element) => element.id === "policies-body",
+      (element) => elementRole(element) === "policies-body",
     ) !== true &&
     activePageNumber > 1;
 
