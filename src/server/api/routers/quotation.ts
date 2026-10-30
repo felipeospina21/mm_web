@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { type PageData } from "@/app/editor/_components/types";
 import { quotationDocumentInput } from "@/app/editor/_components/quotation-schema";
+import { elementRole } from "@/app/editor/_lib/element-role";
 import { canAccessAllQuotations } from "@/server/auth/access";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { clients, quotations, users } from "@/server/db/schema";
@@ -20,11 +21,11 @@ const listInput = z.object({
 
 function derivePageFields(pages: PageData[]) {
   const productPages = pages.filter((page) =>
-    page.elements.some((element) => element.id.startsWith("product-name-")),
+    page.elements.some((element) => elementRole(element) === "product-name"),
   );
   const references = productPages.flatMap((page) => {
-    const element = page.elements.find((item) =>
-      item.id.startsWith("product-reference-"),
+    const element = page.elements.find(
+      (item) => elementRole(item) === "product-reference",
     );
     const reference = element?.text.split(":").at(-1)?.trim();
     return reference ? [reference] : [];
@@ -38,7 +39,7 @@ function setQuotationNumber(pages: PageData[], quotationNumber: string) {
   return pages.map((page) => ({
     ...page,
     elements: page.elements.map((element) =>
-      element.id === "quotation-number"
+      elementRole(element) === "quotation-number"
         ? {
             ...element,
             text: element.text.includes("{{quotationNumber}}")

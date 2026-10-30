@@ -58,6 +58,21 @@ export const templateElementSchema = z
   .object({
     id: z.string().min(1).max(200),
     type: elementTypeSchema,
+    role: z
+      .enum([
+        "product-name",
+        "product-reference",
+        "product-description",
+        "product-image",
+        "line-items",
+        "quotation-number",
+        "representative-info",
+        "footer",
+        "policies-body",
+        "customer-name",
+        "company-name",
+      ])
+      .optional(),
     x: z.number(),
     y: z.number(),
     width: z.number().nonnegative(),

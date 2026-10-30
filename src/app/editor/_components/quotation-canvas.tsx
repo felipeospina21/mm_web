@@ -21,6 +21,7 @@ import {
 } from "../_lib/clipboard";
 import { getPageOffset } from "../_lib/quotation-canvas-geometry";
 import { resizeColumn } from "../_lib/table-ops";
+import { isLineItems } from "../_lib/element-role";
 
 interface QuotationCanvasProps {
   pages: PageData[];
@@ -490,7 +491,7 @@ export default function QuotationCanvas({
             row = 1;
             col = 0;
           }
-          if (!(element.id.startsWith("line-items-") && col === 4)) break;
+          if (!(isLineItems(element) && col === 4)) break;
         }
         if (row < table.cells.length && table.cells[row]?.[col] !== undefined) {
           event.preventDefault();

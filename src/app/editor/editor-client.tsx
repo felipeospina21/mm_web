@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { exportPagesToPdf } from "./_lib/pdf-export";
+import { elementRole, isLineItems } from "./_lib/element-role";
 import { useEditorKeyboardShortcuts } from "./_hooks/use-editor-keyboard-shortcuts";
 import { useQuotationHistory } from "./_hooks/use-quotation-history";
 import { useQuotationPersistence } from "./_hooks/use-quotation-persistence";
@@ -224,7 +225,7 @@ export default function EditorPage() {
       const existingReferences = new Set(
         currentPages.flatMap((page) =>
           page.elements
-            .filter((element) => element.id.startsWith("product-reference-"))
+            .filter((element) => elementRole(element) === "product-reference")
             .map((element) =>
               element.text.split(":").at(-1)?.trim().toLowerCase(),
             )
@@ -253,15 +254,15 @@ export default function EditorPage() {
         })),
       }));
       const existingProductCount = currentPages.filter((page) =>
-        page.elements.some((element) => element.id.startsWith("product-name-")),
+        page.elements.some((element) => elementRole(element) === "product-name"),
       ).length;
       const firstPage = currentPages[0];
       const representativeText = firstPage?.elements.find(
-        (element) => element.id === "representative-info",
+        (element) => elementRole(element) === "representative-info",
       )?.text;
       const representativeLines = representativeText?.split("\n") ?? [];
       const footerText = firstPage?.elements.find(
-        (element) => element.id === "footer",
+        (element) => elementRole(element) === "footer",
       )?.text;
       const currentMeta: QuotationData = {
         ...metaRef.current,
@@ -273,7 +274,7 @@ export default function EditorPage() {
           representativeLines[3]?.trim() ?? metaRef.current.representativeEmail,
       };
       const policiesIndex = currentPages.findIndex((page) =>
-        page.elements.some((element) => element.id === "policies-body"),
+        page.elements.some((element) => elementRole(element) === "policies-body"),
       );
       const insertAt = policiesIndex < 0 ? currentPages.length : policiesIndex;
 
@@ -289,10 +290,10 @@ export default function EditorPage() {
         return {
           ...page,
           elements: page.elements.map((element) => {
-            if (element.id === "representative-info" && representativeText) {
+            if (elementRole(element) === "representative-info" && representativeText) {
               return { ...element, text: representativeText };
             }
-            if (element.id === "footer" && footerText) {
+            if (elementRole(element) === "footer" && footerText) {
               return { ...element, text: footerText };
             }
             return element;
@@ -309,7 +310,7 @@ export default function EditorPage() {
       };
       setPagesWithHistory((previous) => {
         const pIndex = previous.findIndex((page) =>
-          page.elements.some((element) => element.id === "policies-body"),
+          page.elements.some((element) => elementRole(element) === "policies-body"),
         );
         const at = pIndex < 0 ? previous.length : pIndex;
         const next = [...previous];
@@ -364,12 +365,12 @@ export default function EditorPage() {
         : {
             ...page,
             elements: page.elements.map((element) =>
-              element.id === "company-name"
+              elementRole(element) === "company-name"
                 ? {
                     ...element,
                     text: capitalizeName(client.name),
                   }
-                : element.id === "customer-name"
+                : elementRole(element) === "customer-name"
                   ? {
                       ...element,
                       text: t("template.customer", {
@@ -411,10 +412,10 @@ export default function EditorPage() {
       const pagesWithLogos = ensurePageLogos(row.data).map((page) => ({
         ...page,
         elements: page.elements.map((element) => {
-          if (element.id === "company-name") {
+          if (elementRole(element) === "company-name") {
             return { ...element, text: capitalizeName(element.text) };
           }
-          if (element.id === "customer-name") {
+          if (elementRole(element) === "customer-name") {
             return {
               ...element,
               text: capitalizeLabeledName(element.text),
@@ -422,12 +423,12 @@ export default function EditorPage() {
               isEditable: false,
             };
           }
-          if (element.id === "representative-info") {
+          if (elementRole(element) === "representative-info") {
             const lines = element.text.split("\n");
             if (lines[1]) lines[1] = capitalizeName(lines[1]);
             return { ...element, text: lines.join("\n") };
           }
-          if (element.id.startsWith("line-items-") && element.table) {
+          if (isLineItems(element) && element.table) {
             const cells = element.table.cells.map((rowCells, rowIndex) => {
               const next = [...rowCells];
               if (rowIndex === 0) {
@@ -456,7 +457,7 @@ export default function EditorPage() {
         }),
       }));
       const productCount = pagesWithLogos.filter((page) =>
-        page.elements.some((element) => element.id.startsWith("product-name-")),
+        page.elements.some((element) => elementRole(element) === "product-name"),
       ).length;
       metaRef.current = {
         companyName: "",
@@ -492,15 +493,17 @@ export default function EditorPage() {
         prev.map((page, pageIndex) => {
           if (page.id !== pageId) return page;
           let elementPatch = patch;
+          const changed = page.elements.find((el) => el.id === elementId);
           if (
-            elementId.startsWith("product-name-") &&
+            changed &&
+            elementRole(changed) === "product-name" &&
             typeof patch.text === "string"
           ) {
             const productNumber = prev
               .slice(0, pageIndex + 1)
               .filter((candidate) =>
-                candidate.elements.some((element) =>
-                  element.id.startsWith("product-name-"),
+                candidate.elements.some(
+                  (element) => elementRole(element) === "product-name",
                 ),
               ).length;
             const name = patch.text.replace(/^\d+\.\s*/, "").trim();
@@ -525,20 +528,20 @@ export default function EditorPage() {
   const handleAddPage = useCallback(() => {
     setPagesWithHistory((prev) => {
       const policiesIndex = prev.findIndex((page) =>
-        page.elements.some((element) => element.id === "policies-body"),
+        page.elements.some((element) => elementRole(element) === "policies-body"),
       );
       const insertAt =
         policiesIndex < 0 ? Math.max(prev.length - 1, 0) : policiesIndex;
       const pageNumber = insertAt + 1;
       const newPage = makeEmptyProductPage(pageNumber, metaRef.current);
       const footerText = prev[0]?.elements.find(
-        (element) => element.id === "footer",
+        (element) => elementRole(element) === "footer",
       )?.text;
       const pageWithCurrentFooter = footerText
         ? {
             ...newPage,
             elements: newPage.elements.map((element) =>
-              element.id === "footer"
+              elementRole(element) === "footer"
                 ? { ...element, text: footerText }
                 : element,
             ),
@@ -673,7 +676,7 @@ export default function EditorPage() {
         if (
           !pageToDelete ||
           pageToDelete.elements.some(
-            (element) => element.id === "policies-body",
+            (element) => elementRole(element) === "policies-body",
           )
         ) {
           return prev;

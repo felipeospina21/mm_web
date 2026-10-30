@@ -6,6 +6,7 @@ import type Konva from "konva";
 import type { PageData, TemplateElement } from "../_components/types";
 import type { EditingBox } from "../_components/inline-text-editor";
 import { getPageOffset } from "../_lib/quotation-canvas-geometry";
+import { isLineItems, isLineItemsId } from "../_lib/element-role";
 import {
   LINE_ITEM_COLS,
   formatEditedCell,
@@ -34,7 +35,7 @@ function getCellInputValue(
   row: number,
   col: number,
 ): string {
-  if (!element.id.startsWith("line-items-") || row === 0) return value;
+  if (!isLineItems(element) || row === 0) return value;
   if (col === LINE_ITEM_COLS.quantity) return value.replace(/\D/g, "");
   if (col === LINE_ITEM_COLS.price) return value.replace(/[^\d-]/g, "");
   return value;
@@ -122,7 +123,7 @@ export function useInlineEditing({
     (page: PageData, element: TemplateElement, row: number, col: number) => {
       const stage = stageRef.current;
       if (!stage || !element.table || !element.isEditable) return;
-      if (element.id.startsWith("line-items-") && col === LINE_ITEM_COLS.subtotal)
+      if (isLineItems(element) && col === LINE_ITEM_COLS.subtotal)
         return;
       const stageBox = stage.container().getBoundingClientRect();
       const offset = getPageOffset(page.pageNumber);
@@ -170,7 +171,7 @@ export function useInlineEditing({
               const cells = element.table.cells.map((row) => [...row]);
               const row = cells[editingCell.row];
               if (row) {
-                const lineItems = element.id.startsWith("line-items-");
+                const lineItems = isLineItems(element);
                 row[editingCell.col] = formatEditedCell(
                   newText,
                   editingCell.row,
@@ -201,7 +202,7 @@ export function useInlineEditing({
         return;
       }
       const lineItems =
-        editingId?.startsWith("line-items-") && editingCell.row > 0;
+        isLineItemsId(editingId) && editingCell.row > 0;
       const value =
         lineItems &&
         (editingCell.col === LINE_ITEM_COLS.quantity ||
@@ -244,7 +245,7 @@ export function useInlineEditing({
           }
           if (
             !(
-              element.id.startsWith("line-items-") &&
+              isLineItems(element) &&
               nextCol === LINE_ITEM_COLS.subtotal
             )
           ) {
@@ -258,7 +259,7 @@ export function useInlineEditing({
         const cells = table.cells.map((row) => [...row]);
         const currentRow = cells[editingCell.row];
         if (currentRow) {
-          const lineItems = element.id.startsWith("line-items-");
+          const lineItems = isLineItems(element);
           currentRow[editingCell.col] = formatEditedCell(
             currentValue,
             editingCell.row,
@@ -323,7 +324,7 @@ export function useInlineEditing({
     editingCellValue,
     inputMode:
       editingCell &&
-      editingId?.startsWith("line-items-") &&
+      isLineItemsId(editingId) &&
       editingCell.row > 0 &&
       (editingCell.col === LINE_ITEM_COLS.quantity ||
         editingCell.col === LINE_ITEM_COLS.price)
