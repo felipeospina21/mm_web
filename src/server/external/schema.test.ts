@@ -92,6 +92,7 @@ describe("normalizeProduct — sample payload", () => {
     const { clean } = normalizeProduct(SAMPLE_PRODUCT);
     const keys = Object.keys(clean).sort();
     expect(keys).toEqual([
+      "categories",
       "description",
       "id",
       "imageUrl",
