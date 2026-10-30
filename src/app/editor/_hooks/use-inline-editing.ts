@@ -6,6 +6,8 @@ import type Konva from "konva";
 import type { PageData, TemplateElement } from "../_components/types";
 import type { EditingBox } from "../_components/inline-text-editor";
 import { getPageOffset } from "../_lib/quotation-canvas-geometry";
+import { computeContentTop, computeEditingBox } from "../_lib/editing-geometry";
+import { nextEditableCell } from "../_lib/table-navigation";
 import { isLineItems, isLineItemsId } from "../_lib/element-role";
 import {
   LINE_ITEM_COLS,
@@ -103,18 +105,27 @@ export function useInlineEditing({
       const stageBox = stage.container().getBoundingClientRect();
       const offset = getPageOffset(page.pageNumber);
       const scrollTop = scrollTopRef.current;
-      contentTopRef.current = stageBox.top + offset.y + element.y;
+      contentTopRef.current = computeContentTop({
+        stageTop: stageBox.top,
+        offsetY: offset.y,
+        elementY: element.y,
+      });
       setEditingId(element.id);
       setEditingCell(null);
       setEditingTextValue(element.text);
-      setEditingBox({
-        left: stageBox.left + offset.x + element.x,
-        top: contentTopRef.current - scrollTop,
-        width: element.width,
-        height: element.height,
-        fontSize: element.fontSize,
-        color: element.fill,
-      });
+      setEditingBox(
+        computeEditingBox({
+          stageLeft: stageBox.left,
+          offsetX: offset.x,
+          elementX: element.x,
+          contentTop: contentTopRef.current,
+          scrollTop,
+          width: element.width,
+          height: element.height,
+          fontSize: element.fontSize,
+          color: element.fill,
+        }),
+      );
     },
     [stageRef, scrollTopRef],
   );
@@ -135,25 +146,33 @@ export function useInlineEditing({
         row,
         col,
       );
-      contentTopRef.current =
-        stageBox.top + offset.y + element.y + row * rowHeight;
+      contentTopRef.current = computeContentTop({
+        stageTop: stageBox.top,
+        offsetY: offset.y,
+        elementY: element.y,
+        row,
+        rowHeight,
+      });
       setEditingId(element.id);
       setEditingCell({ row, col });
       setEditingTextValue("");
       setEditingCellValue(value);
       editingCellValueRef.current = value;
-      setEditingBox({
-        left:
-          stageBox.left +
-          offset.x +
-          element.x +
-          colWidths.slice(0, col).reduce((a, b) => a + b, 0),
-        top: contentTopRef.current - scrollTop,
-        width: colWidths[col] ?? 0,
-        height: rowHeight,
-        fontSize: element.table.fontSize,
-        color: row === 0 ? element.table.headerColor : "#333333",
-      });
+      setEditingBox(
+        computeEditingBox({
+          stageLeft: stageBox.left,
+          offsetX: offset.x,
+          elementX: element.x,
+          contentTop: contentTopRef.current,
+          scrollTop,
+          width: colWidths[col] ?? 0,
+          height: rowHeight,
+          fontSize: element.table.fontSize,
+          color: row === 0 ? element.table.headerColor : "#333333",
+          colWidths,
+          col,
+        }),
+      );
     },
     [stageRef, scrollTopRef],
   );
@@ -226,34 +245,14 @@ export function useInlineEditing({
         const table = element?.table;
         if (!page || !element || !table) return;
 
-        const cellCount = table.cells.reduce(
-          (count, row) => count + row.length,
-          0,
+        const next = nextEditableCell(
+          table,
+          editingCell,
+          isLineItems(element),
         );
-        let nextRow = editingCell.row;
-        let nextCol = editingCell.col;
-        let foundNextCell = false;
-        for (let step = 0; step < cellCount; step += 1) {
-          nextCol += 1;
-          if (nextCol >= table.colWidths.length) {
-            nextRow += 1;
-            nextCol = 0;
-          }
-          if (nextRow >= table.cells.length) {
-            nextRow = 0;
-            nextCol = 0;
-          }
-          if (
-            !(
-              isLineItems(element) &&
-              nextCol === LINE_ITEM_COLS.subtotal
-            )
-          ) {
-            foundNextCell = true;
-            break;
-          }
-        }
-        if (!foundNextCell) return;
+        if (!next) return;
+        const nextRow = next.row;
+        const nextCol = next.col;
 
         const { colWidths, rowHeight } = table;
         const cells = table.cells.map((row) => [...row]);
@@ -282,23 +281,31 @@ export function useInlineEditing({
           nextRow,
           nextCol,
         );
-        contentTopRef.current =
-          stageBox.top + offset.y + element.y + nextRow * rowHeight;
+        contentTopRef.current = computeContentTop({
+          stageTop: stageBox.top,
+          offsetY: offset.y,
+          elementY: element.y,
+          row: nextRow,
+          rowHeight,
+        });
         setEditingCell({ row: nextRow, col: nextCol });
         setEditingCellValue(nextValue);
         editingCellValueRef.current = nextValue;
-        setEditingBox({
-          left:
-            stageBox.left +
-            offset.x +
-            element.x +
-            colWidths.slice(0, nextCol).reduce((a, b) => a + b, 0),
-          top: contentTopRef.current - scrollTop,
-          width: colWidths[nextCol] ?? 0,
-          height: rowHeight,
-          fontSize: table.fontSize,
-          color: nextRow === 0 ? table.headerColor : "#333333",
-        });
+        setEditingBox(
+          computeEditingBox({
+            stageLeft: stageBox.left,
+            offsetX: offset.x,
+            elementX: element.x,
+            contentTop: contentTopRef.current,
+            scrollTop,
+            width: colWidths[nextCol] ?? 0,
+            height: rowHeight,
+            fontSize: table.fontSize,
+            color: nextRow === 0 ? table.headerColor : "#333333",
+            colWidths,
+            col: nextCol,
+          }),
+        );
         return;
       }
 

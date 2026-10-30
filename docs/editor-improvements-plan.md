@@ -12,7 +12,7 @@
 
 ## Conventions for every task
 
-- Commit directly to `main` (team decision for this effort), one self-contained
+- create a branch per task
   commit per task so it can be reviewed/reverted alone.
 - After each task: `pnpm typecheck && pnpm lint && pnpm test` must pass; add/adjust
   tests where the task says so.
@@ -47,6 +47,16 @@
 - ✅ **Task 3.4** — `EditorToolbar` header extracted; floating-toolbar logic moved
   to pure `_lib/table-ops` (12 tests) + rendering split into text-format/table
   subcomponents. (`b020887`, `85098ad`, +2b)
+- ✅ **Task 3.5** — Element `role` discriminator: `role` on `TemplateElement` +
+  pure `_lib/element-role` (`elementRole`/`isLineItems`/`isLineItemsId`) with a
+  legacy-id back-compat mapping (20 tests, incl. a legacy-document fixture);
+  schema `role` enum; all id `startsWith`/exact-id checks replaced across the
+  editor + server router (fixes the `derivePageFields`/`setQuotationNumber`
+  layering leak). (`08acdcf`)
+- ✅ **Task 3.6** — `use-inline-editing` slimmed: overlay geometry → pure
+  `_lib/editing-geometry` (`computeContentTop`/`computeEditingBox`, 5 tests) and
+  Tab navigation → pure `_lib/table-navigation` (`nextEditableCell`, 6 tests);
+  hook delegates, return surface unchanged. (`0006656`)
 
 **Deferred:**
 
@@ -54,11 +64,11 @@
   iteration (module is feature-flagged off; see the task for details). Plan text
   retained below.
 
-**Not started** (full detail retained in the sections below): Task 3.5, 3.6;
+**Not started** (full detail retained in the sections below):
 Task 4.0a, 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
 
-**Next up:** Task 3.5 — element `role` discriminator (riskiest; touches persisted
-`data` + ~5 files; depends on the Task 2.1 schema).
+**Next up:** Task 4.0a — decision point on whether the editor needs a client
+store, before the Phase 4 memoization work.
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -200,55 +210,19 @@ with 12 unit tests (`85098ad`); (2b) split the floating-toolbar rendering into
 `text-format-controls.tsx` + `table-controls.tsx`, leaving `FloatingToolbar` as a
 thin orchestrator. Behaviour preserved throughout.
 
-### Task 3.5 — Element `role` discriminator (1.2)
+### Task 3.5 — Element `role` discriminator (1.2) — ✅ DONE (`08acdcf`)
 
-- **Files:** `src/app/editor/_components/types.ts` (+ the Zod schema from Task
-  2.1); then `editor-client.tsx`, `use-inline-editing.ts`, `clipboard.ts`,
-  `canvas-page-renderer.tsx`, and `src/server/api/routers/quotation.ts`.
-- **Change:** add `role` to `TemplateElement` (or an `elementRole()` helper +
-  constants) and replace the hand-matched `startsWith(...)` / exact-id string
-  checks. Fix the server layering leak (`derivePageFields` reaching into editor
-  string conventions) by deriving from `role`.
-- **Acceptance:**
-  - No `startsWith("line-items-"|"product-name-"|…)` or magic exact-id checks
-    remain (grep confirms).
-  - Existing saved documents still resolve roles correctly — provide a migration
-    or a back-compat mapping from legacy id prefixes to `role` so old `data`
-    loads.
-  - Tests for the role mapping + a loaded-legacy-document fixture.
-- **Effort:** large. **Risk:** high (touches persisted data + 5 files) — depends
-  on Task 2.1's schema and should land after the hook extractions so the surface
-  is smaller.
+`role` on `TemplateElement` + pure `_lib/element-role` (`elementRole`,
+`isLineItems`, `isLineItemsId`) with a legacy-id back-compat mapping and a
+schema `role` enum; all id `startsWith`/exact-id checks replaced across the
+editor and the server router. See the Status block above.
 
-### Task 3.6 — Slim down the `use-inline-editing` hook
+### Task 3.6 — Slim down the `use-inline-editing` hook — ✅ DONE (`0006656`)
 
-`useInlineEditing` is a legitimate hook (it owns editing state via
-`useState`/`useEffect`), but it currently also absorbs two concerns that are not
-stateful and would be better as pure, testable helpers:
-
-1. **Overlay geometry is duplicated 3×.** The `editingBox` math
-   (`stageBox.left + offset.x + element.x + colWidths.slice(0, col).reduce(...)`,
-   `top: contentTopRef.current - scrollTop`) is repeated in `openTextEditor`,
-   `openCellEditor`, and the Tab branch of `handleEditorKeyDown`.
-2. **Table navigation is pure logic in a `useCallback`.** The "find next editable
-   cell, skip the subtotal column, commit current cell, move selection" block in
-   `handleEditorKeyDown` is ~60 lines that use no hook features beyond closing
-   over refs.
-
-- **Files:** `src/app/editor/_hooks/use-inline-editing.ts` (post Task 3.0 move);
-  new pure helpers in `_lib/` (e.g. `editing-geometry.ts` with
-  `computeEditingBox(...)`, and `nextEditableCell(table, cell, isLineItems)` —
-  colocate with `line-items.ts` if it keeps them small).
-- **Change:** extract the box math and the next-cell search into pure functions;
-  the hook keeps the `useState`/`useEffect`/`useCallback` state wiring and
-  delegates. Overlaps with Task 3.1's "extract pure decisions, then test them"
-  approach and benefits from the element-`role` work (Task 3.5) replacing the
-  `startsWith("line-items-")` checks inside it.
-- **Acceptance:** overlay positioning and Tab navigation behave identically; unit
-  tests cover `computeEditingBox` and `nextEditableCell` (including the
-  subtotal-column skip and header-row wrap); hook surface (return shape) is
-  unchanged for `quotation-canvas.tsx`.
-- **Effort:** medium. **Risk:** low–medium (behavior-preserving; now tested).
+Overlay geometry extracted to pure `_lib/editing-geometry`
+(`computeContentTop`/`computeEditingBox`) and Tab navigation to pure
+`_lib/table-navigation` (`nextEditableCell`); the hook delegates, return surface
+unchanged. See the Status block above.
 
 ---
 
@@ -267,11 +241,11 @@ Context+reducer) instead of the current container-owned state + prop passing.
 - **Context:** after Phase 3 the real domain state (`pages` + undo/redo) lives in
   `useQuotationHistory`; server state is TanStack Query; the tree is shallow
   (`editor-client` → `QuotationCanvas` is one hop, ~10 props — a container/child
-  boundary, not deep drilling). So today a store would mostly *relocate* state,
+  boundary, not deep drilling). So today a store would mostly _relocate_ state,
   not cut coupling, while adding a second state paradigm and a re-render footgun
   that matters for the Konva canvas.
 - **Decide with real data from 4.0/4.1/4.2:** adopt a store **only if** the
-  memoization work shows that *multiple sibling components* (canvas, floating
+  memoization work shows that _multiple sibling components_ (canvas, floating
   toolbar, future `EditorToolbar`, inline editors) independently need to
   read/write shared `selectedId`/`pages`/selection, and props can't be stabilized
   cleanly. A store's main win here is selector-based subscriptions that avoid
