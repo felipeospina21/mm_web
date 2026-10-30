@@ -343,7 +343,12 @@ export default function EditorPage() {
     resetHistory,
   });
 
-  const pendingHomeClientIdRef = useRef(selectedClientId);
+  // Seed from sessionStorage directly (like pendingHomeContactIdRef above), not
+  // from `selectedClientId`: that state defers its sessionStorage read to a
+  // post-mount effect to avoid a hydration mismatch, so it is still null on the
+  // first render when this ref captures its initial value. Reading the pending
+  // client here keeps the home → editor client-data load working.
+  const pendingHomeClientIdRef = useRef(takePendingQuotationClient());
 
   useEffect(() => {
     const pendingHomeClientId = pendingHomeClientIdRef.current;
