@@ -1,0 +1,99 @@
+name: CI
+
+# Main quality gates (lint, types, tests) on every push to main and every PR,
+# so merges can be blocked until all checks pass.
+#
+# Optimized for speed and least resource use:
+#   - Dependencies are installed ONCE in `setup`, which caches the fully-linked
+#     node_modules keyed on the lockfile. The three check jobs restore that
+#     node_modules and skip install entirely (no re-resolve, no re-link).
+#   - Checks run in parallel; superseded runs on the same ref are cancelled.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The app validates env vars at import (src/env.js); these checks need no
+  # secrets/DB, so skip that validation.
+  SKIP_ENV_VALIDATION: "1"
+  # Speeds up installs: skip downloading Cypress/Puppeteer-style binaries etc.
+  HUSKY: "0"
+
+jobs:
+  setup:
+    name: Install deps (cached)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Restore the fully-linked node_modules from a previous identical run.
+      # The key is the lockfile hash, so it only changes when deps change.
+      - name: Cache node_modules
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('pnpm-lock.yaml') }}
+      # Only install when the cache missed (i.e. deps actually changed).
+      - name: Install
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm install --frozen-lockfile
+
+  lint:
+    name: Lint (ESLint)
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm lint
+
+  typecheck:
+    name: Typecheck (tsc)
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('pnpm-lock.yaml') }}
+      # Clear stale generated route types so tsc checks a clean tree.
+      - run: rm -rf .next/types
+      - run: pnpm typecheck
+
+  test:
+    name: Test (Vitest)
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm test
