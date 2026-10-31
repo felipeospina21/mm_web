@@ -72,7 +72,9 @@
 **Not started** (full detail retained in the sections below):
 Task 4.0a, 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
 Playwright — main-flow coverage; shared dev DB with scoped teardown; catalog
-uses real seeded data, external SKU API mocked).
+uses real seeded data, external SKU API mocked); Phase 7 (revisit unit tests /
+raise coverage further — finish editor-client, ratcheting threshold, deepen
+interactions, harden the suite).
 
 **Next up:** Task 4.0a — decision point on whether the editor needs a client
 store, before the Phase 4 memoization work.
@@ -670,6 +672,67 @@ writing flow specs, so every spec is clean-by-construction.
 > load-saved-quotation** flow is **out of scope** — that module is feature-flagged
 > off and not reachable end-to-end (consistent with the Task 2.3 / 3.3
 > deferrals); add its e2e coverage when the module is un-flagged.
+
+---
+
+## Phase 7 — Revisit unit tests & raise coverage further
+
+Task 3.7 lifted editor statement coverage from ~13% to ~46% across three tiers.
+This phase picks up where it stopped: close the remaining gaps, harden the
+tests already written, and turn coverage into an enforced, ratcheting gate so it
+can only go up. Opportunistic — do alongside nearby work, but complete the
+deferred items before relying on the suite as a Phase 4 safety net.
+
+### Task 7.1 — Finish the deferred editor-client coverage
+
+- **Files:** `editor-client.tsx` (0% today — the single largest editor gap),
+  new `editor-client.test.tsx`.
+- **Change:** add an RTL test at a stable seam. Mock `@/trpc/react` (the
+  `quotation.*` / `product.*` procedures it consumes) and the `sessionStorage`
+  handoffs; assert the orchestration wiring — save enablement, add/append
+  products, page add/delete — without chasing Konva rendering (canvas mocked as
+  in Task 3.7 Tier 3).
+- **Acceptance:** editor-client has meaningful statement coverage; the mount and
+  the main callbacks are exercised; no flakiness.
+- **Effort:** medium. **Risk:** low–medium (mock-heavy; keep seams stable).
+
+### Task 7.2 — Turn on a ratcheting coverage threshold (CI gate)
+
+- **Files:** `vitest.config.ts` (`coverage.thresholds`), the CI `test` job.
+- **Change:** set editor-scoped `thresholds` at (or just below) the then-current
+  numbers so coverage cannot regress; raise them as 7.1/7.3 land. Wire
+  `pnpm test:coverage` into CI (or add `--coverage` to the `test` job). Decide
+  global-vs-glob scoping explicitly so non-editor files aren't gated prematurely.
+- **Acceptance:** a PR that drops editor coverage fails CI; the threshold is
+  documented and matches reality.
+- **Effort:** small. **Risk:** low (watch for flaky/first-run threshold misses).
+
+### Task 7.3 — Deepen the Tier 2/3 tests (behaviour, not just render)
+
+- **Change:** push beyond smoke/render into interactions now that the infra
+  exists — e.g. `use-inline-editing` open→edit→commit→Tab through a mocked
+  stage; `quotation-canvas` paste/selection handlers; `canvas-page-renderer`
+  image loading/placeholder/retry states; `table-node` cell/row/column select
+  and resize callbacks. Add the `pdf-export` `drawTable` cell-iteration test
+  noted in Phase 5 (coordinate with Task 4.4).
+- **Acceptance:** the core editor interactions (not just that components render)
+  are asserted; expected values come from worked examples, not the code.
+- **Effort:** medium–large. **Risk:** low (additive).
+
+### Task 7.4 — Harden the existing suite
+
+- **Change:** review Task 3.7's tests for brittleness and drift — prefer
+  role/text queries over structure, extract the repeated `react-konva` DOM mock
+  into one shared test helper (`src/test/`), and remove any assertions coupled
+  to implementation detail. Re-check the test-file ESLint override stays as
+  narrow as possible.
+- **Acceptance:** one shared konva mock helper; no duplicated mock factories;
+  tests survive a refactor of internals.
+- **Effort:** small–medium. **Risk:** low.
+
+> **Status (Phase 7):** not started. Natural order: 7.1 → 7.2 (gate once
+> editor-client is covered) → 7.3 → 7.4. 7.4 can be done opportunistically at any
+> point. Builds directly on the Task 3.7 infra (jsdom + RTL + `@vitest/coverage-v8`).
 
 ---
 
