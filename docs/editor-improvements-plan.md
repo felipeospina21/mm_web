@@ -65,10 +65,12 @@
   retained below.
 
 **Not started** (full detail retained in the sections below):
-Task 4.0a, 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
+Task 3.7; Task 4.0a, 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
 
-**Next up:** Task 4.0a — decision point on whether the editor needs a client
-store, before the Phase 4 memoization work.
+**Next up:** Task 3.7 — raise editor test coverage (gate before Phase 4). Lock a
+safety net over core editor functionality before the memoization work changes
+render behaviour. React Testing Library is the agreed tool for hook/component
+tests.
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -223,6 +225,66 @@ Overlay geometry extracted to pure `_lib/editing-geometry`
 (`computeContentTop`/`computeEditingBox`) and Tab navigation to pure
 `_lib/table-navigation` (`nextEditableCell`); the hook delegates, return surface
 unchanged. See the Status block above.
+
+### Task 3.7 — Raise editor test coverage (gate before Phase 4)
+
+Lock in a safety net over the editor's **core functionality** before the Phase 4
+performance work changes render behaviour (4.1/4.2 restructure props and add
+`React.memo`, which can silently break interactions). Coverage so far has
+accrued opportunistically as each extraction shipped its own pure-logic tests;
+this task closes the remaining gaps deliberately, prioritizing the editor.
+
+**Current state (2026-10-30):** tests are **pure Vitest, `environment: "node"`,
+no DOM**, and `include` is `*.test.ts` only (no `.test.tsx`). So hooks and Konva
+components are entirely untested at their own level; coverage lives in `_lib/`
+pure helpers + the schema. This task is therefore **tiered** — cheap pure tests
+first, then opt into DOM infra only where it pays off.
+
+- **Tier 1 — remaining pure `_lib/` helpers (no new infra, do first):**
+  - `clipboard.ts` (paste parsing / cell fill, line-items branch),
+    `quotation-canvas-geometry.ts` (`getPageOffset`), `template-data.ts`
+    (page building, interpolation, role tagging, `buildPagesFromQuotation`),
+    and `pdf-export.ts` pure helpers (`wrapText`, `parseColor`, `drawTable`
+    cell iteration — see the Phase 5 note; coordinate with Task 4.4).
+  - Acceptance: each gets focused unit tests; expected values from worked
+    examples (no tautological asserts).
+
+- **Tier 2 — hooks (jsdom + React Testing Library — approved):**
+  - Add the infra: `environment: "jsdom"` (or per-file `@vitest-environment`),
+    extend `include` to `*.test.tsx`, add `@testing-library/react` (use its
+    `renderHook`). React Testing Library is the agreed tool for hook/component
+    tests. One-time setup.
+  - Cover the hooks carrying real logic: `use-quotation-history` (undo/redo +
+    `onEdit`/dirty seam), `use-quotation-persistence` (save gating, save-race
+    `editRevisionRef`, success re-sync), `use-inline-editing` (open/commit/Tab
+    via the now-pure helpers), `use-representative-profile`.
+  - Acceptance: behaviour pinned via the hook's public return, not internals.
+
+- **Tier 3 — components / interactions (React Testing Library; highest value):**
+  - `quotation-canvas.tsx`, `canvas-page-renderer.tsx`, `table-node.tsx`,
+    `floating-toolbar.tsx`, `editor-client.tsx`. Use React Testing Library to
+    drive real user interactions (render, query by role/text, fire events).
+    Konva does **not** render in jsdom cleanly — so for canvas components, mock
+    `react-konva` (render children / stub the Konva nodes) and assert on the
+    props/handlers wired to them, rather than pixels. Non-canvas UI
+    (`floating-toolbar`, modals, toolbar) tests normally through RTL.
+  - Acceptance: cover the core flows — select/drag intent, inline edit commit,
+    add/append products, save enablement — via RTL at the cheapest stable seam;
+    do **not** chase pixel/canvas rendering in unit tests (defer true visual
+    checks to the manual plan / a future Playwright e2e layer).
+
+- **CI / threshold (decision):** optionally turn on `vitest --coverage` (v8)
+  and set a **ratcheting** threshold scoped to `src/app/editor/**` (start at the
+  current number, raise as tiers land) so coverage can't regress. Add a
+  `test:coverage` script and wire it into the CI `test` job if adopted. Decide
+  adopt/defer explicitly and record it.
+
+- **Scope guard:** "core functionality, mainly the editor" — prioritize the
+  editor over app-wide coverage; Tiers 1–2 are the must-haves, Tier 3 is
+  best-effort at stable seams. Pure logic over DOM wherever a seam allows it.
+- **Effort:** large (spread across tiers). **Risk:** low (additive; tests only).
+- **Do before Phase 4.** Tier 1 has no dependencies; Tier 2/3 benefit from the
+  completed Phase 3 hook/helper extractions (smaller, well-defined seams).
 
 ---
 
