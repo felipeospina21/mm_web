@@ -1,5 +1,8 @@
 # mm_web
 
+[![CI](https://github.com/felipeospina21/mm_web/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/felipeospina21/mm_web/actions/workflows/ci.yml)
+[![Node](https://img.shields.io/badge/node-24_LTS-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+
 Quotation editor built on the [T3 Stack](https://create.t3.gg/) — Next.js 16 (App
 Router), NextAuth / Auth.js (email + password), tRPC, Drizzle ORM, Tailwind CSS,
 and PostgreSQL. A signed-in user browses a product catalog, selects products, and
