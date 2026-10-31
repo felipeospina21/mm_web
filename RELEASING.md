@@ -15,6 +15,35 @@ for **traceability, rollback, and changelog** — not an API contract.
 
 ## Release flow
 
+### One command: `pnpm ship`
+
+```bash
+git checkout main && git pull   # start from an up-to-date main
+pnpm ship                       # guard → release → push → GitHub release → vercel --prod
+```
+
+`pnpm ship` runs the whole flow, fail-fast, with the irreversible deploy last:
+
+1. **Guard** — refuses unless on `main`, clean tree, and in sync with origin.
+2. **Confirm** — prompts before doing anything (ends in a prod deploy). Skip
+   with `--yes`.
+3. **Release** — `pnpm release` (bump + `CHANGELOG.md` + commit + tag).
+4. **Push** — `git push --follow-tags origin main`.
+5. **GitHub release** — `gh release create vX.Y.Z --generate-notes`.
+6. **Deploy** — `vercel --prod`.
+
+If any step fails, the rest do not run; finish manually from the failed step
+(see the explicit steps below).
+
+Flags: `pnpm ship:dry` (preview only — no commit/push/deploy),
+`pnpm ship --yes` (no prompt), `pnpm ship --release-as minor` (force a bump).
+
+> **Owner-only.** Step 4 pushes the release commit directly to `main`, which
+> relies on the repo ruleset's **admin bypass** of the required-PR rule. Run it
+> as the repository admin.
+
+### Manual steps (fallback / if `ship` fails midway)
+
 Run from `main`, after your feature PR is merged:
 
 ```bash
