@@ -339,3 +339,16 @@ export async function exportPagesToPdf(
 
   pdf.save(filename);
 }
+
+/**
+ * Pure helpers exposed for unit testing only. Not part of the public API —
+ * production code uses `exportPagesToPdf`. Mirrors the `__test` convention used
+ * by `line-items.ts` / `schema.ts`.
+ */
+export const __test = {
+  parseColor,
+  getFontFamily,
+  getFontStyle,
+  getImageFormat,
+  wrapText,
+};
