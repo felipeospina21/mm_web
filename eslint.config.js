@@ -67,6 +67,20 @@ export default tseslint.config(
     },
   },
   {
+    // Test files use lightweight module mocks (e.g. a react-konva stub that
+    // maps Konva nodes to DOM elements). A few rules are noise in that context
+    // and would otherwise force contorted mock code; relax them for tests only.
+    files: ["**/*.test.ts", "**/*.test.tsx", "src/test/**"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-base-to-string": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/no-empty-function": "off",
+      "@typescript-eslint/consistent-type-imports": "off",
+      "react/display-name": "off",
+    },
+  },
+  {
     linterOptions: {
       reportUnusedDisableDirectives: true,
     },

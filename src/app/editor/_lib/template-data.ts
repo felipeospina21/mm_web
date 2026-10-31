@@ -292,7 +292,7 @@ function makePoliciesPageElements(): TemplateElement[] {
 }
 
 /** Replaces all placeholders in a text string with quotation values */
-function interpolate(
+export function interpolate(
   text: string,
   quotation: QuotationData,
   product?: QuotationData["products"][number],

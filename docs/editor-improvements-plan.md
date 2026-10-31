@@ -57,6 +57,11 @@
   `_lib/editing-geometry` (`computeContentTop`/`computeEditingBox`, 5 tests) and
   Tab navigation → pure `_lib/table-navigation` (`nextEditableCell`, 6 tests);
   hook delegates, return surface unchanged. (`0006656`)
+- ✅ **Task 3.7** — Editor test coverage raised **~13% → ~46%** (233 tests,
+  +63) across Tier 1 (pure `_lib`), Tier 2 (hooks via RTL `renderHook`), Tier 3
+  (components via RTL with `react-konva` mocked). Added jsdom + Testing Library
+  + `@vitest/coverage-v8` and a `test:coverage` script. `editor-client.tsx`
+  component test + a ratcheting CI threshold deferred (documented). (this PR)
 
 **Deferred:**
 
@@ -65,12 +70,12 @@
   retained below.
 
 **Not started** (full detail retained in the sections below):
-Task 3.7; Task 4.0a, 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5.
+Task 4.0a, 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
+Playwright — main-flow coverage; shared dev DB with scoped teardown; catalog
+uses real seeded data, external SKU API mocked).
 
-**Next up:** Task 3.7 — raise editor test coverage (gate before Phase 4). Lock a
-safety net over core editor functionality before the memoization work changes
-render behaviour. React Testing Library is the agreed tool for hook/component
-tests.
+**Next up:** Task 4.0a — decision point on whether the editor needs a client
+store, before the Phase 4 memoization work.
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -226,7 +231,21 @@ Overlay geometry extracted to pure `_lib/editing-geometry`
 `_lib/table-navigation` (`nextEditableCell`); the hook delegates, return surface
 unchanged. See the Status block above.
 
-### Task 3.7 — Raise editor test coverage (gate before Phase 4)
+### Task 3.7 — Raise editor test coverage (gate before Phase 4) — ✅ DONE (this PR)
+
+**Result:** editor statement coverage **~13% → ~46%** (233 tests, +63).
+Tier 1 (pure `_lib`) + Tier 2 (hooks via RTL) + Tier 3 (components via RTL with
+`react-konva` mocked) all landed. Infra added: jsdom + `@testing-library/*` +
+`@vitest/coverage-v8`; `.test.tsx` runs under jsdom via per-file
+`// @vitest-environment jsdom`; `pnpm test:coverage` (v8, editor-scoped report).
+**Decisions recorded:** (a) no failing CI coverage `thresholds` yet — the number
+is still rising and `editor-client.tsx` is deferred; revisit once it's covered.
+(b) `editor-client.tsx` component test **deferred** — tRPC-multi-procedure +
+sessionStorage make a full mount brittle, and its logic is already covered by the
+history/persistence/representative hook tests + the `_lib` tests. Follow-up: add
+an editor-client smoke test and turn on a ratcheting editor-scoped threshold.
+
+<details><summary>Original task detail</summary>
 
 Lock in a safety net over the editor's **core functionality** before the Phase 4
 performance work changes render behaviour (4.1/4.2 restructure props and add
@@ -285,6 +304,8 @@ first, then opt into DOM infra only where it pays off.
 - **Effort:** large (spread across tiers). **Risk:** low (additive; tests only).
 - **Do before Phase 4.** Tier 1 has no dependencies; Tier 2/3 benefit from the
   completed Phase 3 hook/helper extractions (smaller, well-defined seams).
+
+</details>
 
 ---
 
@@ -470,6 +491,188 @@ needs a second look in the stage noted.
 
 ---
 
+## Phase 6 — End-to-end tests (Playwright, main-flow coverage)
+
+Complements the unit-test push (Task 3.7). Unit tests pin pure logic and hooks;
+this phase locks the **main user flows** end-to-end through the real Next.js app.
+Scope is the critical happy-paths plus a few high-value negative paths — not
+exhaustive coverage.
+
+> **Prereqs & tooling.** Playwright drives a real browser against `pnpm start`
+> (or `pnpm dev`) wired to the **Supabase dev** project (`.env.development`). The
+> `playwright` CLI is expected on PATH (or via `pnpm dlx playwright` / `pnpm exec`);
+> confirm `playwright --version` before Task 6.0 and pin `@playwright/test` as a
+> devDep so CI is reproducible. These tests **require a DB and (mocked) network**,
+> unlike the Vitest suite — so they live under a separate `test:e2e` script and a
+> separate config, and do **not** run as part of `pnpm test`.
+
+> **Design constraints (agreed):**
+>
+> 1. **Shared dev DB, no bloat — isolate-then-delete.** Tests run against the
+>    shared Supabase dev DB, so every row a test creates must be removed, and
+>    cleanup must be scoped so it can never touch another user's data.
+>    - **One stable, long-lived e2e user** — seeded once (`pnpm db:seed:dev`),
+>      reused across runs. Do **not** create/delete the auth `user` per run
+>      (cascade to `account`/`session`, parallel-worker races, little upside).
+>      Everything a test creates is **scoped to this user's `id`**, which is the
+>      hard safety boundary for teardown.
+>    - **Created rows are `quotation` and `client`/`client_contact`.** `quotation`
+>      has **no user-controlled text column**, so quotations are deleted purely by
+>      `user_id = <e2e user>`. `client` **is** tagged with a sentinel
+>      (`name LIKE '[E2E]%'`) and deleted by `user_id = <e2e user> AND name LIKE
+>      '[E2E]%'`; `client_contact` cascades from `client`. (Table names are
+>      physically prefixed `mm_web_`.)
+>    - **Two-layer cleanup:** per-test `afterEach` deletes the IDs a test created
+>      (captured from the save response), and a Playwright **global teardown**
+>      sweeps anything leaked from a crashed run — both scoped to the e2e
+>      `user_id`. Teardown uses a direct Drizzle/`postgres` client over
+>      `DIRECT_URL` (not the pooler).
+> 2. **Products — split by path (matches how the app actually sources them):**
+>    - **Catalog (`product.list`) → real seeded DB data.** The catalog reads the
+>      `product`/`product_variant` tables via Drizzle, with **no** external-API
+>      involvement. Seed a fixed, known catalog once (`pnpm db:seed:products:dev`)
+>      and assert against it — deterministic and owned by us.
+>    - **SKU lookup (`product.resolveReferences`) → mock the external API.** This
+>      is the only path that hits the external aggregator (`externalGet`, bearer
+>      token). Mock it for determinism, to avoid a prod/shared dependency and rate
+>      limits, and to stage resolved / unresolved / malformed cases. **Primary**
+>      technique: Playwright `page.route()` intercepting the `/api/trpc` call
+>      (mind the tRPC **batch + superjson** envelope). **Fallback** if the
+>      envelope matching is fiddly: point `EXTERNAL_API_BASE_URL` at a tiny local
+>      **stub server** in the e2e env so interception happens at the `externalGet`
+>      boundary and the tRPC layer stays real. Start with `page.route`; fall back
+>      to the stub only if needed.
+
+### Task 6.0 — Playwright setup & DB-cleanup harness (prerequisite)
+
+Stand up the e2e infrastructure and the isolation/teardown harness **before**
+writing flow specs, so every spec is clean-by-construction.
+
+- **Add:** `@playwright/test` (pinned devDep); `playwright.config.ts` (own
+  `testDir`, e.g. `e2e/`, separate from Vitest's `src/**/*.test.*`); `test:e2e`
+  (+ `test:e2e:ui`) scripts loading `.env.development`; a `webServer` entry so
+  Playwright boots the app; browser install step documented for CI.
+- **E2e user + fixtures:** seed a dedicated user (e.g. `e2e@test.local`) via
+  `pnpm db:seed:dev` and a fixed catalog via `pnpm db:seed:products:dev`; record
+  the credentials as e2e env vars. Resolve the e2e user's `id` once in global
+  setup (store for teardown scoping).
+- **Auth fixture:** a Playwright fixture that signs in once (credentials) and
+  **reuses `storageState`** so each spec starts authenticated without re-logging
+  in — except the dedicated login specs (6.1), which drive the form directly.
+- **Cleanup harness:** a small `e2e/_support/db.ts` using a direct `postgres`
+  client over `DIRECT_URL`:
+  - `deleteQuotationsForUser(userId)` → `DELETE FROM mm_web_quotation WHERE
+    user_id = $1`.
+  - `deleteE2eClientsForUser(userId)` → `DELETE FROM mm_web_client WHERE user_id
+    = $1 AND name LIKE '[E2E]%'` (contacts cascade).
+  - Wire per-test `afterEach` (delete captured IDs) **and** `globalTeardown`
+    (sweep by e2e `user_id`).
+- **External-API mock helper:** `e2e/_support/mock-external.ts` exposing
+  `mockResolveReferences(page, { resolved, unresolved })` via `page.route` on
+  `**/api/trpc/**` (handle batch + superjson). Keep the stub-server fallback
+  behind the same helper API so specs don't change if we switch techniques.
+- **Acceptance:** `pnpm test:e2e` runs a trivial smoke spec (app boots, login
+  page renders) green locally; a deliberately row-creating throwaway spec leaves
+  **zero** residual rows for the e2e user after teardown (verify by querying
+  counts before/after); `pnpm test` (Vitest) is unaffected (separate testDir).
+- **Effort:** medium–large (one-time). **Risk:** medium — teardown scoping is
+  safety-critical; always filter by the e2e `user_id`, never a bare `LIKE`.
+
+### Task 6.1 — Auth flows
+
+- **Specs:** (a) **login success** — seeded credentials → lands on `/` catalog,
+  nav shows the signed-in user; (b) **invalid credentials** — wrong password →
+  `role="alert"` with the invalid-credentials message, stays signed out;
+  (c) **auth guard round-trip** — visit `/editor` signed out → redirected to
+  login with `callbackUrl=/editor` → after login returns to `/editor`;
+  (d) **logout** — sign out → back to login, `/editor` blocked again.
+- **Notes:** these specs drive the login form directly (not the shared
+  `storageState` fixture). Microsoft Entra login is **out of scope** (external
+  IdP, non-deterministic) — at most a render/redirect smoke check, no live SSO.
+- **Acceptance:** all four behaviours asserted; no rows created (no teardown
+  needed beyond the shared sweep).
+- **Effort:** small. **Risk:** low. **Depends on:** 6.0.
+
+### Task 6.2 — Catalog selection & handoff
+
+- **Specs:** (a) **select a product** — click "Add" on a seeded card → button
+  flips to "Added", floating `QuotationBar` appears with the right count;
+  (b) **persistence across nav** — add, go to `/editor`, navigate back → card
+  still "Added", count preserved (sessionStorage survives nav);
+  (c) **catalog → editor handoff** — click the QuotationBar link → `/editor`
+  renders a product page per selected product (name / reference / inventory
+  table present).
+- **Notes:** uses real seeded catalog data (no external mock needed here).
+- **Acceptance:** selection, persistence, and handoff asserted against known
+  seeded products. No DB writes (selection is client-side sessionStorage).
+- **Effort:** small–medium. **Risk:** low. **Depends on:** 6.0 (seeded catalog).
+
+### Task 6.3 — Editor core: inline edit + undo/redo
+
+- **Spec:** in `/editor` (with a selection handed off), edit a field/cell →
+  value changes; **undo** → reverts; **redo** → reapplies. Assert the dirty
+  state is reflected (save becomes enabled).
+- **Notes:** exercises the inline-edit overlay + `useQuotationHistory` through
+  the real UI. Konva renders in a real browser here (unlike jsdom), so this is
+  the right layer for canvas-interaction confidence.
+- **Acceptance:** edit/undo/redo observable via the rendered value and save
+  enablement. No DB writes.
+- **Effort:** medium. **Risk:** medium (canvas interaction selectors — prefer
+  stable `data-testid`/roles over pixel hit-testing).
+- **Depends on:** 6.2 (handoff to reach a populated editor).
+
+### Task 6.4 — Save a quotation (DB write + cleanup)
+
+- **Spec:** from a populated editor, pick/create a client (tagged `[E2E] …`),
+  make an edit, click **Save** → success state; saved identity set; dirty flag
+  clears. Capture the created `quotation` id (and any created `client` id) from
+  the response.
+- **Cleanup:** `afterEach` deletes the captured quotation/client ids; global
+  teardown sweeps by e2e `user_id` as backstop.
+- **Acceptance:** save succeeds and persists (optionally re-query by id to
+  confirm `user_id`, `product_count`, `references`); after the spec, teardown
+  leaves zero e2e-user quotations/`[E2E]` clients.
+- **Effort:** medium. **Risk:** medium (the only DB-writing flow — cleanup
+  correctness is the main risk; always scope by e2e `user_id`).
+- **Depends on:** 6.0 (cleanup harness), 6.2/6.3.
+
+### Task 6.5 — PDF export
+
+- **Spec:** from a populated editor, click **Export PDF** → assert a download is
+  triggered (Playwright `page.on('download')` / `waitForEvent('download')`) with
+  a sensible filename; optionally assert the download is non-empty. Do **not**
+  assert PDF pixel contents.
+- **Notes:** jsPDF runs client-side; this validates the export wiring, not
+  rendering fidelity (that stays manual / future visual testing).
+- **Acceptance:** a download event fires and produces a non-empty file. No DB
+  writes.
+- **Effort:** small. **Risk:** low. **Depends on:** 6.2/6.3.
+
+### Task 6.6 — Reference/SKU lookup with mocked external API
+
+- **Specs:** using the external-API mock (`mockResolveReferences`): (a) **all
+  resolved** — enter known SKUs → products resolve and can be added to the
+  quotation; (b) **mixed** — some unresolved → UI reports which codes were not
+  found while letting the user proceed with the resolved ones; (c) optional
+  **malformed payload** → treated as unresolved (no crash).
+- **Entry points:** `reference-lookup.tsx` (manual-start flow) and/or the
+  editor's `add-product-modal.tsx` — both call `api.product.resolveReferences`.
+- **Acceptance:** resolved/unresolved branches render correctly against mocked
+  responses; no live external call (assert via the route interception). No DB
+  writes unless the spec also saves (then reuse 6.4 cleanup).
+- **Effort:** medium. **Risk:** medium (tRPC batch/superjson envelope in the
+  mock — the stub-server fallback de-risks this if needed).
+- **Depends on:** 6.0 (mock helper).
+
+> **Status (Phase 6):** not started. Suggested order: 6.0 → 6.1 → 6.2 → 6.3 →
+> 6.4 → 6.5 → 6.6. The critical happy-path MVP is **6.0 + 6.1(a) + 6.2 + 6.4 +
+> 6.5**; 6.3 and 6.6 add depth once the harness is proven. The **My Quotations /
+> load-saved-quotation** flow is **out of scope** — that module is feature-flagged
+> off and not reachable end-to-end (consistent with the Task 2.3 / 3.3
+> deferrals); add its e2e coverage when the module is un-flagged.
+
+---
+
 ## Dependency notes
 
 - Task 2.1 (Zod schema) is a prerequisite for Task 3.5 (element `role`) — the
@@ -481,3 +684,8 @@ needs a second look in the stage noted.
 - A full `useReducer` migration (finding 1.3) is intentionally **not** a task
   here — it is a larger follow-up once the history/persistence hooks exist. Add
   it as its own plan when ready.
+- Phase 6 (e2e) Task 6.0 is a hard prerequisite for all other 6.x specs (it owns
+  the Playwright config, auth fixture, DB-cleanup harness, and external-API mock
+  helper). Phase 6 is independent of Phase 4/5 and can proceed in parallel with
+  Task 3.7, but is best started after the core editor UI is stable so selectors
+  don't churn.
