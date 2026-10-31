@@ -160,6 +160,9 @@ the environment variables from `.env.example` (`DATABASE_URL`, `DIRECT_URL`,
 Vercel project settings, pointed at the Supabase **prod** project. Migrations are
 applied with `pnpm db:migrate:prod` (against `.env.production`).
 
+Versioning and the release flow (loose semver, `pnpm release`) are documented in
+[`RELEASING.md`](./RELEASING.md).
+
 ## Local development
 
 Develop against the **Supabase dev project** so your environment matches

@@ -8,6 +8,9 @@
   },
   "scripts": {
     "build": "next build",
+    "release": "commit-and-tag-version",
+    "release:minor": "commit-and-tag-version --release-as minor",
+    "release:dry": "commit-and-tag-version --dry-run",
     "check": "eslint . && tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate:dev": "dotenv -e .env.development -- drizzle-kit migrate --config=drizzle.dev.config.ts",
@@ -72,6 +75,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "3.2.4",
+    "commit-and-tag-version": "^13.3.0",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.23.0",

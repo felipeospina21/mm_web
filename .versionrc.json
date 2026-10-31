@@ -1,0 +1,16 @@
+{
+  "header": "# Changelog\n\nAll notable changes to this project are documented here. Versions follow\n**loose semver** while in `0.x` (pre-stable): `feat:` and `fix:` both bump the\npatch, and the project stays in `0.x` until a `1.0.0` release is cut manually.\nVersion inferred from Conventional Commit messages.\n",
+  "types": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Refactors" },
+    { "type": "revert", "section": "Reverts" },
+    { "type": "docs", "section": "Documentation", "hidden": true },
+    { "type": "test", "section": "Tests", "hidden": true },
+    { "type": "build", "section": "Build System", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true },
+    { "type": "chore", "section": "Chores", "hidden": true },
+    { "type": "style", "section": "Styles", "hidden": true }
+  ]
+}
