@@ -34,7 +34,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       # Restore the fully-linked node_modules from a previous identical run.
       # The key is the lockfile hash, so it only changes when deps change.
       - name: Cache node_modules
@@ -57,7 +57,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - uses: actions/cache@v4
         with:
           path: node_modules
@@ -73,7 +73,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - uses: actions/cache@v4
         with:
           path: node_modules
@@ -91,7 +91,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - uses: actions/cache@v4
         with:
           path: node_modules
