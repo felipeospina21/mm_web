@@ -70,14 +70,15 @@
   retained below.
 
 **Not started** (full detail retained in the sections below):
-Task 4.0a, 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
+Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
 Playwright — main-flow coverage; shared dev DB with scoped teardown; catalog
 uses real seeded data, external SKU API mocked); Phase 7 (revisit unit tests /
 raise coverage further — finish editor-client, ratcheting threshold, deepen
 interactions, harden the suite).
 
-**Next up:** Task 4.0a — decision point on whether the editor needs a client
-store, before the Phase 4 memoization work.
+**Next up:** Task 4.0 — fix refs-during-render in `quotation-canvas.tsx` /
+`use-canvas-stage.ts` and re-upgrade `react-hooks/refs` to `error`. (Task 4.0a
+decided 2026-11-03: **defer** the client store — see its section.)
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -317,7 +318,21 @@ Do after Phase 3: `React.memo` is blocked by unstable props, and stabilizing the
 is easier post-decomposition. We need metrics for before/after to measure implementation
 impact.
 
-### Task 4.0a — Decision point: do we need a client store? (architecture)
+### Task 4.0a — Decision point: do we need a client store? (architecture) — ✅ DECIDED: DEFER (2026-11-03)
+
+> **Decision (2026-11-03): defer — do NOT adopt a client store now.** Evidence
+> from the current tree: domain state is already well-placed after Phase 3
+> (`pages`+undo/redo in `useQuotationHistory`, server state in TanStack Query,
+> `selectedId`+geometry in `useCanvasStage`, table selection in
+> `useTableSelection`); the tree is shallow (`editor-client` → `QuotationCanvas`
+> one hop, ~10 props; → `CanvasPageRenderer` the next). A store today would
+> relocate well-placed state and add a second paradigm + a Konva re-render
+> footgun. The real issue is **prop stability / re-renders**, which Tasks 4.0/4.1/
+> 4.2 address directly — not state location. Per the plan's own criteria (adopt
+> only if 4.1/4.2 show multiple siblings need shared read/write AND props can't be
+> stabilized) and anti-goal (don't adopt mid-decomposition), we revisit **only if**
+> the 4.1/4.2 metrics prove it. The narrowest no-dependency option (Task 3.2's
+> `useReducer` note for the history hook) remains available if ever needed.
 
 Before the memoization work, make an explicit, evidence-based call on whether the
 editor's shared client state warrants a store (Zustand / `useSyncExternalStore` /
