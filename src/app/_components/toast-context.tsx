@@ -28,7 +28,12 @@ export interface Toast {
   id: number;
   message: string;
   variant: ToastVariant;
+  /** True once dismissal has begun, so the exit transition can play out. */
+  exiting?: boolean;
 }
+
+/** How long the enter/exit transition runs (keep in sync with the CSS below). */
+const ANIMATION_MS = 200;
 
 export interface ShowToastOptions {
   /** Auto-dismiss delay in ms. Pass 0 to disable auto-dismiss. */
@@ -55,16 +60,25 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(0);
-  // Track pending auto-dismiss timers so we can clear them on unmount.
+  // Track pending timers (auto-dismiss + post-exit removal) to clear on unmount.
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
 
   const dismiss = useCallback((id: number) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id));
-    const timer = timers.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
+    // Phase 1: mark exiting so the item plays its fade/slide-out transition.
+    setToasts((current) =>
+      current.map((toast) =>
+        toast.id === id ? { ...toast, exiting: true } : toast,
+      ),
+    );
+    // A pending auto-dismiss timer is now redundant.
+    const existing = timers.current.get(id);
+    if (existing) clearTimeout(existing);
+    // Phase 2: actually remove it once the exit transition has finished.
+    const removal = setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id));
       timers.current.delete(id);
-    }
+    }, ANIMATION_MS);
+    timers.current.set(id, removal);
   }, []);
 
   const showToast = useCallback(
@@ -139,23 +153,46 @@ function ToastViewport({
       className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 p-4 sm:items-end"
     >
       {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          role={toast.variant === "error" ? "alert" : "status"}
-          aria-live={toast.variant === "error" ? "assertive" : "polite"}
-          className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg ${VARIANT_STYLES[toast.variant]}`}
-        >
-          <p className="flex-1 leading-relaxed">{toast.message}</p>
-          <button
-            type="button"
-            onClick={() => onDismiss(toast.id)}
-            aria-label={t("common.dismiss")}
-            className="-m-1 rounded-md p-1 text-current/70 hover:text-current focus:ring-2 focus:ring-current/40 focus:outline-none"
-          >
-            <span aria-hidden="true">✕</span>
-          </button>
-        </div>
+        <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
+    </div>
+  );
+}
+
+function ToastItem({
+  toast,
+  onDismiss,
+}: {
+  toast: Toast;
+  onDismiss: (id: number) => void;
+}) {
+  // Start hidden/offset, then flip to visible on the next frame so the CSS
+  // transition plays on enter. On exit, `toast.exiting` drives it back out.
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const visible = entered && !toast.exiting;
+
+  return (
+    <div
+      role={toast.variant === "error" ? "alert" : "status"}
+      aria-live={toast.variant === "error" ? "assertive" : "polite"}
+      className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg transition duration-200 ease-out motion-reduce:transition-none ${VARIANT_STYLES[toast.variant]} ${
+        visible ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+      }`}
+    >
+      <p className="flex-1 leading-relaxed">{toast.message}</p>
+      <button
+        type="button"
+        onClick={() => onDismiss(toast.id)}
+        aria-label={t("common.dismiss")}
+        className="-m-1 rounded-md p-1 text-current/70 hover:text-current focus:ring-2 focus:ring-current/40 focus:outline-none"
+      >
+        <span aria-hidden="true">✕</span>
+      </button>
     </div>
   );
 }

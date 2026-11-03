@@ -46,11 +46,16 @@ describe("ToastProvider", () => {
     act(() => {
       vi.advanceTimersByTime(1000);
     });
+    // The auto-dismiss fires, then the exit animation plays out before removal.
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     expect(screen.getByText("stays")).toBeInTheDocument();
     expect(screen.queryByText("goes")).not.toBeInTheDocument();
   });
 
-  it("dismiss removes a toast by id", () => {
+  it("dismiss removes a toast by id (after the exit animation)", () => {
+    vi.useFakeTimers();
     const { result } = renderHook(() => useToast(), { wrapper });
     let id = -1;
     act(() => {
@@ -58,6 +63,10 @@ describe("ToastProvider", () => {
     });
     expect(screen.getByText("bye")).toBeInTheDocument();
     act(() => result.current.dismiss(id));
+    // Exit animation is in flight; the node is still mounted until it finishes.
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     expect(screen.queryByText("bye")).not.toBeInTheDocument();
   });
 
