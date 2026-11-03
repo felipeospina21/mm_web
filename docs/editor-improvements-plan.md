@@ -70,15 +70,15 @@
   retained below.
 
 **Not started** (full detail retained in the sections below):
-Task 4.4; Phase 5; Phase 6 (e2e /
+Phase 5; Phase 6 (e2e /
 Playwright — main-flow coverage; shared dev DB with scoped teardown; catalog
 uses real seeded data, external SKU API mocked); Phase 7 (revisit unit tests /
 raise coverage further — finish editor-client, ratcheting threshold, deepen
 interactions, harden the suite).
 
-**Next up:** Task 4.4 — parallelize PDF image loading (`Promise.all` the image
-fetches, keep sequential draw order). (Task 4.0a decided 2026-11-03: **defer**
-the client store — see its section.)
+**Next up:** Phase 5 — lower-priority opportunistic cleanup. (Phase 4
+performance work is complete: Tasks 4.0/4.0a/4.1/4.2/4.3/4.4 all done. Task 4.0a
+decided 2026-11-03: **defer** the client store — see its section.)
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -312,7 +312,7 @@ first, then opt into DOM infra only where it pays off.
 
 ---
 
-## Phase 4 — Performance (ride on the cleaner, tested code)
+## Phase 4 — Performance (ride on the cleaner, tested code) — ✅ COMPLETE
 
 Do after Phase 3: `React.memo` is blocked by unstable props, and stabilizing them
 is easier post-decomposition. We need metrics for before/after to measure implementation
@@ -414,16 +414,18 @@ O(n²) hotspot — with O(1) reads. `editing-geometry.ts` uses the same helper
 > but after the Phase 3 extractions the offending `slice().reduce()` sites live in
 > `table-node.tsx` and `_lib/editing-geometry.ts`; those are what this task fixed.
 
-### Task 4.4 — Parallelize PDF image loading (2.4)
+### Task 4.4 — Parallelize PDF image loading (2.4) — ✅ DONE
 
-- **Files:** `src/app/editor/_lib/pdf-export.ts`.
-- **Change:** pre-resolve all image data URLs with `Promise.all`, then draw into
-  jsPDF sequentially (drawing order preserved; only the async load is
-  parallelized).
-- **Acceptance:** exported PDF is byte-for-content identical for a fixture; export
-  of a multi-image quotation is measurably faster; placeholder-on-failure
-  behaviour preserved.
-- **Effort:** small–medium. **Risk:** low–medium (watch ordering).
+`exportPagesToPdf` now pre-resolves every image up front and in parallel
+(`resolveImages` over `Promise.all` with per-image `try/catch` so one bad image
+can't abort the export), then draws into jsPDF in strict document order — only
+the slow, I/O-bound loads overlap, so output is identical. Split the old async
+`drawImage` into `loadImageForElement` (fetch → resize → decode) + a synchronous
+`drawImage(pdf, element, resolved)`; `null` resolved → same grey placeholder as
+before. New pure `collectImageElements` + `resolveImages` seams (loader injected)
+with 5 unit tests covering document-order collection, parallel fan-out, and
+per-image error isolation. Verified: typecheck + `pnpm lint` (0 errors) +
+`pnpm test` (247 pass, +5).
 
 ---
 
