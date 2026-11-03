@@ -1,4 +1,5 @@
 import type { EditingBox } from "../_components/inline-text-editor";
+import { columnOffsets } from "./column-offsets";
 
 /**
  * Vertical position of an inline-edit overlay in *content space* — the `top`
@@ -50,9 +51,7 @@ export function computeEditingBox(input: {
     col = 0,
   } = input;
   const colOffset =
-    colWidths && col > 0
-      ? colWidths.slice(0, col).reduce((a, b) => a + b, 0)
-      : 0;
+    colWidths && col > 0 ? (columnOffsets(colWidths)[col] ?? 0) : 0;
   return {
     left: stageLeft + offsetX + elementX + colOffset,
     top: contentTop - scrollTop,

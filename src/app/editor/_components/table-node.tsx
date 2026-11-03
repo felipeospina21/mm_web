@@ -5,6 +5,7 @@ import { Group, Rect, Text } from "react-konva";
 import type Konva from "konva";
 import type { TableData } from "./types";
 import { theme } from "@/lib/theme";
+import { columnOffsets } from "../_lib/column-offsets";
 
 /** Half the hit-width (px) of a column-resize divider handle. */
 const HANDLE_HALF_WIDTH = 4;
@@ -71,6 +72,12 @@ function TableNode({
     fontSize,
   } = table;
 
+  // Prefix sums of column widths computed once per render: `offsets[col]` is the
+  // x of column `col`'s left edge; `totalWidth` is the final entry. Replaces the
+  // O(n²) `colWidths.slice(0, col).reduce(...)` lookups done per cell/column.
+  const offsets = columnOffsets(colWidths);
+  const totalWidth = offsets[colWidths.length]!;
+
   return (
     <Group
       id={id}
@@ -105,7 +112,7 @@ function TableNode({
         <Rect
           x={-2}
           y={-2}
-          width={colWidths.reduce((a, b) => a + b, 0) + 4}
+          width={totalWidth + 4}
           height={rowHeight * cells.length + 4}
           stroke={theme.colors.primary}
           strokeWidth={2}
@@ -115,7 +122,7 @@ function TableNode({
       )}
       {cells.map((rowCells, rowIndex) =>
         rowCells.map((cellText, colIndex) => {
-          const cellX = colWidths.slice(0, colIndex).reduce((a, b) => a + b, 0);
+          const cellX = offsets[colIndex]!;
           const cellWidth = colWidths[colIndex] ?? 0;
           const isHeader = rowIndex === 0;
           return (
@@ -198,7 +205,7 @@ function TableNode({
             key={`selected-row-${row}`}
             x={0}
             y={row * rowHeight}
-            width={colWidths.reduce((total, width) => total + width, 0)}
+            width={totalWidth}
             height={rowHeight}
             stroke={theme.colors.primary}
             strokeWidth={2}
@@ -208,7 +215,7 @@ function TableNode({
       {selectedColumns.map((col) => (
         <Rect
           key={`selected-column-${col}`}
-          x={colWidths.slice(0, col).reduce((total, width) => total + width, 0)}
+          x={offsets[col]}
           y={0}
           width={colWidths[col] ?? 0}
           height={rowHeight * cells.length}
@@ -220,7 +227,7 @@ function TableNode({
       {selectedCells.map(({ row, col }) => (
         <Rect
           key={`selected-cell-${row}-${col}`}
-          x={colWidths.slice(0, col).reduce((total, width) => total + width, 0)}
+          x={offsets[col]}
           y={row * rowHeight}
           width={colWidths[col] ?? 0}
           height={rowHeight}
@@ -236,9 +243,7 @@ function TableNode({
           right-middle handle. Shown only while the table is selected. */}
       {isSelected &&
         colWidths.map((width, col) => {
-          const rightEdge = colWidths
-            .slice(0, col + 1)
-            .reduce((total, value) => total + value, 0);
+          const rightEdge = offsets[col + 1]!;
           const isLast = col === colWidths.length - 1;
           const handleX = isLast ? rightEdge - HANDLE_INSET : rightEdge;
           const tableHeight = rowHeight * cells.length;
@@ -269,9 +274,7 @@ function TableNode({
               onDragEnd={(event) => {
                 const node = event.target;
                 // The column's left edge, relative to the table Group.
-                const leftEdge = colWidths
-                  .slice(0, col)
-                  .reduce((total, value) => total + value, 0);
+                const leftEdge = offsets[col]!;
                 // node.x() is the handle's left edge; its centre is the divider
                 // line. For the last column the real right edge is the line plus
                 // the inset we rendered it at.
