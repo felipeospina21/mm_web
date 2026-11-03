@@ -321,12 +321,26 @@ function useLoadedImage(src: string | undefined): LoadedImageState {
     : { src, image: null, status: "loading", retry };
 }
 
+/**
+ * Shared Konva node props spread onto the image (or its placeholder) from the
+ * caller's `commonProps` — id/position/drag + the pointer handlers. The caller
+ * passes `Rect`-shaped config; the `image` itself (an `ImageConfig` field) is
+ * resolved internally by {@link useLoadedImage}, so the extra `ImageConfig`
+ * props are optional here. `rest` can then spread onto a `Rect` or a
+ * `KonvaImage` without a cast.
+ */
+interface ImageElementProps
+  extends Konva.RectConfig,
+    Partial<Konva.ImageConfig> {
+  element: TemplateElement;
+}
+
 const ImageElement = memo(function ImageElement({
   element,
   ...rest
-}: { element: TemplateElement } & Record<string, unknown>) {
+}: ImageElementProps) {
   const imageState = useLoadedImage(element.src);
-  const shapeProps = rest as unknown as Konva.RectConfig & Konva.ImageConfig;
+  const shapeProps = rest;
   if (!element.src)
     return (
       <Rect
