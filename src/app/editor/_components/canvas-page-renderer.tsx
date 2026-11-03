@@ -2,7 +2,7 @@
 
 import { Group, Rect, Text, Image as KonvaImage } from "react-konva";
 import type Konva from "konva";
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import TableNode from "./table-node";
 import type { PageData, TemplateElement } from "./types";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./types";
@@ -112,7 +112,7 @@ export function CanvasPageRenderer({
   );
 }
 
-function CanvasPage(
+const CanvasPage = memo(function CanvasPage(
   props: Omit<CanvasPageRendererProps, "pages" | "visiblePageNumbers"> & {
     page: PageData;
   },
@@ -274,7 +274,7 @@ function CanvasPage(
       })}
     </Group>
   );
-}
+});
 
 type LoadedImageState = {
   src: string;
@@ -321,7 +321,7 @@ function useLoadedImage(src: string | undefined): LoadedImageState {
     : { src, image: null, status: "loading", retry };
 }
 
-function ImageElement({
+const ImageElement = memo(function ImageElement({
   element,
   ...rest
 }: { element: TemplateElement } & Record<string, unknown>) {
@@ -423,4 +423,4 @@ function ImageElement({
       height={height}
     />
   );
-}
+});

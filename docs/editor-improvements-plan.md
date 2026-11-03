@@ -70,14 +70,14 @@
   retained below.
 
 **Not started** (full detail retained in the sections below):
-Task 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
+Task 4.3, 4.4; Phase 5; Phase 6 (e2e /
 Playwright — main-flow coverage; shared dev DB with scoped teardown; catalog
 uses real seeded data, external SKU API mocked); Phase 7 (revisit unit tests /
 raise coverage further — finish editor-client, ratcheting threshold, deepen
 interactions, harden the suite).
 
-**Next up:** Task 4.2 — `React.memo` the Konva tree (now unblocked by the
-stable `dragBoundFunc` from Task 4.1). (Task 4.0a decided 2026-11-03: **defer**
+**Next up:** Task 4.3 — precompute table column prefix sums (replace the O(n²)
+`colWidths.slice().reduce()` in loops). (Task 4.0a decided 2026-11-03: **defer**
 the client store — see its section.)
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
@@ -381,14 +381,24 @@ to the new pure `_lib/drag-bounds.ts` (`clampToPageBounds`, 5 unit tests). The
 4.2's `React.memo`). Verified: typecheck + `pnpm lint` (0 errors) + `pnpm test`
 (238 pass, +5 drag-bounds). Behaviour preserved.
 
-### Task 4.2 — `React.memo` the Konva tree (2.1)
+### Task 4.2 — `React.memo` the Konva tree (2.1) — ✅ DONE
 
-- **Files:** `table-node.tsx`, `canvas-page-renderer.tsx` (`CanvasPage`,
-  `ImageElement`).
-- **Change:** wrap in `React.memo`. Only effective once Task 4.1 lands.
-- **Acceptance:** editing one element no longer re-renders every element (verify
-  with React Profiler on a multi-page quotation); output visually identical.
-- **Effort:** small. **Risk:** low (after 4.1).
+Wrapped `TableNode`, `CanvasPage`, and `ImageElement` in `React.memo`, and
+stabilized the `selection` bag (`useMemo` in `quotation-canvas`) + passed the
+already-stable `selectElement` directly. **Delivered: page-level re-render
+isolation** — editing an element on one page no longer re-renders OTHER pages
+(`CanvasPage`'s memo now has stable inputs for untouched/inactive pages). Output
+visually identical. Verified: typecheck + `pnpm lint` (0 errors) + `pnpm test`
+(238 pass).
+
+> **Known follow-up (scoped out of 4.2, by decision):** when a page DOES
+> re-render, its per-element closures (`select`, `commonProps`, inline
+> `onSelectRow`/etc. in `CanvasPage`) are still rebuilt, so that page's
+> `TableNode`/`ImageElement` memo does not yet fire per-node. Full per-node
+> memoization needs those closures stabilized (per-element `useCallback` caches)
+> — a larger change that edges toward the client-store territory deferred in
+> Task 4.0a. Revisit if a Profiler trace shows per-node re-renders within a page
+> are a real cost.
 
 ### Task 4.3 — Precompute column prefix sums (2.3)
 
