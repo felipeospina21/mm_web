@@ -450,28 +450,10 @@ per-image error isolation. Verified: typecheck + `pnpm lint` (0 errors) +
 
 ## Phase 5 — Lower-priority cleanup (opportunistic)
 
-Pick up alongside nearby work rather than as a dedicated push.
+Pick up alongside nearby work rather than as a dedicated push. `(was ref N.M)`
+tags trace an item back to where it was first catalogued; **5.x is the id**.
 
-> **Numbering:** actionable items are **Task 5.1–5.8**. The `(was ref N.M)` tags
-> trace each back to where it was first catalogued in the Phase 2/3 notes — kept
-> for history, but **5.x is the identifier**.
-
-### ✅ Done (brief)
-
-- **Task 5.1 — Replace client-side `alert(...)`** (was ref 3.3). App-wide
-  `ToastProvider`/`useToast()` replaces the two `alert()` calls (save + PDF
-  errors); save failures routed via an injected `onSaveError` seam. Also fixed a
-  save-hangs-offline bug (`networkMode: "always"` + `navigator.onLine` guard).
-  PR #15.
-- **Task 5.3 — `ImageElement` typing** (was ref 3.5). Replaced the
-  `Record<string, unknown>` + double cast with a real `ImageElementProps`
-  interface (`Konva.RectConfig & Partial<Konva.ImageConfig>`). PR #14.
-- **Task 5.5 — Lint debt** (was ref 3.7). Already clear — the `clipboard.ts`
-  regexp/unsafe-return and `quotation-canvas.tsx` ref-reads-in-render were
-  resolved in Phase 3 + Task 4.0 (`pnpm lint` = 0 errors). Only the
-  `set-state-in-effect` **warning** remains, tracked under Task 5.7.
-
-### ⏳ Pending (full detail)
+### Pending
 
 - **Task 5.2 — Logging (was ref 3.4):** server paths (tRPC `timingMiddleware`,
   any server error handlers) should use the existing structured logger
@@ -515,15 +497,10 @@ Pick up alongside nearby work rather than as a dedicated push.
   payoff. Decide to (a) keep and properly multi-locale it, or (b) simplify to
   plain strings/constants. Scope the blast radius first (grep usages) before
   changing anything.
-
-### Review-later notes (added 2026-10-29)
-
-Observations to revisit (not numbered tasks). None block anything today.
-
-- **Draft protection is an in-session band-aid — revisit with the quotation
-  module.** `editor-client.tsx` derives `isDraft` ("unsaved content worth
-  protecting") and guards `beforeunload` + in-app nav (`a5aecac`). But draft-ness
-  is inferred from **consume-on-read `sessionStorage` handoffs**
+- **Task 5.9 — Draft protection is an in-session band-aid (deferred to the
+  quotation module).** `editor-client.tsx` derives `isDraft` ("unsaved content
+  worth protecting") and guards `beforeunload` + in-app nav (`a5aecac`). But
+  draft-ness is inferred from **consume-on-read `sessionStorage` handoffs**
   (`takePendingManualQuotation` clears on read; product selection is read at
   mount) captured once at mount, so it is fragile across **tab
   duplicate/clone/refresh** (storage is copied at clone time; the manual flag may
@@ -531,18 +508,34 @@ Observations to revisit (not numbered tasks). None block anything today.
   feature-flagged `_my-quotations` module): persist/restore drafts and derive
   `isDraft` from the loaded content, not one-shot mount flags. Re-evaluate the
   whole `isDraft` derivation then. `isDraft` was named with that future in mind.
-- **Nav draft-guard scope is intentionally narrow.** `nav-bar.tsx` only
-  intercepts the two nav links (Nueva cotización / Editor) via `EditorDraftProvider`
-  (`editor-draft-context.tsx`). **Sign-out** and the catalog floating
-  "Cargar en el editor" bar (`quotation-bar.tsx`, a plain `<a href>`) are **not**
-  guarded. Sign-out from a dirty editor still discards silently; decide whether
-  to guard it when touching auth/nav. The context is deliberately a tiny
-  state-backed provider (an earlier ref-based version silently de-synced across
-  an editor remount — do not reintroduce a ref here).
-- **`pdf-export.ts` now has direct unit tests** (added in Task 4.4: `parseColor`,
-  `wrapText`, `collectImageElements`, `resolveImages`). Remaining helpers
-  (`drawTable` cell iteration) are still only covered indirectly via `table-ops`
-  / `line-items` tests.
+- **Task 5.10 — Nav draft-guard scope is intentionally narrow (deferred).**
+  `nav-bar.tsx` only intercepts the two nav links (Nueva cotización / Editor) via
+  `EditorDraftProvider` (`editor-draft-context.tsx`). **Sign-out** and the
+  catalog floating "Cargar en el editor" bar (`quotation-bar.tsx`, a plain
+  `<a href>`) are **not** guarded. Sign-out from a dirty editor still discards
+  silently; decide whether to guard it when touching auth/nav. The context is
+  deliberately a tiny state-backed provider (an earlier ref-based version
+  silently de-synced across an editor remount — do not reintroduce a ref here).
+- **Task 5.11 — Direct `pdf-export.ts` tests for the remaining helpers.** Task
+  4.4 added direct tests (`parseColor`, `wrapText`, `collectImageElements`,
+  `resolveImages`); `drawTable` cell iteration is still only covered indirectly
+  via `table-ops` / `line-items` tests. Add a focused test when next touching the
+  exporter.
+
+### Done
+
+- **Task 5.1 — Replace client-side `alert(...)`** (was ref 3.3). App-wide
+  `ToastProvider`/`useToast()` replaces the two `alert()` calls (save + PDF
+  errors); save failures routed via an injected `onSaveError` seam. Also fixed a
+  save-hangs-offline bug (`networkMode: "always"` + `navigator.onLine` guard).
+  PR #15.
+- **Task 5.3 — `ImageElement` typing** (was ref 3.5). Replaced the
+  `Record<string, unknown>` + double cast with a real `ImageElementProps`
+  interface (`Konva.RectConfig & Partial<Konva.ImageConfig>`). PR #14.
+- **Task 5.5 — Lint debt** (was ref 3.7). Already clear — the `clipboard.ts`
+  regexp/unsafe-return and `quotation-canvas.tsx` ref-reads-in-render were
+  resolved in Phase 3 + Task 4.0 (`pnpm lint` = 0 errors). Only the
+  `set-state-in-effect` **warning** remains, tracked under Task 5.7.
 
 ---
 
