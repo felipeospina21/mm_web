@@ -70,14 +70,14 @@
   retained below.
 
 **Not started** (full detail retained in the sections below):
-Task 4.3, 4.4; Phase 5; Phase 6 (e2e /
+Task 4.4; Phase 5; Phase 6 (e2e /
 Playwright — main-flow coverage; shared dev DB with scoped teardown; catalog
 uses real seeded data, external SKU API mocked); Phase 7 (revisit unit tests /
 raise coverage further — finish editor-client, ratcheting threshold, deepen
 interactions, harden the suite).
 
-**Next up:** Task 4.3 — precompute table column prefix sums (replace the O(n²)
-`colWidths.slice().reduce()` in loops). (Task 4.0a decided 2026-11-03: **defer**
+**Next up:** Task 4.4 — parallelize PDF image loading (`Promise.all` the image
+fetches, keep sequential draw order). (Task 4.0a decided 2026-11-03: **defer**
 the client store — see its section.)
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
@@ -400,13 +400,19 @@ visually identical. Verified: typecheck + `pnpm lint` (0 errors) + `pnpm test`
 > Task 4.0a. Revisit if a Profiler trace shows per-node re-renders within a page
 > are a real cost.
 
-### Task 4.3 — Precompute column prefix sums (2.3)
+### Task 4.3 — Precompute column prefix sums (2.3) — ✅ DONE
 
-- **Files:** `table-node.tsx`, `use-inline-editing.ts`, `clipboard.ts`.
-- **Change:** compute a cumulative column-offset array once per table instead of
-  `colWidths.slice(0, col).reduce(...)` inside loops (currently O(n²)).
-- **Acceptance:** identical offsets/rendering; a unit test for the offset helper.
-- **Effort:** small. **Risk:** low.
+New pure `_lib/column-offsets.ts` (`columnOffsets` → prefix-sum array,
+`offsets[0]=0`, last entry = total width) with 4 unit tests. `table-node.tsx`
+computes `offsets`/`totalWidth` once per render and replaces 6
+`slice().reduce()`/`reduce()` calls — the 3 inside the cell double-map were the
+O(n²) hotspot — with O(1) reads. `editing-geometry.ts` uses the same helper
+(single source of truth). Verified: typecheck + `pnpm lint` (0 errors) +
+`pnpm test` (242 pass, +4). Identical offsets/rendering.
+
+> **File-list drift note:** the plan listed `use-inline-editing.ts`/`clipboard.ts`,
+> but after the Phase 3 extractions the offending `slice().reduce()` sites live in
+> `table-node.tsx` and `_lib/editing-geometry.ts`; those are what this task fixed.
 
 ### Task 4.4 — Parallelize PDF image loading (2.4)
 
