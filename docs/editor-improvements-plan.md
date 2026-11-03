@@ -76,9 +76,28 @@ uses real seeded data, external SKU API mocked); Phase 7 (revisit unit tests /
 raise coverage further — finish editor-client, ratcheting threshold, deepen
 interactions, harden the suite).
 
-**Next up:** Phase 5 — lower-priority opportunistic cleanup. (Phase 4
+**Next up:** Phase 5 — remaining lower-priority cleanup, all decision-heavy:
+client-safe logging (3.4), the `set-state-in-effect` + app-wide `useEffect`
+sweep, app-wide splits (3.8), and the i18n keep-vs-simplify review. (Phase 4
 performance work is complete: Tasks 4.0/4.0a/4.1/4.2/4.3/4.4 all done. Task 4.0a
 decided 2026-11-03: **defer** the client store — see its section.)
+
+**Session log — 2026-11-03** (branch-per-task; all merged to `main`):
+
+- **Phase 4 completed** this session: Task 4.1 stable `dragBoundFunc` + pure
+  `_lib/drag-bounds` (PR #10, `8257697`); Task 4.2 `React.memo` the Konva tree for
+  page-level re-render isolation (PR #11, `35f6183`→merged); Task 4.3 precompute
+  column prefix sums `_lib/column-offsets` (PR #12, `5eb8ffa`); Task 4.4
+  parallelize PDF image loading (PR #13, `c692685`). (Task 4.0 / 4.0a landed just
+  before: refs under a `refs` key; client store deferred.)
+- **Phase 5 started:** `ImageElement` real props interface (PR #14, `20afd68`);
+  app-wide **toast system** replacing `alert()` + **offline-save fix**
+  (`networkMode:"always"` + `navigator.onLine` guard) + top-right placement +
+  subtle enter/exit animation (PR #15, `d6ddbc6`).
+- Test baseline grew 233 → **255** tests across 30 files; lint still 0 errors /
+  1 warning (`set-state-in-effect`, a Phase 5 decision item). Bug lesson logged:
+  React Query's default `networkMode:"online"` pauses mutations offline (stuck
+  spinner, no `onError`) — use `"always"` for user-triggered saves.
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
