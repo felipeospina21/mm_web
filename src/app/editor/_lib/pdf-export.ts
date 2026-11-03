@@ -248,7 +248,98 @@ async function resizeImageData(
   return canvas.toDataURL(mimeType, 0.92);
 }
 
-async function drawImage(pdf: jsPDF, element: TemplateElement): Promise<void> {
+/** An image's resolved raster data + intrinsic size, ready to draw into jsPDF. */
+interface ResolvedImage {
+  dataUrl: string;
+  format: "PNG" | "JPEG" | "WEBP";
+  naturalWidth: number;
+  naturalHeight: number;
+}
+
+/** Decode a data URL to its intrinsic size and package it for drawing. */
+async function decodeResolvedImage(dataUrl: string): Promise<ResolvedImage> {
+  const image = new window.Image();
+  const imageLoaded = new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("Image could not be decoded"));
+  });
+  image.src = dataUrl;
+  await imageLoaded;
+  return {
+    dataUrl,
+    format: getImageFormat(dataUrl),
+    naturalWidth: image.naturalWidth,
+    naturalHeight: image.naturalHeight,
+  };
+}
+
+/** Every image element (with a non-empty src) across all pages, in document
+ * order. Pure — the unit of work the parallel loader fans out over. */
+function collectImageElements(pages: PageData[]): TemplateElement[] {
+  const images: TemplateElement[] = [];
+  for (const page of pages) {
+    for (const element of page.elements) {
+      if (element.type === "image" && element.src) images.push(element);
+    }
+  }
+  return images;
+}
+
+/**
+ * Load every image in parallel, returning a map from element to its resolved
+ * raster (or `null` when that image failed to load — the draw step renders a
+ * placeholder for those, exactly as the old sequential path did).
+ *
+ * Isolation matters: one bad image must not abort the whole export, so each
+ * load is caught individually (not a bare `Promise.all` that rejects on the
+ * first failure). `load` is injected so this orchestration is unit-testable
+ * without a real network or `window.Image`.
+ */
+async function resolveImages(
+  elements: TemplateElement[],
+  load: (element: TemplateElement) => Promise<ResolvedImage>,
+): Promise<Map<TemplateElement, ResolvedImage | null>> {
+  const resolved = new Map<TemplateElement, ResolvedImage | null>();
+  await Promise.all(
+    elements.map(async (element) => {
+      try {
+        resolved.set(element, await load(element));
+      } catch (error) {
+        console.warn(
+          "PDF image could not be loaded; drawing a placeholder.",
+          error,
+        );
+        resolved.set(element, null);
+      }
+    }),
+  );
+  return resolved;
+}
+
+/** The production image loader: proxy-fetch, downscale to the element's box,
+ * then decode. Separated from {@link resolveImages} so tests can inject a fake. */
+async function loadImageForElement(
+  element: TemplateElement,
+): Promise<ResolvedImage> {
+  const sourceData = await loadImageData(element.src!);
+  const dataUrl = await resizeImageData(
+    sourceData,
+    element.width,
+    element.height,
+  );
+  return decodeResolvedImage(dataUrl);
+}
+
+/**
+ * Draw a pre-resolved image synchronously (no awaits — the load already
+ * happened in {@link resolveImages}). A missing src or a failed load both draw
+ * the same grey placeholder the sequential path used.
+ */
+function drawImage(
+  pdf: jsPDF,
+  element: TemplateElement,
+  resolved: ResolvedImage | null | undefined,
+): void {
   if (!element.src) {
     pdf.setFillColor(238, 238, 238);
     pdf.setDrawColor(187, 187, 187);
@@ -256,51 +347,36 @@ async function drawImage(pdf: jsPDF, element: TemplateElement): Promise<void> {
     return;
   }
 
-  try {
-    const sourceData = await loadImageData(element.src);
-    const dataUrl = await resizeImageData(
-      sourceData,
-      element.width,
-      element.height,
-    );
-    const image = new window.Image();
-    const imageLoaded = new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error("Image could not be decoded"));
-    });
-    image.src = dataUrl;
-    await imageLoaded;
-    const scale = Math.min(
-      element.width / image.naturalWidth,
-      element.height / image.naturalHeight,
-    );
-    const width = image.naturalWidth * scale;
-    const height = image.naturalHeight * scale;
-    pdf.addImage(
-      dataUrl,
-      getImageFormat(dataUrl),
-      element.x + (element.width - width) / 2,
-      element.y + (element.height - height) / 2,
-      width,
-      height,
-      undefined,
-      "FAST",
-    );
-  } catch (error) {
-    console.warn(
-      "PDF image could not be loaded; drawing a placeholder.",
-      error,
-    );
+  if (!resolved) {
     pdf.setFillColor(243, 244, 246);
     pdf.setDrawColor(209, 213, 219);
     pdf.rect(element.x, element.y, element.width, element.height, "FD");
+    return;
   }
+
+  const scale = Math.min(
+    element.width / resolved.naturalWidth,
+    element.height / resolved.naturalHeight,
+  );
+  const width = resolved.naturalWidth * scale;
+  const height = resolved.naturalHeight * scale;
+  pdf.addImage(
+    resolved.dataUrl,
+    resolved.format,
+    element.x + (element.width - width) / 2,
+    element.y + (element.height - height) / 2,
+    width,
+    height,
+    undefined,
+    "FAST",
+  );
 }
 
-async function drawElement(
+function drawElement(
   pdf: jsPDF,
   element: TemplateElement,
-): Promise<void> {
+  images: Map<TemplateElement, ResolvedImage | null>,
+): void {
   if (element.type === "text") {
     drawTextElement(pdf, element);
   } else if (element.type === "rect") {
@@ -308,7 +384,7 @@ async function drawElement(
   } else if (element.type === "table" && element.table) {
     drawTable(pdf, element, element.table);
   } else if (element.type === "image") {
-    await drawImage(pdf, element);
+    drawImage(pdf, element, images.get(element));
   }
 }
 
@@ -328,12 +404,20 @@ export async function exportPagesToPdf(
     compress: true,
   });
 
+  // Load every image up front and in parallel; the draw loop below stays in
+  // strict document order so the output is identical to the old sequential
+  // path — only the (slow, I/O-bound) loads now overlap.
+  const images = await resolveImages(
+    collectImageElements(pages),
+    loadImageForElement,
+  );
+
   for (const [index, page] of pages.entries()) {
     if (index > 0) {
       pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT], "portrait");
     }
     for (const element of page.elements) {
-      await drawElement(pdf, element);
+      drawElement(pdf, element, images);
     }
   }
 
@@ -351,4 +435,6 @@ export const __test = {
   getFontStyle,
   getImageFormat,
   wrapText,
+  collectImageElements,
+  resolveImages,
 };
