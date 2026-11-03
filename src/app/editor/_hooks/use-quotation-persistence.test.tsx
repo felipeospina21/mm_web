@@ -28,9 +28,6 @@ vi.mock("@/trpc/react", () => ({
   },
 }));
 
-// Avoid alert noise / undefined in jsdom when onError runs.
-vi.stubGlobal("alert", vi.fn());
-
 import { useQuotationPersistence } from "./use-quotation-persistence";
 
 function ref<T>(value: T): RefObject<T> {
@@ -45,6 +42,7 @@ function setup(
   const replacePages = vi.fn();
   const resetHistory = vi.fn();
   const setIsDirty = vi.fn();
+  const onSaveError = vi.fn();
   const editRevisionRef = ref(0);
   const saveRevisionRef = ref(0);
   const options = {
@@ -56,6 +54,7 @@ function setup(
     replacePages,
     resetHistory,
     setIsDirty,
+    onSaveError,
     ...overrides,
   };
   const view = renderHook(() => useQuotationPersistence(options));
@@ -64,6 +63,7 @@ function setup(
     replacePages,
     resetHistory,
     setIsDirty,
+    onSaveError,
     editRevisionRef,
     saveRevisionRef,
   };
@@ -149,5 +149,20 @@ describe("useQuotationPersistence", () => {
     expect(replacePages).not.toHaveBeenCalled();
     expect(resetHistory).not.toHaveBeenCalled();
     expect(setIsDirty).not.toHaveBeenCalled();
+  });
+
+  it("onError reports a localized failure via the injected onSaveError", () => {
+    const { onSaveError } = setup();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    act(() => capturedOptions.onError?.({ message: "boom" }));
+
+    expect(onSaveError).toHaveBeenCalledTimes(1);
+    // The hook localizes the message and interpolates the error; assert the
+    // raw error text is surfaced to the caller (locale-agnostic substring).
+    expect(onSaveError).toHaveBeenCalledWith(expect.stringContaining("boom"));
+    consoleError.mockRestore();
   });
 });

@@ -29,6 +29,12 @@ interface UseQuotationPersistenceOptions {
   replacePages: (next: PageData[]) => void;
   resetHistory: (next: PageData[]) => void;
   setIsDirty: (dirty: boolean) => void;
+  /**
+   * Report a save failure to the user. Injected so this hook stays free of any
+   * specific UI concern (was a blocking `alert`; now the app's toast). Receives
+   * the already-localized message.
+   */
+  onSaveError: (message: string) => void;
 }
 
 export interface QuotationPersistence {
@@ -58,6 +64,7 @@ export function useQuotationPersistence({
   replacePages,
   resetHistory,
   setIsDirty,
+  onSaveError,
 }: UseQuotationPersistenceOptions): QuotationPersistence {
   const [saved, setSaved] = useState<SavedIdentity | null>(null);
 
@@ -75,7 +82,7 @@ export function useQuotationPersistence({
     },
     onError: (error) => {
       console.error("Save failed:", error);
-      alert(t("editor.saveFailed", { error: error.message }));
+      onSaveError(t("editor.saveFailed", { error: error.message }));
     },
   });
 

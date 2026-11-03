@@ -464,8 +464,15 @@ needs a second look in the stage noted.
   iteration) remain untested — add a focused test when Task 4.4 (parallelize PDF
   image loading) touches this file.
 
-- **Replace client-side `alert(...)`** in save `onError` and PDF export with the
-  app's modal/toast pattern (3.3).
+- ✅ **Replace client-side `alert(...)` (3.3) — DONE.** Added a global
+  `ToastProvider` + `useToast()` (`src/app/_components/toast-context.tsx`,
+  mounted in the root layout), an accessible toast stack (`role="alert"` +
+  `aria-live="assertive"` for errors; errors persist, other variants
+  auto-dismiss). Save failures now flow through an injected `onSaveError` seam on
+  `useQuotationPersistence` (keeps the hook UI-agnostic); PDF-export failures call
+  `showError` directly. New `common.dismiss` key (es/en). 6 new tests (toast
+  behaviour + persistence onError). `console.*` retained for diagnostics (that's
+  the separate logging item 3.4).
 - **Logging (3.4):** server paths (tRPC `timingMiddleware`, any server error
   handlers) should use the existing structured logger `src/server/observability/logger.ts`
   (`log.*` + `errorFields`). Note it is `server-only`, so the editor's
