@@ -67,7 +67,16 @@ export default function QuotationCanvas({
     () => new Set([1, 2, 3]),
   );
   const visiblePageNumbersRef = useRef(visiblePageNumbers);
-  const stage = useCanvasStage({
+  const {
+    refs: { stageRef, containerRef, pastePositionRef },
+    stageSize,
+    selectedId,
+    setSelectedId,
+    updateActivePageFromPointer,
+    selectElement,
+    handleStageMouseDown,
+    handleStageTouchStart,
+  } = useCanvasStage({
     pages,
     onActivePageChange,
     onSelectionChange,
@@ -76,8 +85,8 @@ export default function QuotationCanvas({
   const tableSelection = useTableSelection();
   const inlineEditing = useInlineEditing({
     pages,
-    stageRef: stage.stageRef,
-    containerRef: stage.containerRef,
+    stageRef,
+    containerRef: containerRef,
     scrollTopRef,
     onElementChange,
   });
@@ -85,7 +94,7 @@ export default function QuotationCanvas({
   const elementClipboardRef = useRef<TemplateElement | null>(null);
 
   useEffect(() => {
-    const container = stage.containerRef.current;
+    const container = containerRef.current;
     if (!container) return;
 
     const updateVisiblePages = () => {
@@ -131,7 +140,7 @@ export default function QuotationCanvas({
       container.removeEventListener("scroll", updateVisiblePages);
       observer.disconnect();
     };
-  }, [pages.length, stage.containerRef, scrollTopRef]);
+  }, [pages.length, containerRef, scrollTopRef]);
 
   useEffect(() => {
     if (visiblePageNumbersRef.current.has(activePageNumber)) return;
@@ -157,7 +166,7 @@ export default function QuotationCanvas({
         const reader = new FileReader();
         reader.onload = () => {
           if (typeof reader.result !== "string") return;
-          const { pageNumber, x, y } = stage.pastePositionRef.current;
+          const { pageNumber, x, y } = pastePositionRef.current;
           const imageElement = new window.Image();
           imageElement.onload = () => {
             const scale = Math.min(
@@ -180,7 +189,7 @@ export default function QuotationCanvas({
         return;
       }
       if (!clipboardText && elementClipboardRef.current) {
-        const { pageNumber, x, y } = stage.pastePositionRef.current;
+        const { pageNumber, x, y } = pastePositionRef.current;
         if (!pages.some((page) => page.pageNumber === pageNumber)) return;
         event.preventDefault();
         onPasteElement(
@@ -196,7 +205,7 @@ export default function QuotationCanvas({
         return;
       }
 
-      const selectedTable = findSelectedTable(pages, stage.selectedId);
+      const selectedTable = findSelectedTable(pages, selectedId);
       if (
         clipboardText &&
         selectedTable?.element.isEditable &&
@@ -231,7 +240,7 @@ export default function QuotationCanvas({
       onElementChange,
       onPasteImage,
       pages,
-      stage.selectedId,
+      selectedId,
       tableSelection,
     ],
   );
@@ -242,10 +251,10 @@ export default function QuotationCanvas({
       if (target.closest("input, textarea, [contenteditable='true']")) return;
       const selectedElement = pages
         .flatMap((page) => page.elements)
-        .find((element) => element.id === stage.selectedId);
+        .find((element) => element.id === selectedId);
       const selectedTable = pages
         .flatMap((page) => page.elements)
-        .find((element) => element.id === stage.selectedId && element.table);
+        .find((element) => element.id === selectedId && element.table);
       if (!selectedTable?.table) {
         if (!selectedElement) return;
         event.preventDefault();
@@ -268,7 +277,7 @@ export default function QuotationCanvas({
       event.preventDefault();
       event.clipboardData.setData("text/plain", clipboardText);
     },
-    [pages, stage.selectedId, tableSelection],
+    [pages, selectedId, tableSelection],
   );
 
   const makeDragBoundFunc = useCallback(
@@ -348,16 +357,16 @@ export default function QuotationCanvas({
     if (!transformer || !canvasStage) return;
     const selectedElement = pages
       .flatMap((page) => page.elements)
-      .find((element) => element.id === stage.selectedId);
-    const selectedNode = canvasStage.findOne(`#${stage.selectedId}`);
+      .find((element) => element.id === selectedId);
+    const selectedNode = canvasStage.findOne(`#${selectedId}`);
     transformer.nodes(
       selectedElement?.isEditable && selectedNode ? [selectedNode] : [],
     );
-  }, [stage.selectedId, pages]);
+  }, [selectedId, pages]);
 
   const handleSelectRow = useCallback(
     (elementId: string, pageNumber: number, row: number, extend: boolean) => {
-      stage.setSelectedId(elementId);
+      setSelectedId(elementId);
       onActivePageChange(pageNumber);
       if (row === 0) {
         tableSelection.clear();
@@ -365,7 +374,7 @@ export default function QuotationCanvas({
       }
       if (
         extend &&
-        stage.selectedId === elementId &&
+        selectedId === elementId &&
         tableSelection.rowAnchor !== null
       ) {
         const start = Math.min(tableSelection.rowAnchor, row);
@@ -381,7 +390,7 @@ export default function QuotationCanvas({
       tableSelection.setSelectedCells([]);
       tableSelection.setRowAnchor(row);
     },
-    [onActivePageChange, stage, tableSelection],
+    [onActivePageChange, setSelectedId, selectedId, tableSelection],
   );
 
   const handleSelectColumn = useCallback(
@@ -391,7 +400,7 @@ export default function QuotationCanvas({
       column: number,
       extend: boolean,
     ) => {
-      stage.setSelectedId(elementId);
+      setSelectedId(elementId);
       onActivePageChange(pageNumber);
       tableSelection.setRowAnchor(null);
       tableSelection.setSelectedRows([]);
@@ -404,7 +413,7 @@ export default function QuotationCanvas({
             : [...current, column].sort((a, b) => a - b),
       );
     },
-    [onActivePageChange, stage, tableSelection],
+    [onActivePageChange, setSelectedId, tableSelection],
   );
 
   const handleSelectCell = useCallback(
@@ -415,7 +424,7 @@ export default function QuotationCanvas({
       col: number,
       extend: boolean,
     ) => {
-      stage.setSelectedId(elementId);
+      setSelectedId(elementId);
       onActivePageChange(pageNumber);
       tableSelection.setRowAnchor(null);
       tableSelection.setSelectedRows([]);
@@ -432,7 +441,7 @@ export default function QuotationCanvas({
         return alreadySelected ? current : [...current, { row, col }];
       });
     },
-    [onActivePageChange, stage, tableSelection],
+    [onActivePageChange, setSelectedId, tableSelection],
   );
 
   const handleResizeColumn = useCallback(
@@ -453,7 +462,7 @@ export default function QuotationCanvas({
 
   return (
     <div
-      ref={stage.containerRef}
+      ref={containerRef}
       tabIndex={0}
       onCopy={handleCopy}
       onPaste={handlePaste}
@@ -464,10 +473,10 @@ export default function QuotationCanvas({
         )
           return;
         const page = pages.find((item) =>
-          item.elements.some((element) => element.id === stage.selectedId),
+          item.elements.some((element) => element.id === selectedId),
         );
         const element = page?.elements.find(
-          (item) => item.id === stage.selectedId && item.table,
+          (item) => item.id === selectedId && item.table,
         );
         const table = element?.table;
         if (!page || !element || !table?.cells.length) return;
@@ -502,31 +511,31 @@ export default function QuotationCanvas({
       style={{ background: STAGE_BG }}
     >
       <Stage
-        ref={stage.stageRef}
-        width={Math.max(stage.stageSize.width, PAGE_WIDTH + 80)}
-        height={Math.max(stage.stageSize.height, 1)}
+        ref={stageRef}
+        width={Math.max(stageSize.width, PAGE_WIDTH + 80)}
+        height={Math.max(stageSize.height, 1)}
         style={{ background: STAGE_BG, position: "sticky", top: 0, zIndex: 1 }}
         onMouseDown={(event) =>
-          stage.handleStageMouseDown(event, tableSelection.clear)
+          handleStageMouseDown(event, tableSelection.clear)
         }
         onTouchStart={(event) =>
-          stage.handleStageTouchStart(event, tableSelection.clear)
+          handleStageTouchStart(event, tableSelection.clear)
         }
-        onMouseMove={stage.updateActivePageFromPointer}
+        onMouseMove={updateActivePageFromPointer}
       >
         <Layer y={-scrollTop}>
           <CanvasPageRenderer
             pages={pages}
             visiblePageNumbers={visiblePageNumbers}
             activePageNumber={activePageNumber}
-            selectedId={stage.selectedId}
+            selectedId={selectedId}
             selection={{
               rows: tableSelection.selectedRows,
               columns: tableSelection.selectedColumns,
               cells: tableSelection.selectedCells,
             }}
             onSelectElement={(id, pageNumber) =>
-              stage.selectElement(id, pageNumber)
+              selectElement(id, pageNumber)
             }
             onActivePageChange={onActivePageChange}
             onDragEnd={handleDragEnd}
@@ -556,7 +565,7 @@ export default function QuotationCanvas({
             0,
             pages.length * (PAGE_HEIGHT + PAGE_GAP) +
               PAGE_GAP -
-              Math.max(stage.stageSize.height, 1),
+              Math.max(stageSize.height, 1),
           ),
         }}
       />
@@ -574,17 +583,17 @@ export default function QuotationCanvas({
           }
         />
       )}
-      {stage.selectedId &&
+      {selectedId &&
         pages.some((page) =>
           page.elements.some(
             (element) =>
-              element.id === stage.selectedId &&
+              element.id === selectedId &&
               (element.isEditable ?? element.isRowDeletable),
           ),
         ) && (
           <FloatingToolbar
             pages={pages}
-            selectedId={stage.selectedId}
+            selectedId={selectedId}
             selectedRows={tableSelection.selectedRows}
             onClearSelectedRows={() => {
               tableSelection.setSelectedRows([]);
@@ -594,7 +603,7 @@ export default function QuotationCanvas({
             onElementChange={onElementChange}
             onDeleteElement={(id) => {
               onDeleteElement(id);
-              stage.setSelectedId(null);
+              setSelectedId(null);
             }}
             onDuplicateElement={onDuplicateElement}
           />

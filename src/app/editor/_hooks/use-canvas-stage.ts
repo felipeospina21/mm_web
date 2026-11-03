@@ -131,12 +131,19 @@ export function useCanvasStage({
   );
 
   return {
-    stageRef,
-    containerRef,
+    // Refs are grouped under their own key so callers never read a ref-bearing
+    // value during render. The React Compiler `react-hooks/refs` rule can only
+    // tell render-safe reads from ref reads if the two are not mixed in one
+    // object — keeping refs here lets the rule stay at "error".
+    refs: {
+      stageRef,
+      containerRef,
+      pastePositionRef,
+    },
+    // Render-safe state + handlers (safe to read during render).
     stageSize,
     selectedId,
     setSelectedId,
-    pastePositionRef,
     updateActivePageFromPointer,
     updatePastePositionFromPointer,
     selectElement,
