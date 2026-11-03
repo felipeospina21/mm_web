@@ -70,15 +70,15 @@
   retained below.
 
 **Not started** (full detail retained in the sections below):
-Task 4.0, 4.1, 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
+Task 4.1, 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
 Playwright — main-flow coverage; shared dev DB with scoped teardown; catalog
 uses real seeded data, external SKU API mocked); Phase 7 (revisit unit tests /
 raise coverage further — finish editor-client, ratcheting threshold, deepen
 interactions, harden the suite).
 
-**Next up:** Task 4.0 — fix refs-during-render in `quotation-canvas.tsx` /
-`use-canvas-stage.ts` and re-upgrade `react-hooks/refs` to `error`. (Task 4.0a
-decided 2026-11-03: **defer** the client store — see its section.)
+**Next up:** Task 4.1 — stabilize per-element handlers & `dragBoundFunc`
+(same canvas file/ref area as Task 4.0, now done). (Task 4.0a decided
+2026-11-03: **defer** the client store — see its section.)
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -358,29 +358,17 @@ Context+reducer) instead of the current container-owned state + prop passing.
 - **Outcome:** record the decision (adopt / defer / reject) with the metric that
   drove it, then proceed.
 
-### Task 4.0 — Fix refs-during-render & re-upgrade the lint rule (3.7)
+### Task 4.0 — Fix refs-during-render & re-upgrade the lint rule (3.7) — ✅ DONE
 
-`quotation-canvas.tsx` reads ref-bundled values during render (the
-`react-hooks/refs` React Compiler rule fires ~9×). As a stopgap the rule is
-currently downgraded to **`warn`** in `eslint.config.js` (alongside the other
-React Compiler rules) so it does not block CI — this is explicitly **temporary**.
+`useCanvasStage` now returns its refs (`stageRef`, `containerRef`,
+`pastePositionRef`) under a dedicated `refs` key, separate from render-safe state
+(`selectedId`, `stageSize`) and handlers; `quotation-canvas.tsx` destructures the
+refs as direct identifiers (so `ref={stageRef}` is a bare-identifier read) and
+touches them only in handlers/effects. `react-hooks/refs` re-upgraded `warn` →
+`error` in `eslint.config.js`, TEMPORARY comment removed. Verified: typecheck +
+`pnpm lint` (0 errors, `refs` at error) + `pnpm test` (233 pass). Behaviour
+preserved (canvas smoke test green).
 
-- **Files:** `src/app/editor/_components/quotation-canvas.tsx`,
-  `src/app/editor/_hooks/use-canvas-stage.ts` (post Task 3.0 move),
-  `eslint.config.js`.
-- **Change:** stop accessing ref values during render. The `useCanvasStage`
-  return bundles refs (`stageRef`, `containerRef`, `pastePositionRef`) with state
-  (`selectedId`, `stageSize`); the lint can't prove render-time `stage.*` reads
-  aren't ref reads. Separate refs from render-safe state (or read refs only in
-  handlers/effects) so the rule is satisfied at the root. Then **re-upgrade
-  `react-hooks/refs` from `warn` back to `error`** in `eslint.config.js` and
-  remove the TEMPORARY comment.
-- **Acceptance:** `pnpm lint` passes with `react-hooks/refs` set to `error` again;
-  canvas selection / paste-position / scroll behaviour unchanged.
-- **Effort:** medium. **Risk:** medium (touches a 585-line untested component —
-  pairs well with the Phase 3 decomposition + any tests added there).
-- **Do before Task 4.1** (same file + ref area); the warn→error flip is the
-  completion signal.
 
 ### Task 4.1 — Stabilize per-element handlers & `dragBoundFunc` (2.2)
 
