@@ -20,6 +20,7 @@ import {
   pasteIntoTable,
 } from "../_lib/clipboard";
 import { getPageOffset } from "../_lib/quotation-canvas-geometry";
+import { clampToPageBounds } from "../_lib/drag-bounds";
 import { resizeColumn } from "../_lib/table-ops";
 import { isLineItems } from "../_lib/element-role";
 
@@ -86,12 +87,19 @@ export default function QuotationCanvas({
   const inlineEditing = useInlineEditing({
     pages,
     stageRef,
-    containerRef: containerRef,
+    containerRef,
     scrollTopRef,
     onElementChange,
   });
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const elementClipboardRef = useRef<TemplateElement | null>(null);
+  // Synchronous mirror of `pages` so the single, stable `dragBoundFunc` can
+  // resolve an element + its page by the dragged node's id without being
+  // recreated whenever `pages` changes (which would defeat React.memo in 4.2).
+  const pagesRef = useRef(pages);
+  useEffect(() => {
+    pagesRef.current = pages;
+  }, [pages]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -242,6 +250,7 @@ export default function QuotationCanvas({
       pages,
       selectedId,
       tableSelection,
+      pastePositionRef,
     ],
   );
 
@@ -280,22 +289,24 @@ export default function QuotationCanvas({
     [pages, selectedId, tableSelection],
   );
 
-  const makeDragBoundFunc = useCallback(
-    (page: PageData, element: TemplateElement) => {
-      return (pos: Konva.Vector2d): Konva.Vector2d => {
-        const pageOffset = getPageOffset(page.pageNumber);
-        const visiblePageY = pageOffset.y - scrollTopRef.current;
-        return {
-          x: Math.min(
-            Math.max(pos.x, pageOffset.x),
-            pageOffset.x + PAGE_WIDTH - element.width,
-          ),
-          y: Math.min(
-            Math.max(pos.y, visiblePageY),
-            visiblePageY + PAGE_HEIGHT - element.height,
-          ),
-        };
-      };
+  // One stable `dragBoundFunc` for every node. Konva binds `this` to the node
+  // being dragged; its id is the element id, so we resolve the element + its
+  // page from `pagesRef` and delegate the clamp math to the pure
+  // `clampToPageBounds`. Stable identity lets 4.2 memoize the Konva nodes.
+  const dragBoundFunc = useCallback(
+    function (this: Konva.Node, pos: Konva.Vector2d): Konva.Vector2d {
+      const elementId = this.id();
+      for (const page of pagesRef.current) {
+        const element = page.elements.find((item) => item.id === elementId);
+        if (!element) continue;
+        return clampToPageBounds(pos, {
+          pageNumber: page.pageNumber,
+          width: element.width,
+          height: element.height,
+          scrollTop: scrollTopRef.current,
+        });
+      }
+      return pos;
     },
     [scrollTopRef],
   );
@@ -540,7 +551,7 @@ export default function QuotationCanvas({
             onActivePageChange={onActivePageChange}
             onDragEnd={handleDragEnd}
             onTransformEnd={handleTransformEnd}
-            makeDragBoundFunc={makeDragBoundFunc}
+            dragBoundFunc={dragBoundFunc}
             onOpenTextEditor={inlineEditing.openTextEditor}
             onOpenCellEditor={inlineEditing.openCellEditor}
             onSelectRow={handleSelectRow}

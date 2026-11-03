@@ -30,10 +30,8 @@ export interface CanvasPageRendererProps {
     pageId: string,
     event: Konva.KonvaEventObject<Event>,
   ) => void;
-  makeDragBoundFunc: (
-    page: PageData,
-    element: TemplateElement,
-  ) => (pos: Konva.Vector2d) => Konva.Vector2d;
+  /** Stable clamp for every draggable node; Konva binds `this` to the node. */
+  dragBoundFunc: (this: Konva.Node, pos: Konva.Vector2d) => Konva.Vector2d;
   onOpenTextEditor: (page: PageData, element: TemplateElement) => void;
   onOpenCellEditor: (
     page: PageData,
@@ -78,7 +76,7 @@ export function CanvasPageRenderer({
   onActivePageChange,
   onDragEnd,
   onTransformEnd,
-  makeDragBoundFunc,
+  dragBoundFunc,
   onOpenTextEditor,
   onOpenCellEditor,
   onSelectRow,
@@ -101,7 +99,7 @@ export function CanvasPageRenderer({
             onActivePageChange={onActivePageChange}
             onDragEnd={onDragEnd}
             onTransformEnd={onTransformEnd}
-            makeDragBoundFunc={makeDragBoundFunc}
+            dragBoundFunc={dragBoundFunc}
             onOpenTextEditor={onOpenTextEditor}
             onOpenCellEditor={onOpenCellEditor}
             onSelectRow={onSelectRow}
@@ -128,7 +126,7 @@ function CanvasPage(
     onActivePageChange,
     onDragEnd,
     onTransformEnd,
-    makeDragBoundFunc,
+    dragBoundFunc,
     onOpenTextEditor,
     onOpenCellEditor,
     onSelectRow,
@@ -177,7 +175,7 @@ function CanvasPage(
           x: absX,
           y: absY,
           draggable: element.isDraggable,
-          dragBoundFunc: makeDragBoundFunc(page, element),
+          dragBoundFunc,
           onMouseDown: select,
           onTouchStart: select,
           onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) =>
@@ -222,7 +220,7 @@ function CanvasPage(
               }}
               onDragEnd={(event) => onDragEnd(page.id, event)}
               onTransformEnd={(event) => onTransformEnd(page.id, event)}
-              dragBoundFunc={makeDragBoundFunc(page, element)}
+              dragBoundFunc={dragBoundFunc}
               onResizeColumn={(colIndex, newWidth) =>
                 onResizeColumn(element.id, page.pageNumber, colIndex, newWidth)
               }
