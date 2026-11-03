@@ -70,15 +70,15 @@
   retained below.
 
 **Not started** (full detail retained in the sections below):
-Task 4.1, 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
+Task 4.2, 4.3, 4.4; Phase 5; Phase 6 (e2e /
 Playwright — main-flow coverage; shared dev DB with scoped teardown; catalog
 uses real seeded data, external SKU API mocked); Phase 7 (revisit unit tests /
 raise coverage further — finish editor-client, ratcheting threshold, deepen
 interactions, harden the suite).
 
-**Next up:** Task 4.1 — stabilize per-element handlers & `dragBoundFunc`
-(same canvas file/ref area as Task 4.0, now done). (Task 4.0a decided
-2026-11-03: **defer** the client store — see its section.)
+**Next up:** Task 4.2 — `React.memo` the Konva tree (now unblocked by the
+stable `dragBoundFunc` from Task 4.1). (Task 4.0a decided 2026-11-03: **defer**
+the client store — see its section.)
 
 > Completed tasks (Phase 1, and 2.1 / 2.2) are collapsed to one-line references
 > below; this Status block is the source of truth. Full detail remains for the
@@ -370,15 +370,16 @@ touches them only in handlers/effects. `react-hooks/refs` re-upgraded `warn` →
 preserved (canvas smoke test green).
 
 
-### Task 4.1 — Stabilize per-element handlers & `dragBoundFunc` (2.2)
+### Task 4.1 — Stabilize per-element handlers & `dragBoundFunc` (2.2) — ✅ DONE
 
-- **Files:** `canvas-page-renderer.tsx`, `quotation-canvas.tsx`.
-- **Change:** stop building fresh `onMouseDown`/`onDragEnd`/`onDblClick` closures
-  and `makeDragBoundFunc(page, element)` per element per render. Pass
-  `page.id`/`element.id` and resolve in the handler, or memoize the factories.
-- **Acceptance:** drag/select/edit behaviour unchanged; prop identities stable
-  across renders (prerequisite for 4.2).
-- **Effort:** medium. **Risk:** medium (event wiring).
+Replaced the per-element `makeDragBoundFunc(page, element)` factory-of-factory
+with ONE stable `dragBoundFunc` (`useCallback`, deps `[scrollTopRef]`): Konva
+binds `this` to the dragged node, so it resolves the element + its page by the
+node's `id()` from a synchronous `pagesRef` mirror and delegates the clamp math
+to the new pure `_lib/drag-bounds.ts` (`clampToPageBounds`, 5 unit tests). The
+`dragBoundFunc` prop identity is now stable across renders (prerequisite for
+4.2's `React.memo`). Verified: typecheck + `pnpm lint` (0 errors) + `pnpm test`
+(238 pass, +5 drag-bounds). Behaviour preserved.
 
 ### Task 4.2 — `React.memo` the Konva tree (2.1)
 

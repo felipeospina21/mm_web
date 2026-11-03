@@ -56,7 +56,7 @@ function renderRenderer(pages: PageData[]) {
       onActivePageChange={vi.fn()}
       onDragEnd={vi.fn()}
       onTransformEnd={vi.fn()}
-      makeDragBoundFunc={() => (pos) => pos}
+      dragBoundFunc={(pos: { x: number; y: number }) => pos}
       onOpenTextEditor={vi.fn()}
       onOpenCellEditor={vi.fn()}
       onSelectRow={vi.fn()}
