@@ -10,6 +10,7 @@ import type { PageData } from "../_components/types";
 // expose a controllable mutate + state so tests can drive the save lifecycle.
 const mutate = vi.fn();
 let capturedOptions: {
+  networkMode?: string;
   onSuccess?: (result: unknown) => void;
   onError?: (error: { message: string }) => void;
 } = {};
@@ -28,9 +29,6 @@ vi.mock("@/trpc/react", () => ({
   },
 }));
 
-// Avoid alert noise / undefined in jsdom when onError runs.
-vi.stubGlobal("alert", vi.fn());
-
 import { useQuotationPersistence } from "./use-quotation-persistence";
 
 function ref<T>(value: T): RefObject<T> {
@@ -45,6 +43,7 @@ function setup(
   const replacePages = vi.fn();
   const resetHistory = vi.fn();
   const setIsDirty = vi.fn();
+  const onSaveError = vi.fn();
   const editRevisionRef = ref(0);
   const saveRevisionRef = ref(0);
   const options = {
@@ -56,6 +55,7 @@ function setup(
     replacePages,
     resetHistory,
     setIsDirty,
+    onSaveError,
     ...overrides,
   };
   const view = renderHook(() => useQuotationPersistence(options));
@@ -64,6 +64,7 @@ function setup(
     replacePages,
     resetHistory,
     setIsDirty,
+    onSaveError,
     editRevisionRef,
     saveRevisionRef,
   };
@@ -101,6 +102,26 @@ describe("useQuotationPersistence", () => {
       data: PAGES,
     });
     expect(saveRevisionRef.current).toBe(7);
+  });
+
+  it("configures the save mutation to run even while offline", () => {
+    setup();
+    expect(capturedOptions.networkMode).toBe("always");
+  });
+
+  it("short-circuits with an offline message and does not dispatch when offline", () => {
+    const onlineSpy = vi
+      .spyOn(navigator, "onLine", "get")
+      .mockReturnValue(false);
+    const { result, onSaveError, saveRevisionRef } = setup();
+
+    act(() => result.current.handleSave());
+
+    expect(mutate).not.toHaveBeenCalled();
+    expect(onSaveError).toHaveBeenCalledTimes(1);
+    // Revision snapshot is untouched since no request went out.
+    expect(saveRevisionRef.current).toBe(0);
+    onlineSpy.mockRestore();
   });
 
   it("does not call mutate when it cannot save", () => {
@@ -149,5 +170,20 @@ describe("useQuotationPersistence", () => {
     expect(replacePages).not.toHaveBeenCalled();
     expect(resetHistory).not.toHaveBeenCalled();
     expect(setIsDirty).not.toHaveBeenCalled();
+  });
+
+  it("onError reports a localized failure via the injected onSaveError", () => {
+    const { onSaveError } = setup();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    act(() => capturedOptions.onError?.({ message: "boom" }));
+
+    expect(onSaveError).toHaveBeenCalledTimes(1);
+    // The hook localizes the message and interpolates the error; assert the
+    // raw error text is surfaced to the caller (locale-agnostic substring).
+    expect(onSaveError).toHaveBeenCalledWith(expect.stringContaining("boom"));
+    consoleError.mockRestore();
   });
 });

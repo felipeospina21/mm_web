@@ -7,6 +7,7 @@ import { TRPCReactProvider } from "@/trpc/react";
 import { defaultLocale, t } from "@/i18n/messages";
 import { NavBar } from "./_components/nav-bar-server";
 import { EditorDraftProvider } from "./_components/editor-draft-context";
+import { ToastProvider } from "./_components/toast-context";
 
 export const metadata: Metadata = {
   title: t("metadata.title"),
@@ -26,10 +27,12 @@ export default function RootLayout({
     <html lang={defaultLocale} className={`${geist.variable}`}>
       <body>
         <TRPCReactProvider>
-          <EditorDraftProvider>
-            <NavBar />
-            {children}
-          </EditorDraftProvider>
+          <ToastProvider>
+            <EditorDraftProvider>
+              <NavBar />
+              {children}
+            </EditorDraftProvider>
+          </ToastProvider>
         </TRPCReactProvider>
       </body>
     </html>

@@ -52,6 +52,7 @@ const es = {
   "quotations.productMany": "{count} productos",
   "common.confirm": "Confirmar",
   "common.cancel": "Cancelar",
+  "common.dismiss": "Descartar notificación",
   "client.label": "Cliente",
   "client.select": "Selecciona un cliente",
   "client.search": "Buscar clientes...",
@@ -85,6 +86,8 @@ const es = {
   "editor.exporting": "Exportando…",
   "editor.exportPdf": "Exportar a PDF",
   "editor.saveFailed": "No se pudo guardar la cotización: {error}",
+  "editor.offline":
+    "Estás sin conexión. Conéctate a internet para guardar la cotización.",
   "editor.pdfExportFailed":
     "No se pudo exportar el PDF. Consulta la consola para ver los detalles.",
   "editor.untitledClient": "Cliente sin nombre",
@@ -207,6 +210,7 @@ const en: Record<MessageKey, string> = {
   "quotations.productMany": "{count} products",
   "common.confirm": "Confirm",
   "common.cancel": "Cancel",
+  "common.dismiss": "Dismiss notification",
   "client.label": "Client",
   "client.select": "Select a client",
   "client.search": "Search clients...",
@@ -240,6 +244,7 @@ const en: Record<MessageKey, string> = {
   "editor.exporting": "Exporting…",
   "editor.exportPdf": "Export to PDF",
   "editor.saveFailed": "Save failed: {error}",
+  "editor.offline": "You're offline. Reconnect to the internet to save.",
   "editor.pdfExportFailed": "PDF export failed. See console for details.",
   "editor.untitledClient": "Untitled client",
   "editor.discardTitle": "Discard unsaved changes?",

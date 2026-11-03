@@ -34,6 +34,7 @@ import {
 } from "@/lib/quotation-load";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
 import { useEditorDraft } from "@/app/_components/editor-draft-context";
+import { useToast } from "@/app/_components/toast-context";
 import { AddProductModal } from "./_components/add-product-modal";
 import { capitalizeLabeledName, capitalizeName } from "@/lib/capitalize-name";
 import { api, type RouterOutputs } from "@/trpc/react";
@@ -52,6 +53,7 @@ const QuotationCanvas = dynamic(
 type QuotationRow = NonNullable<RouterOutputs["quotation"]["byId"]>;
 
 export default function EditorPage() {
+  const { showError } = useToast();
   // Unsaved-changes flag: true after any edit, cleared on successful save.
   const [isDirty, setIsDirty] = useState(false);
   const editRevisionRef = useRef(0);
@@ -171,6 +173,7 @@ export default function EditorPage() {
     replacePages,
     resetHistory,
     setIsDirty,
+    onSaveError: showError,
   });
 
   /**
@@ -771,11 +774,11 @@ export default function EditorPage() {
       await exportPagesToPdf(pages, fileName);
     } catch (error) {
       console.error("PDF export failed:", error);
-      alert(t("editor.pdfExportFailed"));
+      showError(t("editor.pdfExportFailed"));
     } finally {
       setIsExporting(false);
     }
-  }, [pages, savedData]);
+  }, [pages, savedData, showError]);
 
   return (
     // h-screen minus the 56px global navbar rendered above by the layout,
