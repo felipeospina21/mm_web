@@ -77,8 +77,8 @@ raise coverage further — finish editor-client, ratcheting threshold, deepen
 interactions, harden the suite).
 
 **Next up:** Phase 5 — remaining lower-priority cleanup, all decision-heavy:
-client-safe logging (3.4), the `set-state-in-effect` + app-wide `useEffect`
-sweep, app-wide splits (3.8), and the i18n keep-vs-simplify review. (Phase 4
+logging (5.2), the `set-state-in-effect` + app-wide `useEffect` sweep (5.7),
+app-wide splits (5.6), and the i18n keep-vs-simplify review (5.8). (Phase 4
 performance work is complete: Tasks 4.0/4.0a/4.1/4.2/4.3/4.4 all done. Task 4.0a
 decided 2026-11-03: **defer** the client store — see its section.)
 
@@ -452,6 +452,11 @@ per-image error isolation. Verified: typecheck + `pnpm lint` (0 errors) +
 
 Pick up alongside nearby work rather than as a dedicated push.
 
+> **Numbering:** actionable items are **Task 5.1–5.8** (done or not). The
+> `(was ref N.M)` tags trace each back to where it was first catalogued in the
+> Phase 2/3 notes — kept for history, but **5.x is the identifier**. The
+> "Review-later notes" below are observations to revisit, not numbered tasks.
+
 ### Review-later notes (added 2026-10-29)
 
 Captured from a bug-fix / small-feature session. None block anything today; each
@@ -483,7 +488,7 @@ needs a second look in the stage noted.
   iteration) remain untested — add a focused test when Task 4.4 (parallelize PDF
   image loading) touches this file.
 
-- ✅ **Replace client-side `alert(...)` (3.3) — DONE.** Added a global
+- ✅ **Task 5.1 — Replace client-side `alert(...)` (was ref 3.3) — DONE.** Added a global
   `ToastProvider` + `useToast()` (`src/app/_components/toast-context.tsx`,
   mounted in the root layout), an accessible toast stack (`role="alert"` +
   `aria-live="assertive"` for errors; errors persist, other variants
@@ -491,36 +496,36 @@ needs a second look in the stage noted.
   `useQuotationPersistence` (keeps the hook UI-agnostic); PDF-export failures call
   `showError` directly. New `common.dismiss` key (es/en). 6 new tests (toast
   behaviour + persistence onError). `console.*` retained for diagnostics (that's
-  the separate logging item 3.4). Also fixed a save bug surfaced while testing:
+  the separate logging item, Task 5.2). Also fixed a save bug surfaced while testing:
   React Query's default `networkMode: "online"` **paused** the save mutation
   offline (spinner stuck on "Saving…", `onError` never fired) — set
   `networkMode: "always"` on the save mutation + an upfront `navigator.onLine`
   guard that shows an `editor.offline` toast instead of dispatching a doomed
   request.
-- **Logging (3.4):** server paths (tRPC `timingMiddleware`, any server error
+- **Task 5.2 — Logging (was ref 3.4):** server paths (tRPC `timingMiddleware`, any server error
   handlers) should use the existing structured logger `src/server/observability/logger.ts`
   (`log.*` + `errorFields`). Note it is `server-only`, so the editor's
   **client-side** `console.*` (PDF export, save `onError`) needs a client-safe
   logger or simply guarded/removed logs — do not import the server logger into
   client code.
-- ✅ **`ImageElement` typing (3.5) — DONE.** Replaced `Record<string, unknown>`
+- ✅ **Task 5.3 — `ImageElement` typing (was ref 3.5) — DONE.** Replaced `Record<string, unknown>`
   + `as unknown as Konva.RectConfig & Konva.ImageConfig` with a real
   `ImageElementProps` interface (`Konva.RectConfig & Partial<Konva.ImageConfig>`
   — the `image` field is resolved internally by `useLoadedImage`, so it's
   optional in the caller contract). No runtime change; 247 tests green.
-- **`useLoadedImage` render pattern (2.5):** revisit only if image flicker is
+- **Task 5.4 — `useLoadedImage` render pattern (was ref 2.5):** revisit only if image flicker is
   observed.
-- **Lint debt (3.7):** ✅ mostly already clear — `prefer-regexp-exec` /
+- **Task 5.5 — Lint debt (was ref 3.7):** ✅ mostly already clear — `prefer-regexp-exec` /
   `no-unsafe-return` in `clipboard.ts` and the ref-reads-in-render in
   `quotation-canvas.tsx` were resolved during the Phase 3 extractions + Task 4.0
   (verified 2026-11-03: `pnpm lint` reports 0 errors). Only remaining lint item
   is the `set-state-in-effect` **warning** at `editor-client.tsx:130`, tracked as
   its own decision item below.
-- **App-wide splits (3.8):** `template-data.ts` factories vs assembly;
+- **Task 5.6 — App-wide splits (was ref 3.8):** `template-data.ts` factories vs assembly;
   `client-field.tsx` create-client dialog extraction; a shared
   Escape/outside-click hook for the modal components — only if its API stays
   simpler than the current effects.
-- **Audit `useEffect` usage app-wide (keep or replace).** Start with the
+- **Task 5.7 — Audit `useEffect` usage app-wide (keep or replace).** Start with the
   post-mount effect added in `editor-client.tsx` that reads
   `takePendingQuotationClient()` from `sessionStorage` into `selectedClientId`
   (added to fix a Save-button **hydration mismatch**: the old
@@ -542,7 +547,7 @@ needs a second look in the stage noted.
   (`isManualStart`, `hasInitialProducts`, `pendingHomeContactIdRef`, and the
   initial pages/meta via `getQuotationProducts`) — they carry the same latent
   risk but aren't flagged today because they don't drive a rendered attribute.
-- **Review the i18n implementation — is it needed?** The editor/toolbar use a
+- **Task 5.8 — Review the i18n implementation — is it needed?** The editor/toolbar use a
   `t(...)` helper from `@/i18n/messages` with a single `defaultLocale`. Assess
   whether full internationalization is actually a requirement: if the app is
   effectively single-locale (currently `es-CO`-flavoured), the `t()` indirection
