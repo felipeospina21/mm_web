@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fase 2 — Módulo de Cotizaciones · Resumen para el cliente</title>
+    <style>
+      :root {
+        --ink: #1c2430;
+        --muted: #5a6676;
+        --accent: #2563eb;
+        --accent-soft: #eff4ff;
+        --line: #e4e8ef;
+        --bg: #f6f8fb;
+        --card: #ffffff;
+        --note: #fff8e6;
+        --note-line: #f0d98a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        line-height: 1.65;
+        font-size: 17px;
+      }
+      .page {
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+      }
+      header.hero {
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+        color: #fff;
+        border-radius: 16px;
+        padding: 40px 36px;
+        margin-bottom: 36px;
+        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.18);
+      }
+      header.hero .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 13px;
+        font-weight: 600;
+        opacity: 0.85;
+        margin: 0 0 10px;
+      }
+      header.hero h1 {
+        margin: 0 0 6px;
+        font-size: 30px;
+        line-height: 1.2;
+        font-weight: 700;
+      }
+      header.hero p.sub {
+        margin: 0;
+        font-size: 18px;
+        opacity: 0.92;
+      }
+      .meta-note {
+        font-size: 14px;
+        color: var(--muted);
+        margin: -18px 0 34px;
+        padding-left: 4px;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 28px 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+      }
+      h2 {
+        font-size: 22px;
+        margin: 0 0 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--accent-soft);
+        color: var(--ink);
+      }
+      h3 {
+        font-size: 17px;
+        margin: 22px 0 6px;
+        color: var(--accent);
+      }
+      p {
+        margin: 0 0 14px;
+      }
+      section > p:last-child,
+      li > p:last-child {
+        margin-bottom: 0;
+      }
+      ul {
+        margin: 0 0 4px;
+        padding-left: 22px;
+      }
+      li {
+        margin-bottom: 10px;
+      }
+      strong {
+        color: var(--ink);
+      }
+      .feature {
+        display: flex;
+        gap: 16px;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .feature:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      .feature:first-of-type {
+        padding-top: 4px;
+      }
+      .feature .num {
+        flex: 0 0 38px;
+        height: 38px;
+        width: 38px;
+        border-radius: 50%;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+      .feature .body {
+        flex: 1;
+      }
+      .feature .body h3 {
+        margin: 4px 0 6px;
+        color: var(--ink);
+        font-size: 17px;
+      }
+      .value-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 14px;
+        margin-top: 4px;
+      }
+      .value-card {
+        background: var(--accent-soft);
+        border-radius: 10px;
+        padding: 16px 18px;
+        font-size: 15.5px;
+      }
+      .value-card strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--accent);
+      }
+      .callout {
+        background: var(--accent-soft);
+        border-left: 4px solid var(--accent);
+        border-radius: 8px;
+        padding: 18px 22px;
+      }
+      .callout h2 {
+        border: none;
+        padding: 0;
+        margin-bottom: 8px;
+      }
+      .decisions {
+        background: var(--note);
+        border: 1px solid var(--note-line);
+      }
+      .decisions h2 {
+        border-bottom-color: var(--note-line);
+      }
+      .decisions .lead {
+        color: var(--muted);
+        font-size: 15.5px;
+      }
+      .sub-list {
+        margin-top: 8px;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 40px;
+      }
+      @media (max-width: 640px) {
+        body {
+          font-size: 16px;
+          line-height: 1.6;
+        }
+        .page {
+          padding: 22px 14px 56px;
+        }
+        header.hero {
+          padding: 26px 20px;
+          border-radius: 12px;
+          margin-bottom: 26px;
+        }
+        header.hero h1 {
+          font-size: 23px;
+        }
+        header.hero p.sub {
+          font-size: 16px;
+        }
+        .meta-note {
+          margin: -12px 0 24px;
+        }
+        section {
+          padding: 20px 18px;
+          border-radius: 12px;
+          margin-bottom: 18px;
+        }
+        h2 {
+          font-size: 19px;
+        }
+        /* Stack the feature number above its text so the copy gets full width */
+        .feature {
+          flex-direction: column;
+          gap: 8px;
+          padding: 18px 0;
+        }
+        .feature .num {
+          flex-basis: 34px;
+          height: 34px;
+          width: 34px;
+          font-size: 15px;
+        }
+        .feature .body h3 {
+          margin-top: 0;
+        }
+        /* Single-column cards on narrow screens */
+        .value-grid {
+          grid-template-columns: 1fr;
+        }
+        .callout,
+        .decisions {
+          padding: 20px 18px;
+        }
+        ul {
+          padding-left: 20px;
+        }
+        .sub-list {
+          padding-left: 18px;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+          font-size: 12pt;
+        }
+        .page {
+          max-width: none;
+          padding: 0;
+        }
+        header.hero {
+          box-shadow: none;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        section {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow">Resumen para discusión con el cliente</p>
+        <h1>Fase 2 — Módulo de Cotizaciones</h1>
+        <p class="sub">Visión general del alcance y el valor para el negocio.</p>
+      </header>
+
+      <p class="meta-note">
+        Documento de visión general orientado a negocio. No incluye detalles
+        técnicos ni estimaciones de tiempo.
+      </p>
+
+      <section>
+        <h2>¿Qué es esta fase?</h2>
+        <p>
+          Hoy la aplicación permite armar y exportar una cotización, pero cada
+          cotización es, en la práctica, un documento aislado: no queda guardado
+          de forma organizada ni es fácil volver a él. La Fase 2 convierte esa
+          capacidad en un <strong>módulo completo de gestión de cotizaciones</strong>,
+          donde el equipo comercial puede guardar su trabajo, retomarlo,
+          organizarlo y controlar quién ve qué.
+        </p>
+      </section>
+
+      <section>
+        <h2>Qué podrán hacer los usuarios</h2>
+
+        <div class="feature">
+          <div class="num">1</div>
+          <div class="body">
+            <h3>Guardar y recuperar cotizaciones</h3>
+            <p>
+              Las cotizaciones quedarán almacenadas y disponibles para
+              consultarlas, reabrirlas y seguir trabajando en ellas en cualquier
+              momento, sin perder el trabajo hecho.
+            </p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="num">2</div>
+          <div class="body">
+            <h3>Trabajar con borradores</h3>
+            <p>
+              El equipo podrá crear <strong>borradores</strong>: cotizaciones en
+              progreso que se guardan, se editan, se recuperan y se eliminan
+              libremente, sin convertirse todavía en un documento "oficial".
+              Cuando el borrador esté listo, se
+              <strong>convierte en cotización definitiva</strong> con su número
+              formal asignado. Esto evita que se consuman números oficiales en
+              trabajos que aún no están terminados.
+            </p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="num">3</div>
+          <div class="body">
+            <h3>Organizar y encontrar cotizaciones</h3>
+            <p>
+              Listados, búsqueda y filtros para ubicar rápidamente una cotización
+              por cliente, estado, fecha o número.
+            </p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="num">4</div>
+          <div class="body">
+            <h3>Perfiles y permisos (roles)</h3>
+            <p>Se introducen dos tipos de usuario:</p>
+            <ul>
+              <li>
+                <strong>Administrador:</strong> visibilidad total sobre las
+                cotizaciones del equipo.
+              </li>
+              <li>
+                <strong>Usuario (comercial):</strong> acceso a sus propias
+                cotizaciones.
+              </li>
+            </ul>
+            <p>
+              Esto da control sobre qué información ve cada persona y sienta la
+              base para crecer a más roles en el futuro.
+            </p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="num">5</div>
+          <div class="body">
+            <h3>Plantillas flexibles ("plantilla libre")</h3>
+            <p>
+              Hoy todas las cotizaciones siguen una misma estructura de página.
+              La Fase 2 añade la posibilidad de crear cotizaciones con una
+              <strong>plantilla libre</strong>, adaptada al criterio del
+              comercial, para los casos que no encajan en el formato estándar —
+              manteniendo el formato estándar disponible para el uso habitual.
+            </p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="num">6</div>
+          <div class="body">
+            <h3>Imágenes de producto confiables y permanentes</h3>
+            <p>
+              Las imágenes de los productos provienen de un servicio externo
+              cuyos enlaces caducan con el tiempo. Hoy eso significa que una
+              cotización guardada puede quedarse sin imágenes al reabrirla más
+              adelante. La Fase 2
+              <strong>guarda las imágenes en nuestro propio almacenamiento</strong>,
+              de modo que las cotizaciones se vean completas siempre, incluso
+              tiempo después. Además, el sistema reutiliza de forma inteligente
+              las imágenes ya guardadas (sin duplicar trabajo) y las actualiza
+              periódicamente por si el producto cambia.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Por qué importa para el negocio</h2>
+        <div class="value-grid">
+          <div class="value-card">
+            <strong>No se pierde trabajo</strong>
+            Las cotizaciones quedan guardadas, organizadas y siempre
+            disponibles.
+          </div>
+          <div class="value-card">
+            <strong>Más agilidad</strong>
+            Los borradores permiten avanzar sin compromiso y formalizar solo
+            cuando corresponde.
+          </div>
+          <div class="value-card">
+            <strong>Control y seguridad</strong>
+            Cada persona ve lo que le corresponde según su rol.
+          </div>
+          <div class="value-card">
+            <strong>Flexibilidad comercial</strong>
+            Se cubren tanto el caso estándar como las cotizaciones a medida.
+          </div>
+          <div class="value-card">
+            <strong>Documentos duraderos</strong>
+            Una cotización guardada hoy se verá igual de completa dentro de
+            meses.
+          </div>
+        </div>
+      </section>
+
+      <section class="callout">
+        <h2>Punto de partida favorable</h2>
+        <p>
+          Buena parte de los cimientos de este módulo
+          <strong>ya están construidos</strong> en fases anteriores. La Fase 2 se
+          apoya en ese trabajo previo para
+          <strong>completar, habilitar y pulir</strong> el módulo, en lugar de
+          empezar de cero — lo que reduce el riesgo del proyecto.
+        </p>
+      </section>
+
+      <section class="decisions">
+        <h2>Decisiones de negocio pendientes</h2>
+        <p class="lead">
+          Para cerrar el alcance necesitamos acordar algunos puntos de negocio,
+          por ejemplo:
+        </p>
+        <ul>
+          <li>
+            ¿En qué momento se asigna el <strong>número oficial</strong> de la
+            cotización: al crear el borrador o al formalizarla?
+          </li>
+          <li>
+            ¿Un comercial puede <strong>ver o modificar</strong> cotizaciones de
+            otros, o solo el administrador?
+          </li>
+          <li>
+            <strong>Reemplazo o ausencia de un comercial</strong> (vacaciones,
+            licencias o ausencias prolongadas): ¿quién gestiona y ve las
+            cotizaciones de ese comercial mientras no está? Opciones a evaluar:
+            <ul class="sub-list">
+              <li>Que las asuma quien tenga rol <strong>administrador</strong>, o</li>
+              <li>
+                Habilitar una opción <strong>configurable de reemplazo</strong>
+                (asignar temporalmente las cotizaciones de un comercial a otro, o
+                transferir la cartera de clientes).
+              </li>
+            </ul>
+          </li>
+          <li>
+            ¿Las cotizaciones eliminadas se <strong>archivan</strong>
+            (recuperables) o se borran definitivamente?
+          </li>
+          <li>
+            ¿Con qué frecuencia conviene <strong>refrescar las imágenes</strong>
+            de producto?
+          </li>
+          <li>
+            <strong>Tiempo de conservación de las imágenes.</strong> El
+            almacenamiento está en un plan gratuito con espacio limitado, por lo
+            que no es viable guardar imágenes de forma indefinida. Esta decisión
+            depende directamente de
+            <strong
+              >cuánto tiempo hacia atrás se necesita poder recuperar una
+              cotización completa (con sus imágenes)</strong
+            >:
+            <ul class="sub-list">
+              <li>
+                Definir ese período de recuperación (por ejemplo, los últimos N
+                meses) marca cuánto tiempo deben conservarse las imágenes.
+              </li>
+              <li>
+                Pasado ese período, las imágenes antiguas podrían depurarse para
+                liberar espacio (la cotización se conserva, pero sus imágenes
+                podrían dejar de estar disponibles).
+              </li>
+              <li>
+                A futuro, si se requiere un período de recuperación más largo,
+                puede implicar ampliar el plan de almacenamiento.
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </section>
+
+      <footer>Fase 2 — Módulo de Cotizaciones · Documento de visión general</footer>
+    </div>
+  </body>
+</html>
