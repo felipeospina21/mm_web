@@ -69,6 +69,11 @@ export function useQuotationPersistence({
   const [saved, setSaved] = useState<SavedIdentity | null>(null);
 
   const saveMutation = api.quotation.save.useMutation({
+    // Default networkMode ("online") PAUSES a mutation while offline: it never
+    // runs and never rejects, so the UI shows "Saving…" forever and onError
+    // never fires. "always" makes the request actually attempt and fail fast
+    // offline, so onError runs and the user gets feedback.
+    networkMode: "always",
     onSuccess: (result) => {
       setSaved(result);
       // Keep edits made while this request was in flight; the response only
@@ -90,6 +95,13 @@ export function useQuotationPersistence({
 
   const handleSave = useCallback(() => {
     if (!canSave || !selectedClientId) return;
+    // Fast path: when the browser reports it's offline, give immediate feedback
+    // instead of dispatching a request that can only fail. (networkMode:
+    // "always" above still covers mid-flight drops and unreliable onLine.)
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      onSaveError(t("editor.offline"));
+      return;
+    }
     saveRevisionRef.current = editRevisionRef.current;
     saveMutation.mutate({
       id: saved?.id,
@@ -104,6 +116,7 @@ export function useQuotationPersistence({
     pagesRef,
     editRevisionRef,
     saveRevisionRef,
+    onSaveError,
   ]);
 
   return {

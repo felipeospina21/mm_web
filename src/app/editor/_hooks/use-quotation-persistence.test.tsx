@@ -10,6 +10,7 @@ import type { PageData } from "../_components/types";
 // expose a controllable mutate + state so tests can drive the save lifecycle.
 const mutate = vi.fn();
 let capturedOptions: {
+  networkMode?: string;
   onSuccess?: (result: unknown) => void;
   onError?: (error: { message: string }) => void;
 } = {};
@@ -101,6 +102,26 @@ describe("useQuotationPersistence", () => {
       data: PAGES,
     });
     expect(saveRevisionRef.current).toBe(7);
+  });
+
+  it("configures the save mutation to run even while offline", () => {
+    setup();
+    expect(capturedOptions.networkMode).toBe("always");
+  });
+
+  it("short-circuits with an offline message and does not dispatch when offline", () => {
+    const onlineSpy = vi
+      .spyOn(navigator, "onLine", "get")
+      .mockReturnValue(false);
+    const { result, onSaveError, saveRevisionRef } = setup();
+
+    act(() => result.current.handleSave());
+
+    expect(mutate).not.toHaveBeenCalled();
+    expect(onSaveError).toHaveBeenCalledTimes(1);
+    // Revision snapshot is untouched since no request went out.
+    expect(saveRevisionRef.current).toBe(0);
+    onlineSpy.mockRestore();
   });
 
   it("does not call mutate when it cannot save", () => {

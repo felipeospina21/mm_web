@@ -472,7 +472,12 @@ needs a second look in the stage noted.
   `useQuotationPersistence` (keeps the hook UI-agnostic); PDF-export failures call
   `showError` directly. New `common.dismiss` key (es/en). 6 new tests (toast
   behaviour + persistence onError). `console.*` retained for diagnostics (that's
-  the separate logging item 3.4).
+  the separate logging item 3.4). Also fixed a save bug surfaced while testing:
+  React Query's default `networkMode: "online"` **paused** the save mutation
+  offline (spinner stuck on "Saving…", `onError` never fired) — set
+  `networkMode: "always"` on the save mutation + an upfront `navigator.onLine`
+  guard that shows an `editor.offline` toast instead of dispatching a doomed
+  request.
 - **Logging (3.4):** server paths (tRPC `timingMiddleware`, any server error
   handlers) should use the existing structured logger `src/server/observability/logger.ts`
   (`log.*` + `errorFields`). Note it is `server-only`, so the editor's
