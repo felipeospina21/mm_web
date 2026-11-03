@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Group, Rect, Text } from "react-konva";
 import type Konva from "konva";
 import type { TableData } from "./types";
@@ -40,7 +41,7 @@ interface TableNodeProps {
  * The Group itself is the draggable/transformable node; its id is the
  * element id so the Transformer can find it.
  */
-export default function TableNode({
+function TableNode({
   id,
   x,
   y,
@@ -290,3 +291,10 @@ export default function TableNode({
     </Group>
   );
 }
+
+/**
+ * Memoized so editing one element does not re-render every table on the canvas.
+ * Effective because its props (handlers, dragBoundFunc, selection arrays) are
+ * stable for an unchanged element (see Tasks 4.1/4.2).
+ */
+export default memo(TableNode);

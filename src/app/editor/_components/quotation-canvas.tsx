@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClipboardEvent as ReactClipboardEvent } from "react";
 import { Layer, Stage, Transformer } from "react-konva";
 import type Konva from "konva";
@@ -471,6 +471,21 @@ export default function QuotationCanvas({
     [pages, onElementChange],
   );
 
+  // Stable identity for the selection bag so memoized pages/nodes don't
+  // re-render on unrelated updates (only changes when a selection changes).
+  const selection = useMemo(
+    () => ({
+      rows: tableSelection.selectedRows,
+      columns: tableSelection.selectedColumns,
+      cells: tableSelection.selectedCells,
+    }),
+    [
+      tableSelection.selectedRows,
+      tableSelection.selectedColumns,
+      tableSelection.selectedCells,
+    ],
+  );
+
   return (
     <div
       ref={containerRef}
@@ -540,14 +555,8 @@ export default function QuotationCanvas({
             visiblePageNumbers={visiblePageNumbers}
             activePageNumber={activePageNumber}
             selectedId={selectedId}
-            selection={{
-              rows: tableSelection.selectedRows,
-              columns: tableSelection.selectedColumns,
-              cells: tableSelection.selectedCells,
-            }}
-            onSelectElement={(id, pageNumber) =>
-              selectElement(id, pageNumber)
-            }
+            selection={selection}
+            onSelectElement={selectElement}
             onActivePageChange={onActivePageChange}
             onDragEnd={handleDragEnd}
             onTransformEnd={handleTransformEnd}
