@@ -472,13 +472,19 @@ needs a second look in the stage noted.
   **client-side** `console.*` (PDF export, save `onError`) needs a client-safe
   logger or simply guarded/removed logs — do not import the server logger into
   client code.
-- **`ImageElement` typing (3.5):** replace `Record<string, unknown>` +
-  `as unknown as …` with a real props interface.
+- ✅ **`ImageElement` typing (3.5) — DONE.** Replaced `Record<string, unknown>`
+  + `as unknown as Konva.RectConfig & Konva.ImageConfig` with a real
+  `ImageElementProps` interface (`Konva.RectConfig & Partial<Konva.ImageConfig>`
+  — the `image` field is resolved internally by `useLoadedImage`, so it's
+  optional in the caller contract). No runtime change; 247 tests green.
 - **`useLoadedImage` render pattern (2.5):** revisit only if image flicker is
   observed.
-- **Lint debt (3.7):** move ref reads out of render in `quotation-canvas.tsx`
-  (the "Cannot access refs during render" errors); fix `prefer-regexp-exec` /
-  `no-unsafe-return` in `clipboard.ts` and others.
+- **Lint debt (3.7):** ✅ mostly already clear — `prefer-regexp-exec` /
+  `no-unsafe-return` in `clipboard.ts` and the ref-reads-in-render in
+  `quotation-canvas.tsx` were resolved during the Phase 3 extractions + Task 4.0
+  (verified 2026-11-03: `pnpm lint` reports 0 errors). Only remaining lint item
+  is the `set-state-in-effect` **warning** at `editor-client.tsx:130`, tracked as
+  its own decision item below.
 - **App-wide splits (3.8):** `template-data.ts` factories vs assembly;
   `client-field.tsx` create-client dialog extraction; a shared
   Escape/outside-click hook for the modal components — only if its API stays
