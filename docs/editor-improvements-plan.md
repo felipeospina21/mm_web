@@ -91,6 +91,24 @@ unloadable and unsavable.
 - **Depends on:** Task 2.1 (shares the element model) and the quotation-module
   work being un-flagged.
 
+## Phase 4 — Performance
+
+### Task 4.0a — Do we need a client store? (Phase 4, architecture) — ⏸️ DECIDED: DEFER (2026-11-03)
+
+Decision is made (defer); the **store work itself is postponed**, so it lives in
+Pending — revisit only if 4.1/4.2 metrics prove it.
+
+> **Decision: defer — do NOT adopt a client store now.** Domain state is already
+> well-placed after Phase 3 (`pages`+undo/redo in `useQuotationHistory`, server
+> state in TanStack Query, `selectedId`+geometry in `useCanvasStage`, table
+> selection in `useTableSelection`); the tree is shallow (`editor-client` →
+> `QuotationCanvas` one hop, ~10 props; → `CanvasPageRenderer` next). A store today
+> would relocate well-placed state and add a second paradigm + a Konva re-render
+> footgun. The real issue is **prop stability / re-renders**, addressed directly by
+> Tasks 4.0/4.1/4.2 — not state location. Revisit only if 4.1/4.2 metrics prove
+> multiple siblings need shared read/write AND props can't be stabilized. The
+> narrowest no-dependency option (Task 3.2's `useReducer` note) remains available.
+
 ## Phase 5 — Lower-priority cleanup (opportunistic)
 
 Pick up alongside nearby work rather than as a dedicated push. `(was ref N.M)`
@@ -537,19 +555,6 @@ pays off.
 </details>
 
 ## Phase 4 — Performance
-
-### Task 4.0a — Do we need a client store? (Phase 4, architecture) — ✅ DECIDED: DEFER (2026-11-03)
-
-> **Decision: defer — do NOT adopt a client store now.** Domain state is already
-> well-placed after Phase 3 (`pages`+undo/redo in `useQuotationHistory`, server
-> state in TanStack Query, `selectedId`+geometry in `useCanvasStage`, table
-> selection in `useTableSelection`); the tree is shallow (`editor-client` →
-> `QuotationCanvas` one hop, ~10 props; → `CanvasPageRenderer` next). A store today
-> would relocate well-placed state and add a second paradigm + a Konva re-render
-> footgun. The real issue is **prop stability / re-renders**, addressed directly by
-> Tasks 4.0/4.1/4.2 — not state location. Revisit only if 4.1/4.2 metrics prove
-> multiple siblings need shared read/write AND props can't be stabilized. The
-> narrowest no-dependency option (Task 3.2's `useReducer` note) remains available.
 
 ### Task 4.0 — Fix refs-during-render & re-upgrade the lint rule (Phase 4, was ref 3.7) — ✅ DONE
 
