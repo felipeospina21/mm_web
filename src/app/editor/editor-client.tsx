@@ -67,6 +67,11 @@ export default function EditorPage() {
    * products picked on the home page). An empty start keeps the same blank
    * product page used by the Add Page action.
    */
+  // The initial pages/meta are built from browser storage at mount (5.7e):
+  // server-rendered empty, client-rendered from storage. The rendered canvas
+  // content lives in the `ssr:false` `QuotationCanvas` below, so the page bodies
+  // themselves never SSR and can't mismatch; the Save-button exposure is via
+  // `isManualStart`/`hasInitialProducts` above. Left as-is.
   const makeInitialMeta = useCallback((): QuotationData => {
     const picked = getQuotationProducts();
     return {
@@ -98,6 +103,12 @@ export default function EditorPage() {
 
   // The home-page manual-start action requests blank item fields on page one.
   // A direct editor visit or a product lookup starts with header + policies.
+  // LATENT SSR/hydration risk (5.7e): reads sessionStorage at mount -> false on
+  // the server, possibly true on the client. It feeds `canSaveWhen`/`isDraft`,
+  // which drive the Save button's rendered `disabled` state — the same class of
+  // mismatch 5.7a fixed for the client field. Not reproduced today (page is
+  // `force-dynamic`, handoff is consume-on-read), so left as-is pending a
+  // shared SSR-safe storage read. Harden if a hydration warning appears.
   const [isManualStart] = useState(() => takePendingManualQuotation());
 
   /**
@@ -119,6 +130,9 @@ export default function EditorPage() {
   const metaRef = useRef<QuotationData>(makeInitialMeta());
 
   // Product storage distinguishes loaded quotations from empty drafts.
+  // LATENT SSR/hydration risk (5.7e): same as `isManualStart` — false on the
+  // server, possibly true on the client, and it feeds the Save button's
+  // rendered `disabled` state via `canSaveWhen`/`isDraft`. Left as-is.
   const [hasInitialProducts] = useState(
     () => getQuotationProducts().length > 0,
   );
@@ -131,6 +145,8 @@ export default function EditorPage() {
   >(undefined);
   const selectedClientId =
     clientOverride !== undefined ? clientOverride : pendingClientId;
+  // Safe (5.7e): a ref read only inside the client-seeding effect, never during
+  // render — refs don't participate in hydration, so no mismatch.
   const pendingHomeContactIdRef = useRef(takePendingQuotationContact());
 
   // `pages` state + undo/redo history live in a dedicated hook; dirty/save-race
