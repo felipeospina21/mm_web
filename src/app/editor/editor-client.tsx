@@ -6,6 +6,7 @@ import { exportPagesToPdf } from "./_lib/pdf-export";
 import { elementRole, isLineItems } from "./_lib/element-role";
 import { useEditorKeyboardShortcuts } from "./_hooks/use-editor-keyboard-shortcuts";
 import { useQuotationHistory } from "./_hooks/use-quotation-history";
+import { usePendingQuotationClient } from "./_hooks/use-pending-quotation-client";
 import { useQuotationPersistence } from "./_hooks/use-quotation-persistence";
 import { useQuotationLoad } from "./_hooks/use-quotation-load";
 import {
@@ -121,15 +122,15 @@ export default function EditorPage() {
   const [hasInitialProducts] = useState(
     () => getQuotationProducts().length > 0,
   );
-  // Start null so the server render and the first client render agree (reading
-  // sessionStorage in the initializer would diverge: null on the server, the
-  // stored value on the client, which mismatches the Save button's disabled
-  // state during hydration). The pending draft client is read after mount.
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  useEffect(() => {
-    const pendingClient = takePendingQuotationClient();
-    if (pendingClient) setSelectedClientId(pendingClient);
-  }, []);
+  // Home-page client handoff, read via `useSyncExternalStore` (null on the
+  // server and during hydration) so the Save button's disabled state matches the
+  // server render. A user pick or a loaded quotation overrides it.
+  const pendingClientId = usePendingQuotationClient();
+  const [clientOverride, setClientOverride] = useState<
+    string | null | undefined
+  >(undefined);
+  const selectedClientId =
+    clientOverride !== undefined ? clientOverride : pendingClientId;
   const pendingHomeContactIdRef = useRef(takePendingQuotationContact());
 
   // `pages` state + undo/redo history live in a dedicated hook; dirty/save-race
@@ -350,10 +351,9 @@ export default function EditorPage() {
   });
 
   // Seed from sessionStorage directly (like pendingHomeContactIdRef above), not
-  // from `selectedClientId`: that state defers its sessionStorage read to a
-  // post-mount effect to avoid a hydration mismatch, so it is still null on the
-  // first render when this ref captures its initial value. Reading the pending
-  // client here keeps the home → editor client-data load working.
+  // from `selectedClientId`: that value is null on the first (hydration) render,
+  // when this ref captures its initial value. Reading the pending client here
+  // keeps the home → editor client-data load working.
   const pendingHomeClientIdRef = useRef(takePendingQuotationClient());
 
   useEffect(() => {
@@ -479,7 +479,7 @@ export default function EditorPage() {
         representativeEmail: "",
         products: Array.from<Product>({ length: productCount }),
       };
-      setSelectedClientId(row.clientId);
+      setClientOverride(row.clientId);
       pendingHomeClientIdRef.current = null;
       replacePages(pagesWithLogos);
       // Reset history to the loaded state.
