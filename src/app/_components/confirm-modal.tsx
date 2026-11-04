@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { t } from "@/i18n/messages";
 
 export interface ConfirmModalProps {
   /** Whether the modal is visible. */
@@ -27,8 +26,8 @@ export function ConfirmModal({
   open,
   title,
   message,
-  confirmLabel = t("common.confirm"),
-  cancelLabel = t("common.cancel"),
+  confirmLabel = "Confirmar",
+  cancelLabel = "Cancelar",
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {

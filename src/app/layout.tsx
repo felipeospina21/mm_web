@@ -4,14 +4,13 @@ import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "@/trpc/react";
-import { defaultLocale, t } from "@/i18n/messages";
 import { NavBar } from "./_components/nav-bar-server";
 import { EditorDraftProvider } from "./_components/editor-draft-context";
 import { ToastProvider } from "./_components/toast-context";
 
 export const metadata: Metadata = {
-  title: t("metadata.title"),
-  description: t("metadata.description"),
+  title: "Cotizaciones",
+  description: "Crea y administra cotizaciones de productos.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
@@ -24,7 +23,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang={defaultLocale} className={`${geist.variable}`}>
+    <html lang="es" className={`${geist.variable}`}>
       <body>
         <TRPCReactProvider>
           <ToastProvider>

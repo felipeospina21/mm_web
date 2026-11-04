@@ -4,7 +4,6 @@ import { api, HydrateClient } from "@/trpc/server";
 
 import { ProductCatalog } from "../_components/product-catalog";
 import { QuotationBar } from "../_components/quotation-bar";
-import { t } from "@/i18n/messages";
 
 /**
  * Hidden product catalog.
@@ -46,10 +45,10 @@ export default async function CatalogPage() {
     <main className="min-h-screen bg-neutral-100">
       <header className="flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-6">
         <h1 className="text-lg font-semibold text-neutral-900">
-          {t("catalog.title")}
+          Catálogo de productos
         </h1>
         <span className="text-sm text-neutral-500">
-          {t("catalog.subtitle")}
+          Selecciona productos para crear una cotización
         </span>
       </header>
 

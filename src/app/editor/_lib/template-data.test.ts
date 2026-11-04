@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Product, QuotationData } from "../_components/types";
-import {
-  buildPagesFromQuotation,
-  interpolate,
-} from "./template-data";
+import { buildPagesFromQuotation, interpolate } from "./template-data";
 import { elementRole } from "./element-role";
 
 function quotation(overrides: Partial<QuotationData> = {}): QuotationData {
@@ -35,9 +32,9 @@ function product(overrides: Partial<Product> = {}): Product {
 
 describe("interpolate", () => {
   it("substitutes quotation-level placeholders", () => {
-    expect(
-      interpolate("{{companyName}} / {{customerName}}", quotation()),
-    ).toBe("Acme / Wile E.");
+    expect(interpolate("{{companyName}} / {{customerName}}", quotation())).toBe(
+      "Acme / Wile E.",
+    );
     expect(interpolate("{{representativeEmail}}", quotation())).toBe(
       "rep@acme.test",
     );
@@ -57,9 +54,9 @@ describe("interpolate", () => {
   });
 
   it("prefixes the product name with its number when provided", () => {
-    expect(
-      interpolate("{{productName}}", quotation(), product(), undefined, 2),
-    ).toBe("2. Widget");
+    expect(interpolate("{{productName}}", quotation(), product(), 2)).toBe(
+      "2. Widget",
+    );
     // Without a number, no prefix.
     expect(interpolate("{{productName}}", quotation(), product())).toBe(
       "Widget",
@@ -70,7 +67,9 @@ describe("interpolate", () => {
 describe("buildPagesFromQuotation", () => {
   it("builds one product page per product plus a final policies page", () => {
     const pages = buildPagesFromQuotation(
-      quotation({ products: [product({ reference: "a" }), product({ reference: "b" })] }),
+      quotation({
+        products: [product({ reference: "a" }), product({ reference: "b" })],
+      }),
     );
     expect(pages).toHaveLength(3); // 2 products + policies
     expect(pages.map((p) => p.pageNumber)).toEqual([1, 2, 3]);
@@ -83,7 +82,9 @@ describe("buildPagesFromQuotation", () => {
 
   it("tags product elements with their roles and interpolates product data", () => {
     const pages = buildPagesFromQuotation(
-      quotation({ products: [product({ name: "Gadget", reference: "ref-9" })] }),
+      quotation({
+        products: [product({ name: "Gadget", reference: "ref-9" })],
+      }),
     );
     const firstPage = pages[0]!;
     const nameEl = firstPage.elements.find(

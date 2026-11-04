@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import { capitalizeName } from "@/lib/capitalize-name";
 import { formatQuotationFooter } from "@/lib/company-profile";
-import { t } from "@/i18n/messages";
 import { api } from "@/trpc/react";
 import type { PageData, QuotationData } from "../_components/types";
 import { elementRole } from "../_lib/element-role";
@@ -50,7 +49,7 @@ export function useRepresentativeProfile({
     const representativeCellphone = representative.cellphone ?? "";
     const representativeEmail = representative.email ?? "";
     const representativeText = [
-      t("template.representative"),
+      "Asesor comercial",
       representativeName,
       `${representativeCellphone} / ${representativePhone} ext. ${representativePhoneExtension}`,
       representativeEmail,

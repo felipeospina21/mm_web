@@ -1,6 +1,5 @@
 "use client";
 
-import { t } from "@/i18n/messages";
 import type { TemplateElement } from "./types";
 
 const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48];
@@ -20,11 +19,14 @@ interface TextFormatControlsProps {
 }
 
 /** Font family / size / bold / italic / underline / color controls. */
-export function TextFormatControls({ element, patch }: TextFormatControlsProps) {
+export function TextFormatControls({
+  element,
+  patch,
+}: TextFormatControlsProps) {
   return (
     <>
       <label className="flex items-center gap-1 text-xs text-neutral-700">
-        {t("toolbar.font")}
+        Fuente
         <select
           value={element.fontFamily ?? "Arial"}
           onChange={(e) => patch({ fontFamily: e.target.value })}
@@ -38,7 +40,7 @@ export function TextFormatControls({ element, patch }: TextFormatControlsProps) 
         </select>
       </label>
       <label className="flex items-center gap-1 text-xs text-neutral-700">
-        {t("toolbar.size")}
+        Tamaño
         <select
           value={element.fontSize}
           onChange={(e) => patch({ fontSize: Number(e.target.value) })}
@@ -55,7 +57,7 @@ export function TextFormatControls({ element, patch }: TextFormatControlsProps) 
         className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
           element.fontWeight === "bold" ? "font-extrabold" : "font-normal"
         }`}
-        title={t("toolbar.bold")}
+        title="Negrita"
         onClick={() =>
           patch({
             fontWeight: element.fontWeight === "bold" ? "normal" : "bold",
@@ -68,7 +70,7 @@ export function TextFormatControls({ element, patch }: TextFormatControlsProps) 
         className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
           element.italic ? "italic" : ""
         }`}
-        title={t("toolbar.italic")}
+        title="Cursiva"
         onClick={() => patch({ italic: !element.italic })}
       >
         I
@@ -77,13 +79,13 @@ export function TextFormatControls({ element, patch }: TextFormatControlsProps) 
         className={`h-7 w-7 rounded border border-neutral-300 bg-neutral-100 text-[13px] ${
           element.underline ? "underline" : ""
         }`}
-        title={t("toolbar.underline")}
+        title="Subrayado"
         onClick={() => patch({ underline: !element.underline })}
       >
         U
       </button>
       <label className="flex items-center gap-1 text-xs text-neutral-700">
-        {t("toolbar.color")}
+        Color
         <input
           type="color"
           value={element.fill}

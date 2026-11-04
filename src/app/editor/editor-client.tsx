@@ -38,7 +38,6 @@ import { useToast } from "@/app/_components/toast-context";
 import { AddProductModal } from "./_components/add-product-modal";
 import { capitalizeLabeledName, capitalizeName } from "@/lib/capitalize-name";
 import { api, type RouterOutputs } from "@/trpc/react";
-import { t } from "@/i18n/messages";
 import { theme } from "@/lib/theme";
 import { useRepresentativeProfile } from "./_hooks/use-representative-profile";
 import { getFileName } from "@/lib/quotation-save";
@@ -109,7 +108,7 @@ export default function EditorPage() {
   const makeInitialPages = useCallback((): PageData[] => {
     const picked = getQuotationProducts();
     if (picked.length === 0) {
-      return makeEmptyQuotationPages(undefined, isManualStart);
+      return makeEmptyQuotationPages(isManualStart);
     }
     return buildPagesFromQuotation(makeInitialMeta());
   }, [isManualStart, makeInitialMeta]);
@@ -157,24 +156,18 @@ export default function EditorPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   // Persistence: saved identity + the save mutation + the save action.
-  const {
-    saved,
-    setSaved,
-    savedData,
-    isSaving,
-    canSave,
-    handleSave,
-  } = useQuotationPersistence({
-    selectedClientId,
-    pagesRef,
-    editRevisionRef,
-    saveRevisionRef,
-    canSaveWhen: isManualStart || hasInitialProducts || isDirty,
-    replacePages,
-    resetHistory,
-    setIsDirty,
-    onSaveError: showError,
-  });
+  const { saved, setSaved, savedData, isSaving, canSave, handleSave } =
+    useQuotationPersistence({
+      selectedClientId,
+      pagesRef,
+      editRevisionRef,
+      saveRevisionRef,
+      canSaveWhen: isManualStart || hasInitialProducts || isDirty,
+      replacePages,
+      resetHistory,
+      setIsDirty,
+      onSaveError: showError,
+    });
 
   /**
    * A draft is any editor state with content that is not persisted — so it is
@@ -257,7 +250,9 @@ export default function EditorPage() {
         })),
       }));
       const existingProductCount = currentPages.filter((page) =>
-        page.elements.some((element) => elementRole(element) === "product-name"),
+        page.elements.some(
+          (element) => elementRole(element) === "product-name",
+        ),
       ).length;
       const firstPage = currentPages[0];
       const representativeText = firstPage?.elements.find(
@@ -277,7 +272,9 @@ export default function EditorPage() {
           representativeLines[3]?.trim() ?? metaRef.current.representativeEmail,
       };
       const policiesIndex = currentPages.findIndex((page) =>
-        page.elements.some((element) => elementRole(element) === "policies-body"),
+        page.elements.some(
+          (element) => elementRole(element) === "policies-body",
+        ),
       );
       const insertAt = policiesIndex < 0 ? currentPages.length : policiesIndex;
 
@@ -293,7 +290,10 @@ export default function EditorPage() {
         return {
           ...page,
           elements: page.elements.map((element) => {
-            if (elementRole(element) === "representative-info" && representativeText) {
+            if (
+              elementRole(element) === "representative-info" &&
+              representativeText
+            ) {
               return { ...element, text: representativeText };
             }
             if (elementRole(element) === "footer" && footerText) {
@@ -313,7 +313,9 @@ export default function EditorPage() {
       };
       setPagesWithHistory((previous) => {
         const pIndex = previous.findIndex((page) =>
-          page.elements.some((element) => elementRole(element) === "policies-body"),
+          page.elements.some(
+            (element) => elementRole(element) === "policies-body",
+          ),
         );
         const at = pIndex < 0 ? previous.length : pIndex;
         const next = [...previous];
@@ -376,13 +378,14 @@ export default function EditorPage() {
                 : elementRole(element) === "customer-name"
                   ? {
                       ...element,
-                      text: t("template.customer", {
-                      name: capitalizeName(
+                      text: `Señor(a): ${capitalizeName(
                         client.contacts.find(
-                          (contact) => contact.id === pendingHomeContactIdRef.current,
-                        )?.name ?? client.contacts[0]?.name ?? "",
-                      ),
-                      }),
+                          (contact) =>
+                            contact.id === pendingHomeContactIdRef.current,
+                        )?.name ??
+                          client.contacts[0]?.name ??
+                          "",
+                      )}`,
                     }
                   : element,
             ),
@@ -396,7 +399,9 @@ export default function EditorPage() {
       customerName: capitalizeName(
         client.contacts.find(
           (contact) => contact.id === pendingHomeContactIdRef.current,
-        )?.name ?? client.contacts[0]?.name ?? "",
+        )?.name ??
+          client.contacts[0]?.name ??
+          "",
       ),
     };
     pendingHomeClientIdRef.current = null;
@@ -435,7 +440,7 @@ export default function EditorPage() {
             const cells = element.table.cells.map((rowCells, rowIndex) => {
               const next = [...rowCells];
               if (rowIndex === 0) {
-                next[4] ??= t("template.subtotal");
+                next[4] ??= "Subtotal \n(antes de iva)";
               } else {
                 const quantity = next[0]?.replace(/\D/g, "") ?? "";
                 const price = next[3]?.replace(/\D/g, "") ?? "";
@@ -460,7 +465,9 @@ export default function EditorPage() {
         }),
       }));
       const productCount = pagesWithLogos.filter((page) =>
-        page.elements.some((element) => elementRole(element) === "product-name"),
+        page.elements.some(
+          (element) => elementRole(element) === "product-name",
+        ),
       ).length;
       metaRef.current = {
         companyName: "",
@@ -531,7 +538,9 @@ export default function EditorPage() {
   const handleAddPage = useCallback(() => {
     setPagesWithHistory((prev) => {
       const policiesIndex = prev.findIndex((page) =>
-        page.elements.some((element) => elementRole(element) === "policies-body"),
+        page.elements.some(
+          (element) => elementRole(element) === "policies-body",
+        ),
       );
       const insertAt =
         policiesIndex < 0 ? Math.max(prev.length - 1, 0) : policiesIndex;
@@ -622,7 +631,7 @@ export default function EditorPage() {
         y: 600,
         width: type === "rect" ? 200 : 300,
         height: type === "rect" ? 100 : 40,
-        text: type === "text" ? t("editor.newText") : "",
+        text: type === "text" ? "Texto nuevo" : "",
         fontSize: 16,
         fill: type === "rect" ? theme.colors.primary : theme.colors.secondary,
         isDraggable: true,
@@ -774,7 +783,9 @@ export default function EditorPage() {
       await exportPagesToPdf(pages, fileName);
     } catch (error) {
       console.error("PDF export failed:", error);
-      showError(t("editor.pdfExportFailed"));
+      showError(
+        "No se pudo exportar el PDF. Consulta la consola para ver los detalles.",
+      );
     } finally {
       setIsExporting(false);
     }
@@ -831,10 +842,10 @@ export default function EditorPage() {
       {/* Guard: loading a saved quotation would discard unsaved changes. */}
       <ConfirmModal
         open={confirmLoad !== null}
-        title={t("editor.discardTitle")}
-        message={t("editor.discardMessage")}
-        confirmLabel={t("editor.discardAndLoad")}
-        cancelLabel={t("editor.keepEditing")}
+        title="¿Descartar los cambios sin guardar?"
+        message="Esta cotización tiene cambios sin guardar. Si cargas otra cotización, se perderán. ¿Quieres continuar?"
+        confirmLabel="Descartar y cargar"
+        cancelLabel="Seguir editando"
         onConfirm={acceptConfirmLoad}
         onCancel={dismissConfirmLoad}
       />

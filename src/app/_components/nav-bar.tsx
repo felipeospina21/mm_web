@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { t } from "@/i18n/messages";
 import Image from "next/image";
 import { useEditorDraft } from "./editor-draft-context";
 import { ConfirmModal } from "./confirm-modal";
@@ -30,8 +29,8 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
   // Pending navigation target held while the leave-confirm dialog is open.
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const navLinks = [
-    { href: "/", label: t("nav.newQuotation") },
-    { href: "/editor", label: t("nav.editor") },
+    { href: "/", label: "Nueva cotización" },
+    { href: "/editor", label: "Editor" },
   ] as const;
 
   const handleNavClick = (event: React.MouseEvent, href: string) => {
@@ -98,16 +97,16 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
           onClick={handleSignOut}
           className="border-black-200 text-primary rounded-lg border px-2 py-1.5 text-xs font-medium transition hover:bg-neutral-100 sm:px-3 sm:text-sm"
         >
-          {t("nav.signOut")}
+          Cerrar sesión
         </button>
       </div>
 
       <ConfirmModal
         open={pendingHref !== null}
-        title={t("editor.leaveTitle")}
-        message={t("editor.leaveMessage")}
-        confirmLabel={t("editor.leaveConfirm")}
-        cancelLabel={t("editor.keepEditing")}
+        title="¿Salir sin guardar?"
+        message="Esta cotización tiene cambios sin guardar. Si sales del editor, se perderán. ¿Quieres continuar?"
+        confirmLabel="Salir sin guardar"
+        cancelLabel="Seguir editando"
         onConfirm={confirmLeave}
         onCancel={() => setPendingHref(null)}
       />

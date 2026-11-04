@@ -1,7 +1,5 @@
 "use client";
 
-import { t } from "@/i18n/messages";
-
 interface TableControlsProps {
   /** Whether the table supports structural edits (add/remove row/column). */
   isEditable: boolean;
@@ -31,34 +29,34 @@ export function TableControls({
     <>
       {isEditable && (
         <>
-          <span className="text-xs text-neutral-700">{t("toolbar.table")}</span>
+          <span className="text-xs text-neutral-700">Tabla</span>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={onAddRow}
-            title={t("toolbar.addRow")}
+            title="Agregar fila"
           >
-            + {t("toolbar.row")}
+            + {"Fila"}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={onRemoveRow}
-            title={t("toolbar.removeRow")}
+            title="Eliminar última fila"
           >
-            − {t("toolbar.row")}
+            − {"Fila"}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={onAddColumn}
-            title={t("toolbar.addColumn")}
+            title="Agregar columna"
           >
-            + {t("toolbar.column")}
+            + {"Col."}
           </button>
           <button
             className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
             onClick={onRemoveColumn}
-            title={t("toolbar.removeColumn")}
+            title="Eliminar última columna"
           >
-            − {t("toolbar.column")}
+            − {"Col."}
           </button>
         </>
       )}
@@ -68,9 +66,9 @@ export function TableControls({
           className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           onClick={onRemoveSelectedRows}
           disabled={selectedRowCount === 0}
-          title={t("toolbar.removeSelectedRows")}
+          title="Eliminar filas seleccionadas"
         >
-          {t("toolbar.removeSelectedRows")}
+          Eliminar filas seleccionadas
         </button>
       )}
     </>

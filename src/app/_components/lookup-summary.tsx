@@ -1,6 +1,5 @@
 "use client";
 
-import { t } from "@/i18n/messages";
 import { setPendingQuotationClient } from "@/lib/quotation-load";
 import {
   clearQuotationProducts,
@@ -46,10 +45,7 @@ export const LookupSummary: FC<LookupSummaryProps> = ({
     <section className="flex flex-col gap-4">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-sm font-semibold text-neutral-800">
-          {t("lookup.resultCount", {
-            resolved: resolved.length,
-            submitted: submitted.length,
-          })}
+          {`${resolved.length} de ${submitted.length} referencias encontradas`}
         </h2>
         <button
           type="button"
@@ -57,7 +53,7 @@ export const LookupSummary: FC<LookupSummaryProps> = ({
           disabled={resolved.length === 0 || !clientId}
           className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          {t("lookup.load")}
+          Cargar en el editor
         </button>
       </div>
 
@@ -90,10 +86,7 @@ function ResolvedSummary({ resolved }: { resolved: QuotationProduct[] }) {
                   <span
                     key={variant.id}
                     className="flex items-center gap-1 rounded-full bg-neutral-50 px-2 py-0.5 text-xs text-neutral-600"
-                    title={t("lookup.stockTitle", {
-                      color: variant.colorName,
-                      count: variant.stock,
-                    })}
+                    title={`${variant.colorName}: ${variant.stock} disponibles`}
                   >
                     <span
                       className="h-2.5 w-2.5 rounded-full border border-neutral-300"
@@ -119,7 +112,7 @@ function UnresolvedSummary({ unresolved }: { unresolved: string[] }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
       <span className="text-xs font-semibold tracking-wide text-amber-700 uppercase">
-        {t("lookup.notFound", { count: unresolved.length })}
+        {`No encontradas (${unresolved.length})`}
       </span>
       <span className="flex flex-wrap gap-1.5">
         {unresolved.map((ref) => (

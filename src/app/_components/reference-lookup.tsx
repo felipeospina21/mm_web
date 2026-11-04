@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { api } from "@/trpc/react";
-import { t } from "@/i18n/messages";
 import {
   setPendingManualQuotation,
   setPendingQuotationClient,
@@ -61,12 +60,13 @@ export function ReferenceLookup() {
         />
         {!clientId && (
           <p className="mt-2 text-sm text-red-700" role="alert">
-            {t("client.required")}
+            Selecciona un cliente antes de iniciar la cotización.
           </p>
         )}
         <div className="mt-4 border-t border-neutral-100 pt-4">
           <p className="mb-3 text-sm text-neutral-600">
-            {t("lookup.manualInstructions")}
+            También puedes empezar una cotización vacía y agregar su contenido
+            manualmente en el editor.
           </p>
           <button
             type="button"
@@ -74,7 +74,7 @@ export function ReferenceLookup() {
             disabled={!clientId}
             className="border-primary text-primary w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
-            {t("lookup.startManual")}
+            Crear cotización manual
           </button>
         </div>
       </section>
@@ -86,7 +86,7 @@ export function ReferenceLookup() {
 
       {query.isError && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {t("lookup.failed", { error: query.error.message })}
+          {`No se pudo completar la búsqueda: ${query.error.message}`}
         </p>
       )}
 
