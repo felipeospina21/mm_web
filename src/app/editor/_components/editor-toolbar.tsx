@@ -1,6 +1,5 @@
 "use client";
 
-import { t } from "@/i18n/messages";
 import type { PageData } from "./types";
 import { elementRole } from "../_lib/element-role";
 import { ActionsMenu } from "./actions-menu";
@@ -63,16 +62,16 @@ export function EditorToolbar({
     <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-y-2 border-b border-neutral-200 bg-white px-2 py-2 sm:h-12 sm:flex-nowrap sm:px-4 sm:py-0">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <h1 className="truncate text-sm font-semibold sm:text-base">
-          {t("editor.title")}
+          Editor de cotizaciones
         </h1>
         {/* Draft until saved; shows the DB-assigned number once persisted. */}
         {saved ? (
           <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-green-800 sm:px-2.5 sm:text-xs">
-            {t("editor.quotationNumber", { number: saved.quotationNumber })}
+            {`Cotización n.º ${saved.quotationNumber}`}
           </span>
         ) : (
           <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap text-neutral-500 sm:px-2.5 sm:text-xs">
-            {t("editor.draft")}
+            Borrador
           </span>
         )}
         {/* Unsaved-changes indicator. */}
@@ -82,7 +81,7 @@ export function EditorToolbar({
               className="h-1.5 w-1.5 rounded-full bg-amber-500"
               aria-hidden="true"
             />
-            {t("editor.unsaved")}
+            Cambios sin guardar
           </span>
         )}
       </div>
@@ -103,18 +102,14 @@ export function EditorToolbar({
           disabled={isSaving || !canSave}
           className="rounded bg-green-600 px-2 py-1.5 text-xs whitespace-nowrap text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
         >
-          {isSaving
-            ? t("editor.saving")
-            : saved
-              ? t("editor.save")
-              : t("editor.saveQuotation")}
+          {isSaving ? "Guardando…" : saved ? "Guardar" : "Guardar cotización"}
         </button>
         <button
           onClick={onExportPdf}
           disabled={!saved || isExporting}
           className="bg-primary rounded px-2 py-1.5 text-xs whitespace-nowrap text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
         >
-          {isExporting ? t("editor.exporting") : t("editor.exportPdf")}
+          {isExporting ? "Exportando…" : "Exportar a PDF"}
         </button>
       </div>
     </header>

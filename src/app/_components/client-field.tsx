@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { SearchableSelect } from "@/components/searchable-select";
 import { api, type RouterOutputs } from "@/trpc/react";
-import { t } from "@/i18n/messages";
 import { capitalizeName } from "@/lib/capitalize-name";
 
 type ClientRecord = RouterOutputs["customer"]["list"][number];
@@ -52,7 +51,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
           : `${client.id}::none`,
       );
       setSelectedClientId(client.id);
-          onChange(client, client.contacts[0]?.id ?? null);
+      onChange(client, client.contacts[0]?.id ?? null);
       setForm(EMPTY_FORM);
       setContacts([{ ...EMPTY_CONTACT }]);
       setIsCreateOpen(false);
@@ -99,13 +98,13 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
         className="text-sm font-semibold text-neutral-800"
         htmlFor="client-select"
       >
-        {t("client.label")}
+        Cliente
       </label>
       <SearchableSelect
         id="client-select"
-        label={t("client.select")}
-        searchLabel={t("client.search")}
-        noResultsLabel={t("client.noResults")}
+        label="Selecciona un cliente"
+        searchLabel="Buscar clientes..."
+        noResultsLabel="No se encontraron clientes."
         options={clientOptions}
         value={selectedOption?.value ?? null}
         onChange={(optionValue) => {
@@ -127,13 +126,13 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
           );
         }}
         footerAction={{
-          label: t("client.addNew"),
+          label: "Agregar cliente nuevo",
           onSelect: () => setIsCreateOpen(true),
         }}
       />
       {clientsQuery.error && (
         <p role="alert" className="text-sm text-red-700">
-          {t("client.loadFailed")}
+          No se pudieron cargar los clientes.
         </p>
       )}
 
@@ -150,23 +149,23 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
             }}
           >
             <h2 className="text-lg font-semibold text-neutral-900">
-              {t("client.addTitle")}
+              Agregar cliente
             </h2>
             <p className="text-sm text-neutral-600">
-              {t("client.requiredFields")}
+              Los campos marcados con * son obligatorios.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {(
                 [
-                  ["name", "client.companyName", true],
-                  ["companyId", "client.companyId", false],
-                  ["address", "client.address", false],
-                  ["phone", "client.phone", false],
+                  ["name", "Nombre Empresa", true],
+                  ["companyId", "ID de empresa", false],
+                  ["address", "Dirección", false],
+                  ["phone", "Teléfono", false],
                 ] as const
               ).map(([field, label, required]) => (
                 <label key={field} className="flex flex-col gap-1 text-sm">
                   <span className="font-medium text-neutral-700">
-                    {t(label)}
+                    {label}
                     {required && (
                       <span aria-hidden="true" className="text-red-600">
                         {" *"}
@@ -185,7 +184,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
             </div>
             <section className="flex flex-col gap-3">
               <h3 className="text-sm font-semibold text-neutral-800">
-                {t("client.contacts")}
+                Contactos
               </h3>
               {contacts.map((contact, index) => (
                 <div
@@ -194,14 +193,14 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
                 >
                   {(
                     [
-                      ["name", "client.contactName", true],
-                      ["phone", "client.contactPhone", true],
-                      ["email", "client.contactEmail", true],
+                      ["name", "Nombre de contacto", true],
+                      ["phone", "Teléfono de contacto", true],
+                      ["email", "Correo de contacto", true],
                     ] as const
                   ).map(([field, label, required]) => (
                     <label key={field} className="flex flex-col gap-1 text-sm">
                       <span className="font-medium text-neutral-700">
-                        {t(label)}
+                        {label}
                         <span aria-hidden="true" className="text-red-600">
                           {" *"}
                         </span>
@@ -229,7 +228,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
                       }
                       className="text-left text-sm text-red-700 sm:col-span-3"
                     >
-                      {t("client.removeContact")}
+                      Eliminar contacto
                     </button>
                   )}
                 </div>
@@ -241,7 +240,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
                 }
                 className="self-start text-sm font-medium text-green-700"
               >
-                {t("client.addContact")}
+                + Agregar contacto
               </button>
             </section>
             {createClient.error && (
@@ -255,7 +254,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
                 onClick={() => setIsCreateOpen(false)}
                 className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700"
               >
-                {t("common.cancel")}
+                Cancelar
               </button>
               <button
                 type="submit"
@@ -272,9 +271,7 @@ export function ClientField({ value, onChange }: ClientFieldProps) {
                 }
                 className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {createClient.isPending
-                  ? t("client.saving")
-                  : t("client.create")}
+                {createClient.isPending ? "Guardando…" : "Crear cliente"}
               </button>
             </div>
           </form>

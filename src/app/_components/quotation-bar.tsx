@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { getQuotationProducts, STORAGE_EVENT } from "@/lib/quotation-selection";
-import { t } from "@/i18n/messages";
 
 /**
  * Floating bar shown on the catalog once the user has picked at least
@@ -27,15 +26,12 @@ export function QuotationBar() {
         className="bg-primary flex items-center gap-3 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-2xl transition hover:opacity-90"
       >
         <span>
-          {t(
-            count === 1
-              ? "quotationBar.oneSelected"
-              : "quotationBar.manySelected",
-            { count },
-          )}
+          {count === 1
+            ? `${count} producto seleccionado`
+            : `${count} productos seleccionados`}
         </span>
         <span className="h-4 w-px bg-white/30" aria-hidden="true" />
-        <span>{t("quotationBar.goToQuotation")}</span>
+        <span>Ir a la cotización →</span>
       </a>
     </div>
   );

@@ -9,7 +9,6 @@ import { PAGE_HEIGHT, PAGE_WIDTH } from "./types";
 import { getPageOffset } from "../_lib/quotation-canvas-geometry";
 import { isAllowedImageSrc } from "./quotation-schema";
 import { theme } from "@/lib/theme";
-import { t } from "@/i18n/messages";
 
 export interface CanvasSelection {
   rows: number[];
@@ -330,8 +329,7 @@ function useLoadedImage(src: string | undefined): LoadedImageState {
  * `KonvaImage` without a cast.
  */
 interface ImageElementProps
-  extends Konva.RectConfig,
-    Partial<Konva.ImageConfig> {
+  extends Konva.RectConfig, Partial<Konva.ImageConfig> {
   element: TemplateElement;
 }
 
@@ -374,8 +372,8 @@ const ImageElement = memo(function ImageElement({
           height={Math.max(0, element.height - 16)}
           text={
             failed
-              ? `${t("image.failed")} · ${t("image.retry")}`
-              : t("image.loading")
+              ? `No se pudo cargar la imagen · Reintentar`
+              : "Cargando imagen…"
           }
           fontSize={13}
           fill={failed ? "#b91c1c" : "#525252"}

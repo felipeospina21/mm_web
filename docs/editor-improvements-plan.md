@@ -21,8 +21,8 @@
 ## Status (updated 2026-11-03)
 
 **Next up:** Phase 5 remaining cleanup — all decision-heavy: logging (5.2), the
-`set-state-in-effect` + app-wide `useEffect` sweep (5.7), app-wide splits (5.6),
-i18n keep-vs-simplify review (5.8). Phases 1–4 are complete; Phase 6 (e2e) and
+`set-state-in-effect` + app-wide `useEffect` sweep (5.7), app-wide splits (5.6).
+Phases 1–4 are complete; Phase 6 (e2e) and
 Phase 7 (coverage) are not started.
 
 **Session log — 2026-11-03** (branch-per-task; all merged to `main`):
@@ -155,15 +155,6 @@ other storage-reading initializers in `editor-client.tsx` (`isManualStart`,
 `hasInitialProducts`, `pendingHomeContactIdRef`, and the initial pages/meta via
 `getQuotationProducts`) — they carry the same latent risk but aren't flagged today
 because they don't drive a rendered attribute.
-
-### Task 5.8 — Review the i18n implementation — is it needed? (Phase 5)
-
-The editor/toolbar use a `t(...)` helper from `@/i18n/messages` with a single
-`defaultLocale`. Assess whether full internationalization is actually a
-requirement: if the app is effectively single-locale (currently `es-CO`-flavoured),
-the `t()` indirection may be adding ceremony without payoff. Decide to (a) keep
-and properly multi-locale it, or (b) simplify to plain strings/constants. Scope
-the blast radius first (grep usages) before changing anything.
 
 ### Task 5.9 — Draft protection is an in-session band-aid (Phase 5) — deferred to the quotation module
 
@@ -603,6 +594,10 @@ strict document order — output identical, only the I/O overlaps. Split async
 +5).
 
 ## Phase 5 — Lower-priority cleanup
+
+### Task 5.8 — Remove the i18n layer (Phase 5) — ✅ DONE (single commit on `main`)
+
+App is Spanish-only; `src/i18n` + `t()` + `locale` params removed in favour of colocated Spanish literals (also dropped 5 unused catalog keys). Re-introduce a message layer when the editor is extracted into a package.
 
 ### Task 5.1 — Replace client-side `alert(...)` (Phase 5, was ref 3.3) — ✅ DONE (PR #15)
 

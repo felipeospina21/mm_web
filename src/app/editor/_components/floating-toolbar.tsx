@@ -1,7 +1,6 @@
 "use client";
 
 import type { PageData, TemplateElement } from "./types";
-import { t } from "@/i18n/messages";
 import {
   addColumn,
   addRow,
@@ -103,7 +102,7 @@ export default function FloatingToolbar({
 
       {isImage && (
         <label className="flex items-center gap-1 text-xs text-neutral-700">
-          {t("toolbar.image")}
+          Imagen
           <input
             type="file"
             accept="image/*"
@@ -130,17 +129,17 @@ export default function FloatingToolbar({
 
       <button
         className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs"
-        title={t("toolbar.duplicate")}
+        title="Duplicar (Ctrl+D)"
         onClick={() => onDuplicateElement(element.id)}
       >
-        {t("toolbar.duplicateShort")}
+        Duplicar
       </button>
       <button
         className="h-7 rounded border border-neutral-300 bg-neutral-100 px-2.5 text-xs text-red-700"
-        title={t("toolbar.delete")}
+        title="Eliminar (Supr)"
         onClick={() => onDeleteElement(element.id)}
       >
-        {t("toolbar.deleteShort")}
+        Eliminar
       </button>
     </div>
   );

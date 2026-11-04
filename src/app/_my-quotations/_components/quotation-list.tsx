@@ -5,13 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { api } from "@/trpc/react";
 import { setPendingQuotationLoad } from "@/lib/quotation-load";
-import { defaultLocale, intlLocale, t } from "@/i18n/messages";
 import { capitalizeName } from "@/lib/capitalize-name";
 
 const PAGE_SIZE = 12;
 
 function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString(intlLocale(defaultLocale), {
+  return new Date(date).toLocaleDateString("es-CO", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -69,7 +68,7 @@ export function QuotationList() {
   if (quotations.length === 0) {
     return (
       <p className="py-20 text-center text-neutral-500">
-        {t("quotations.empty")}
+        Aún no tienes cotizaciones guardadas.
       </p>
     );
   }
@@ -77,7 +76,7 @@ export function QuotationList() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="mb-6 text-xl font-semibold text-neutral-900">
-        {t("quotations.title")}{" "}
+        Mis cotizaciones{" "}
         <span className="text-sm font-normal text-neutral-400">({total})</span>
       </h1>
 
@@ -94,14 +93,13 @@ export function QuotationList() {
                     {q.quotationNumber}
                   </span>
                   <span className="font-semibold text-neutral-900">
-                    {q.clientName ? capitalizeName(q.clientName) : t("client.none")}
+                    {q.clientName
+                      ? capitalizeName(q.clientName)
+                      : "Sin cliente seleccionado"}
                   </span>
                 </span>
                 <span className="text-xs text-neutral-500">
-                  {t("quotations.createdUpdated", {
-                    created: formatDate(q.createdDate),
-                    updated: formatDate(q.updatedDate),
-                  })}
+                  {`Creada ${formatDate(q.createdDate)} · Actualizada ${formatDate(q.updatedDate)}`}
                 </span>
                 {q.userName && (
                   <span className="text-xs text-neutral-500">
@@ -111,14 +109,9 @@ export function QuotationList() {
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className="text-xs text-neutral-500">
-                  {t(
-                    q.productCount === 1
-                      ? "quotations.productOne"
-                      : "quotations.productMany",
-                    {
-                      count: q.productCount,
-                    },
-                  )}
+                  {q.productCount === 1
+                    ? `${q.productCount} producto`
+                    : `${q.productCount} productos`}
                 </span>
               </div>
             </button>

@@ -1,5 +1,3 @@
-import { defaultLocale, t, type Locale } from "@/i18n/messages";
-
 /** Business-wide contact details; keep these out of the per-user profile. */
 export const companyProfile = {
   address: "Calle 6 sur #50 - 30, Medellin",
@@ -13,10 +11,7 @@ type FooterContactData = {
   representativeEmail?: string | null;
 };
 
-export function formatQuotationFooter(
-  contact: FooterContactData,
-  locale: Locale = defaultLocale,
-): string {
+export function formatQuotationFooter(contact: FooterContactData): string {
   const companyLine = [companyProfile.address, companyProfile.website]
     .map((value) => value.trim())
     .filter(Boolean)
@@ -24,22 +19,17 @@ export function formatQuotationFooter(
 
   const phone = contact.representativePhone?.trim() ?? "";
   const extension = contact.representativePhoneExtension?.trim() ?? "";
-  const phoneWithExtension = [
-    phone,
-    extension ? `${t("template.extension", {}, locale)} ${extension}` : "",
-  ]
+  const phoneWithExtension = [phone, extension ? `ext. ${extension}` : ""]
     .filter(Boolean)
     .join(" ");
 
   const representativeLine = [
     contact.representativeCellphone?.trim()
-      ? `${t("template.cellphone", {}, locale)}: ${contact.representativeCellphone.trim()}`
+      ? `Celular: ${contact.representativeCellphone.trim()}`
       : "",
-    phoneWithExtension
-      ? `${t("template.phone", {}, locale)}: ${phoneWithExtension}`
-      : "",
+    phoneWithExtension ? `Teléfono: ${phoneWithExtension}` : "",
     contact.representativeEmail?.trim()
-      ? `${t("template.email", {}, locale)}: ${contact.representativeEmail.trim()}`
+      ? `Correo: ${contact.representativeEmail.trim()}`
       : "",
   ]
     .filter(Boolean)

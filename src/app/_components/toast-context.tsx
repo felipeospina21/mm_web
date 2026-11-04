@@ -11,8 +11,6 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 
-import { t } from "@/i18n/messages";
-
 /**
  * App-wide, non-blocking notifications. Replaces native `alert(...)` for
  * transient success/error messages (e.g. save or PDF-export failures).
@@ -92,8 +90,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       // Errors stay until dismissed (duration 0) unless the caller overrides;
       // other variants auto-dismiss.
       const duration =
-        options?.durationMs ??
-        (variant === "error" ? 0 : DEFAULT_DURATION_MS);
+        options?.durationMs ?? (variant === "error" ? 0 : DEFAULT_DURATION_MS);
       if (duration > 0) {
         const timer = setTimeout(() => dismiss(id), duration);
         timers.current.set(id, timer);
@@ -188,7 +185,7 @@ function ToastItem({
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}
-        aria-label={t("common.dismiss")}
+        aria-label="Descartar notificación"
         className="-m-1 rounded-md p-1 text-current/70 hover:text-current focus:ring-2 focus:ring-current/40 focus:outline-none"
       >
         <span aria-hidden="true">✕</span>

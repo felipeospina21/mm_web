@@ -1,6 +1,5 @@
 "use client";
 
-import { t } from "@/i18n/messages";
 import { parseReferences, MAX_REFERENCES } from "@/lib/references";
 import {
   useState,
@@ -36,15 +35,18 @@ export const ReferencesSection: FC<ReferencesSectionProps> = ({
         htmlFor="references"
         className="text-sm font-semibold text-neutral-800"
       >
-        {t("lookup.label")}
+        Referencias de productos
       </label>
-      <p className="text-sm text-neutral-500">{t("lookup.instructions")}</p>
+      <p className="text-sm text-neutral-500">
+        Pega una lista de referencias separadas por comas. Buscaremos los
+        productos para agregarlos a la cotización.
+      </p>
       <textarea
         id="references"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         rows={4}
-        placeholder={t("lookup.placeholder")}
+        placeholder="mu-61, te-377, TMPS 234"
         className="focus:ring-primary w-full resize-y rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm outline-none focus:border-white focus:ring-1"
       />
 
@@ -54,9 +56,9 @@ export const ReferencesSection: FC<ReferencesSectionProps> = ({
             overLimit ? "text-red-600" : "text-neutral-400"
           }`}
         >
-          {t(parsed.length === 1 ? "lookup.countOne" : "lookup.countMany", {
-            count: parsed.length,
-          })}
+          {parsed.length === 1
+            ? `${parsed.length} referencia`
+            : `${parsed.length} referencias`}
         </span>
         <button
           type="button"
@@ -64,7 +66,7 @@ export const ReferencesSection: FC<ReferencesSectionProps> = ({
           disabled={parsed.length === 0 || overLimit || isFetching}
           className="bg-primary rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isFetching ? t("lookup.resolving") : t("lookup.resolve")}
+          {isFetching ? "Buscando…" : "Buscar referencias"}
         </button>
       </div>
     </section>

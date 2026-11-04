@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { t } from "@/i18n/messages";
 import { ActionsMenuItem } from "./actions-menu-item";
 
 interface ActionsMenuProps {
@@ -66,7 +65,7 @@ export function ActionsMenu({
         aria-haspopup="menu"
         className="flex items-center gap-1.5 rounded border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-xs hover:bg-neutral-200 sm:px-3 sm:text-sm"
       >
-        {t("actions.label")}
+        Acciones
         <svg
           className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
           viewBox="0 0 20 20"
@@ -87,34 +86,34 @@ export function ActionsMenu({
           className="absolute right-0 z-20 mt-2 w-48 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-lg"
         >
           <ActionsMenuItem onClick={onUndo} disabled={!canUndo}>
-            {t("actions.undo")}
+            Deshacer
           </ActionsMenuItem>
           <ActionsMenuItem onClick={onRedo} disabled={!canRedo}>
-            {t("actions.redo")}
+            Rehacer
           </ActionsMenuItem>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
 
           <ActionsMenuItem onClick={onAddPage}>
-            {t("actions.addPage")}
+            Agregar página en blanco
           </ActionsMenuItem>
           <ActionsMenuItem onClick={onDeletePage} disabled={!canDeletePage}>
-            {t("actions.deletePage")}
+            Eliminar página actual
           </ActionsMenuItem>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
 
           <ActionsMenuItem onClick={() => onAddElement("text")}>
-            {t("actions.addText")}
+            + Texto
           </ActionsMenuItem>
           <ActionsMenuItem onClick={() => onAddElement("rect")}>
-            {t("actions.addShape")}
+            + Forma
           </ActionsMenuItem>
           <ActionsMenuItem onClick={() => onAddElement("table")}>
-            {t("actions.addTable")}
+            + Tabla
           </ActionsMenuItem>
           <ActionsMenuItem onClick={() => onAddElement("image")}>
-            {t("actions.addImage")}
+            + Imagen
           </ActionsMenuItem>
 
           <div className="my-1 h-px bg-neutral-100" aria-hidden="true" />
@@ -125,7 +124,7 @@ export function ActionsMenu({
               setOpen(false);
             }}
           >
-            {t("actions.addProducts")}
+            + Agregar productos
           </ActionsMenuItem>
         </div>
       )}

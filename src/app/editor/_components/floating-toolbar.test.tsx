@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { t } from "@/i18n/messages";
 import type { PageData, TemplateElement } from "./types";
 import FloatingToolbar from "./floating-toolbar";
 
@@ -74,10 +73,8 @@ describe("FloatingToolbar", () => {
 
   it("always offers duplicate and delete for an editable element", () => {
     renderToolbar(el({ type: "text" }));
-    expect(
-      screen.getByTitle(t("toolbar.duplicate")),
-    ).toBeInTheDocument();
-    expect(screen.getByTitle(t("toolbar.delete"))).toBeInTheDocument();
+    expect(screen.getByTitle("Duplicar (Ctrl+D)")).toBeInTheDocument();
+    expect(screen.getByTitle("Eliminar (Supr)")).toBeInTheDocument();
   });
 
   it("fires delete / duplicate with the element id", async () => {
@@ -85,8 +82,8 @@ describe("FloatingToolbar", () => {
     const { onDeleteElement, onDuplicateElement } = renderToolbar(
       el({ id: "abc", type: "text" }),
     );
-    await user.click(screen.getByTitle(t("toolbar.duplicate")));
-    await user.click(screen.getByTitle(t("toolbar.delete")));
+    await user.click(screen.getByTitle("Duplicar (Ctrl+D)"));
+    await user.click(screen.getByTitle("Eliminar (Supr)"));
     expect(onDuplicateElement).toHaveBeenCalledWith("abc");
     expect(onDeleteElement).toHaveBeenCalledWith("abc");
   });

@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import type { RefObject } from "react";
 
 import { api, type RouterOutputs } from "@/trpc/react";
-import { t } from "@/i18n/messages";
 import type { PageData } from "../_components/types";
 
 /** Saved identity: `null` while a draft, populated once persisted. */
@@ -87,7 +86,7 @@ export function useQuotationPersistence({
     },
     onError: (error) => {
       console.error("Save failed:", error);
-      onSaveError(t("editor.saveFailed", { error: error.message }));
+      onSaveError(`No se pudo guardar la cotización: ${error.message}`);
     },
   });
 
@@ -99,7 +98,9 @@ export function useQuotationPersistence({
     // instead of dispatching a request that can only fail. (networkMode:
     // "always" above still covers mid-flight drops and unreliable onLine.)
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      onSaveError(t("editor.offline"));
+      onSaveError(
+        "Estás sin conexión. Conéctate a internet para guardar la cotización.",
+      );
       return;
     }
     saveRevisionRef.current = editRevisionRef.current;

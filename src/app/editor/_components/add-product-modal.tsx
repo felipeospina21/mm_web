@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { t } from "@/i18n/messages";
 import { MAX_REFERENCES, parseReferences } from "@/lib/references";
 import { api, type RouterOutputs } from "@/trpc/react";
 
@@ -107,30 +106,28 @@ export function AddProductModal({
         className="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl"
       >
         <h2 id="add-products-title" className="mb-2 text-lg font-semibold">
-          {t("actions.addProducts")}
+          + Agregar productos
         </h2>
         <p className="mb-4 text-sm text-neutral-600">
-          {t("lookup.instructions")}
+          Pega una lista de referencias separadas por comas. Buscaremos los
+          productos para agregarlos a la cotización.
         </p>
         <textarea
           ref={textareaRef}
           value={productReferenceInput}
           onChange={(event) => setProductReferenceInput(event.target.value)}
           rows={3}
-          placeholder={t("lookup.placeholder")}
+          placeholder="mu-61, te-377, TMPS 234"
           className="focus:border-primary w-full resize-y rounded-lg border border-neutral-300 p-3 text-sm outline-none"
         />
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="text-xs text-neutral-500">
             {hasCurrentProductResults &&
               productLookup.data &&
-              t("lookup.resultCount", {
-                resolved: productLookup.data.resolved.length,
-                submitted: submittedProductReferences.length,
-              })}
+              `${productLookup.data.resolved.length} de ${submittedProductReferences.length} referencias encontradas`}
             {productLookup.isError && (
               <span className="text-red-600">
-                {t("lookup.failed", { error: productLookup.error.message })}
+                {`No se pudo completar la búsqueda: ${productLookup.error.message}`}
               </span>
             )}
           </span>
@@ -144,9 +141,7 @@ export function AddProductModal({
             onClick={handleResolve}
             className="bg-primary rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {productLookup.isFetching
-              ? t("lookup.resolving")
-              : t("lookup.resolve")}
+            {productLookup.isFetching ? "Buscando…" : "Buscar referencias"}
           </button>
         </div>
         <div className="mt-5 flex justify-end gap-2">
@@ -155,7 +150,7 @@ export function AddProductModal({
             onClick={handleClose}
             className="rounded-lg border border-neutral-300 px-4 py-2 text-sm"
           >
-            {t("common.cancel")}
+            Cancelar
           </button>
           <button
             type="button"
@@ -165,7 +160,7 @@ export function AddProductModal({
             onClick={handleLoad}
             className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {t("lookup.load")}
+            Cargar en el editor
           </button>
         </div>
       </section>

@@ -3,7 +3,6 @@
 import { Suspense, useState, type FormEvent } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { t } from "@/i18n/messages";
 
 interface LoginFormProps {
   mode: "credentials" | "microsoft";
@@ -34,14 +33,14 @@ function LoginFormInner({
         redirect: false,
       });
       if (result?.error) {
-        setError(t("login.invalidCredentials"));
+        setError("Correo o contraseña incorrectos.");
         setIsSubmitting(false);
         return;
       }
       window.location.assign(result?.url ?? callbackUrl);
     } catch (cause) {
       console.error("Credentials sign-in failed:", cause);
-      setError(t("login.failed"));
+      setError("Ocurrió un error al iniciar sesión. Inténtalo de nuevo.");
       setIsSubmitting(false);
     }
   }
@@ -53,7 +52,7 @@ function LoginFormInner({
       await signIn("microsoft-entra-id", { callbackUrl });
     } catch (cause) {
       console.error("Microsoft sign-in failed:", cause);
-      setError(t("login.failed"));
+      setError("Ocurrió un error al iniciar sesión. Inténtalo de nuevo.");
       setIsSubmitting(false);
     }
   }
@@ -63,7 +62,7 @@ function LoginFormInner({
       <p className="mb-2 text-lg font-medium tracking-wide text-white/75">
         Cotizador Magic Medios
       </p>
-      <h1 className="text-2xl font-bold text-white">{t("login.title")}</h1>
+      <h1 className="text-2xl font-bold text-white">Iniciar sesión</h1>
       {error && (
         <p role="alert" className="text-sm text-red-300">
           {error}
@@ -75,7 +74,7 @@ function LoginFormInner({
           className="flex flex-col gap-3"
         >
           <label className="flex flex-col gap-1 text-sm text-white">
-            {t("login.email")}
+            Correo electrónico
             <input
               autoComplete="username"
               className="rounded-lg bg-white px-3 py-2 text-neutral-900"
@@ -85,7 +84,7 @@ function LoginFormInner({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-white">
-            {t("login.password")}
+            Contraseña
             <input
               autoComplete="current-password"
               className="rounded-lg bg-white px-3 py-2 text-neutral-900"
@@ -99,7 +98,7 @@ function LoginFormInner({
             disabled={isSubmitting}
             className="text-primary mt-2 rounded-lg bg-white px-4 py-3 font-semibold transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? t("login.signingIn") : t("login.submit")}
+            {isSubmitting ? "Iniciando sesión…" : "Iniciar sesión"}
           </button>
         </form>
       ) : (
@@ -109,9 +108,7 @@ function LoginFormInner({
           disabled={isSubmitting}
           className="text-primary mt-2 rounded-lg bg-white px-4 py-3 font-semibold transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSubmitting
-            ? t("login.signingIn")
-            : t("login.continueWithMicrosoft")}
+          {isSubmitting ? "Iniciando sesión…" : "Continuar con Microsoft"}
         </button>
       )}
     </section>
