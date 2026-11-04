@@ -344,10 +344,27 @@ name LIKE '[E2E]%'`; `client_contact` cascades. (Tables are physically
 > 6.6 (auth) underpins both. 6.7 (lookup negative paths) and 6.8 (nightly
 > schedule) are follow-ups.
 
-### Task 6.0 — Playwright setup & DB-cleanup harness (Phase 6, prerequisite)
+### Task 6.0 — Playwright setup & DB-cleanup harness (Phase 6, prerequisite) — ✅ DONE (code; needs a DB run)
 
 Stand up the e2e infrastructure and the isolation/teardown harness **before**
 writing specs, so every spec is clean-by-construction.
+
+> **Landed:** `@playwright/test@1.64.1` (pinned); `playwright.config.ts`
+> (`testDir: e2e/`, `webServer: pnpm dev:db:dev`, global setup/teardown, Chromium,
+> shared `storageState`); `e2e/_support/` harness — `db.ts` (direct `postgres`
+> over `DIRECT_URL`, user-scoped `deleteQuotationsForUser` /
+> `deleteE2eClientsForUser` / `countE2eRowsForUser`), `env.ts`, `global-setup.ts`
+> (resolve e2e user id + sign-in storageState), `global-teardown.ts` (scoped
+> sweep), `mock-external.ts` (`mockResolveReferences` via `page.route`),
+> `fixtures.ts` (per-test cleanup seam); `e2e/smoke.spec.ts`; `test:e2e` /
+> `test:e2e:ui` scripts; `.env.example` + `.gitignore` updated; ESLint relaxes
+> `react-hooks/rules-of-hooks` for `e2e/**` (Playwright's `use` fixture param).
+> Verified without a DB: `typecheck`/`lint` clean, Vitest unaffected (270/270),
+> `playwright test --list` finds both specs, Chromium installed, and `test:e2e`
+> reaches global setup (fails with the intended "seed E2E_USER…" message).
+> **Not yet run green** — needs `.env.development` (DB creds + `E2E_USER_EMAIL`/
+> `E2E_USER_PASSWORD`) and `pnpm db:seed:dev` for the e2e user. Run once:
+> `pnpm db:seed:dev "<e2e-email>" "<pw>" "E2E User"` then `pnpm test:e2e`.
 
 - **Add:** `@playwright/test` (pinned devDep); `playwright.config.ts` (own
   `testDir`, e.g. `e2e/`, separate from Vitest's `src/**/*.test.*`); `test:e2e`
