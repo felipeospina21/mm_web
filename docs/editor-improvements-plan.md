@@ -21,7 +21,7 @@
 ## Status (updated 2026-11-03)
 
 **Next up:** Phase 5 remaining cleanup — all decision-heavy: logging (5.2), the
-app-wide `useEffect` sweep (5.7c–e; 5.7a–b done), app-wide splits (5.6).
+app-wide `useEffect` sweep (5.7d–e; 5.7a–c done), app-wide splits (5.6).
 Phases 1–4 are complete; Phase 6 (e2e) and
 Phase 7 (coverage) are not started.
 
@@ -183,11 +183,16 @@ _Sub-tasks:_
   `use-canvas-stage` wraps `setSelectedId` to notify `onSelectionChange`
   directly (effect removed). `pagesRef.current = pages` mirror **kept** as an
   effect (render-time assignment violates `react-hooks/refs`); commented in code.
-- **5.7c — Apply-on-data-arrival effects (ref-guarded):**
-  `use-representative-profile.ts:32`, `use-quotation-load.ts:67`,
-  `editor-client.tsx:359`. Evaluate lazy-initializer / derived-initial-value
-  alternatives; keep if the effect is the least-bad option. The quotation-load
-  path is feature-flagged off (see 2.3/3.3), so it cannot be verified end to end.
+- **5.7c — Apply-on-data-arrival effects (ref-guarded)** — ✅ DONE (live ones);
+  `use-quotation-load.ts:67` DEFERRED. Both live effects are genuine
+  run-once-on-query-data effects (react to async data, imperatively rewrite
+  pages/history/meta — not derivable in render), so **kept** with clarifying
+  comments: `use-representative-profile.ts:32` (guard tests already cover
+  clean/no-data/dirty/saved/pending-load) and `editor-client.tsx:359`, where a
+  **phantom `selectedClientId` dep was removed** (leftover from 5.7a; never read
+  in the body). `use-quotation-load.ts:67` belongs to the feature-flagged
+  quotation module (2.3/3.3) — not touched until that path is live and
+  verifiable.
 - **5.7d — Keep-but-confirm:** `quotation-canvas.tsx:365` (Konva `Transformer`
   `nodes()` sync, imperative canvas API → likely genuine) and
   `editor-client.tsx:207` (`isDraft` publish to context; the comment explains why
