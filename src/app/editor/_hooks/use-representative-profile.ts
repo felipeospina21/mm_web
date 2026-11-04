@@ -29,6 +29,10 @@ export function useRepresentativeProfile({
   const representativeQuery = api.quotation.representative.useQuery();
   const representativeAppliedRef = useRef(false);
 
+  // Apply-once-on-data-arrival: when the profile query resolves on a clean,
+  // unsaved, non-loading draft, hydrate the representative header + footer once
+  // (the ref guard enforces "once"). A genuine effect — it reacts to async data
+  // and imperatively rewrites pages/history/meta, not derivable in render.
   useEffect(() => {
     const representative = representativeQuery.data;
     if (

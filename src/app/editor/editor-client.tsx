@@ -356,6 +356,9 @@ export default function EditorPage() {
   // keeps the home → editor client-data load working.
   const pendingHomeClientIdRef = useRef(takePendingQuotationClient());
 
+  // Apply-once-on-data-arrival: seed page one + meta from the home-selected
+  // client when the clients query resolves. Guarded by nulling the ref so it
+  // runs a single time; not derivable in render (it rewrites history + meta).
   useEffect(() => {
     const pendingHomeClientId = pendingHomeClientIdRef.current;
     if (!pendingHomeClientId || !clientsQuery.data) return;
@@ -405,14 +408,7 @@ export default function EditorPage() {
       ),
     };
     pendingHomeClientIdRef.current = null;
-  }, [
-    clientsQuery.data,
-    pendingLoadId,
-    selectedClientId,
-    pagesRef,
-    replacePages,
-    resetHistory,
-  ]);
+  }, [clientsQuery.data, pendingLoadId, pagesRef, replacePages, resetHistory]);
 
   /** Replace the editor contents with a loaded quotation and mark it saved. */
   const hydrateFromRow = useCallback(
