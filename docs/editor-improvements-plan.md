@@ -272,78 +272,94 @@ exporter.
 ## Phase 6 — End-to-end tests (Playwright, main-flow coverage)
 
 Complements the unit-test push (Task 3.7). Unit tests pin pure logic and hooks;
-this phase locks the **main user flows** end-to-end through the real Next.js app.
-Scope is the critical happy-paths plus a few high-value negative paths — not
-exhaustive coverage.
+this phase locks the **main user flow** and the **editor's functionality**
+end-to-end through the real Next.js app. Scope is the critical happy-paths plus a
+few high-value negative paths — not exhaustive coverage.
 
-> **Prereqs & tooling.** Playwright drives a real browser against `pnpm start`
-> (or `pnpm dev`) wired to the **Supabase dev** project (`.env.development`). The
-> `playwright` CLI is expected on PATH (or via `pnpm dlx playwright` / `pnpm exec`);
-> confirm `playwright --version` before Task 6.0 and pin `@playwright/test` as a
-> devDep so CI is reproducible. These tests **require a DB and (mocked) network**,
-> unlike the Vitest suite — so they live under a separate `test:e2e` script and a
-> separate config, and do **not** run as part of `pnpm test`.
+> **The real user flow (the only one reachable today):** SKU lookup → create
+> quotation → edit data in the editor → save quotation → export PDF. The product
+> **catalog** (`/catalog`, `ProductCatalog`) is an **unlinked/hidden route** and
+> **My Quotations** (`_my-quotations`) is **feature-flagged off**, so both are
+> **out of scope** until revived (consistent with the Task 2.3 / 3.3 deferrals).
+
+> **What writes to the DB (verified 2026-11-04):** only **Save** writes. SKU
+> lookup (`resolveSkus`) is read-only (external API → normalize → return), and
+> building/editing the quotation is entirely client-side (sessionStorage +
+> in-memory pages); PDF export is client-side jsPDF. So the **only** rows any
+> test creates are at Save: a `quotation` row (+ an optional `[E2E]`-tagged
+> `client`/`client_contact`). Editor-functionality specs that stop short of Save
+> create **nothing** and need no teardown.
+
+> **Prereqs & tooling.** Playwright drives a real browser against the app wired
+> to the **Supabase dev** project (`.env.development`). Pin `@playwright/test` as
+> a devDep; confirm `pnpm exec playwright --version` before Task 6.0. These tests
+> **require a DB and a mocked external API**, unlike the Vitest suite — so they
+> live under a separate `test:e2e` script and config and do **not** run as part
+> of `pnpm test`. **Run locally for now;** nightly scheduling is a later,
+> optional task (6.8) to decide once the suite is stable.
 
 > **Design constraints (agreed):**
 >
-> 1. **Shared dev DB, no bloat — isolate-then-delete.** Tests run against the
->    shared Supabase dev DB, so every row a test creates must be removed, and
->    cleanup must be scoped so it can never touch another user's data.
+> 1. **Shared dev DB, no bloat — isolate-then-delete.** No separate test
+>    project/branch is available, so tests run against the shared Supabase dev DB.
+>    Every row a test creates must be removed, and cleanup must be scoped so it
+>    can never touch another user's data.
 >    - **One stable, long-lived e2e user** — seeded once (`pnpm db:seed:dev`),
 >      reused across runs. Do **not** create/delete the auth `user` per run
 >      (cascade to `account`/`session`, parallel-worker races, little upside).
->      Everything a test creates is **scoped to this user's `id`**, which is the
->      hard safety boundary for teardown.
->    - **Created rows are `quotation` and `client`/`client_contact`.** `quotation`
->      has **no user-controlled text column**, so quotations are deleted purely by
->      `user_id = <e2e user>`. `client` **is** tagged with a sentinel
->      (`name LIKE '[E2E]%'`) and deleted by `user_id = <e2e user> AND name LIKE
-'[E2E]%'`; `client_contact` cascades from `client`. (Table names are
->      physically prefixed `mm_web_`.)
+>      Everything a test creates is **scoped to this user's `id`**, the hard
+>      safety boundary for teardown.
+>    - **Created rows are `quotation` and `client`/`client_contact`, and only at
+>      Save.** `quotation` has **no user-controlled text column**, so quotations
+>      are deleted purely by `user_id = <e2e user>`. `client` **is** tagged with a
+>      sentinel (`name LIKE '[E2E]%'`) and deleted by `user_id = <e2e user> AND
+name LIKE '[E2E]%'`; `client_contact` cascades. (Tables are physically
+>      prefixed `mm_web_`.)
 >    - **Two-layer cleanup:** per-test `afterEach` deletes the IDs a test created
 >      (captured from the save response), and a Playwright **global teardown**
 >      sweeps anything leaked from a crashed run — both scoped to the e2e
->      `user_id`. Teardown uses a direct Drizzle/`postgres` client over
->      `DIRECT_URL` (not the pooler).
-> 2. **Products — split by path (matches how the app actually sources them):**
->    - **Catalog (`product.list`) → real seeded DB data.** The catalog reads the
->      `product`/`product_variant` tables via Drizzle, with **no** external-API
->      involvement. Seed a fixed, known catalog once (`pnpm db:seed:products:dev`)
->      and assert against it — deterministic and owned by us.
->    - **SKU lookup (`product.resolveReferences`) → mock the external API.** This
->      is the only path that hits the external aggregator (`externalGet`, bearer
->      token). Mock it for determinism, to avoid a prod/shared dependency and rate
->      limits, and to stage resolved / unresolved / malformed cases. **Primary**
->      technique: Playwright `page.route()` intercepting the `/api/trpc` call
->      (mind the tRPC **batch + superjson** envelope). **Fallback** if the
->      envelope matching is fiddly: point `EXTERNAL_API_BASE_URL` at a tiny local
->      **stub server** in the e2e env so interception happens at the `externalGet`
->      boundary and the tRPC layer stays real. Start with `page.route`; fall back
->      to the stub only if needed.
+>      `user_id`. Teardown uses a direct `postgres` client over `DIRECT_URL`.
+> 2. **Products come from the mocked external API, not the DB.** The reachable
+>    flow sources products via **SKU lookup** (`product.resolveReferences` →
+>    `resolveSkus`), the only path that hits the external aggregator
+>    (`externalGet`, bearer token). **No product seeding is needed** (the catalog,
+>    which reads `product`/`product_variant`, is out of scope). Mock the external
+>    API for determinism and to stage resolved / unresolved / malformed cases.
+>    **Primary** technique: Playwright `page.route()` intercepting the
+>    `/api/trpc` call (mind the tRPC **batch + superjson** envelope). **Fallback**
+>    if envelope matching is fiddly: point `EXTERNAL_API_BASE_URL` at a tiny local
+>    **stub server** so interception happens at the `externalGet` boundary and the
+>    tRPC layer stays real. Start with `page.route`; fall back only if needed.
 
-> **Status (Phase 6):** not started. Suggested order: 6.0 → 6.1 → 6.2 → 6.3 →
-> 6.4 → 6.5 → 6.6. The critical happy-path MVP is **6.0 + 6.1(a) + 6.2 + 6.4 +
-> 6.5**; 6.3 and 6.6 add depth once the harness is proven. The **My Quotations /
-> load-saved-quotation** flow is **out of scope** — that module is feature-flagged
-> off and not reachable end-to-end (consistent with the Task 2.3 / 3.3
-> deferrals); add its e2e coverage when the module is un-flagged.
+> **Status (Phase 6):** not started. Two independent tracks share the 6.0
+> harness:
+>
+> - **Flow track** (one linear journey): 6.0 → 6.1 → 6.2 → 6.3 → 6.4. MVP =
+>   6.0 + 6.1(a) + 6.2 + 6.3.
+> - **Editor track** (the app's core, many focused specs): 6.0 → 6.5. This is the
+>   largest single piece; land a **core subset first** (selection, inline edit,
+>   undo/redo, duplicate/delete) to prove the canvas-interaction harness, then add
+>   formatting + table ops.
+>
+> 6.6 (auth) underpins both. 6.7 (lookup negative paths) and 6.8 (nightly
+> schedule) are follow-ups.
 
 ### Task 6.0 — Playwright setup & DB-cleanup harness (Phase 6, prerequisite)
 
 Stand up the e2e infrastructure and the isolation/teardown harness **before**
-writing flow specs, so every spec is clean-by-construction.
+writing specs, so every spec is clean-by-construction.
 
 - **Add:** `@playwright/test` (pinned devDep); `playwright.config.ts` (own
   `testDir`, e.g. `e2e/`, separate from Vitest's `src/**/*.test.*`); `test:e2e`
   (+ `test:e2e:ui`) scripts loading `.env.development`; a `webServer` entry so
-  Playwright boots the app; browser install step documented for CI.
-- **E2e user + fixtures:** seed a dedicated user (e.g. `e2e@test.local`) via
-  `pnpm db:seed:dev` and a fixed catalog via `pnpm db:seed:products:dev`; record
-  the credentials as e2e env vars. Resolve the e2e user's `id` once in global
-  setup (store for teardown scoping).
+  Playwright boots the app. Browser install is `pnpm exec playwright install`.
+- **E2e user:** seed one dedicated user (e.g. `e2e@test.local`) via
+  `pnpm db:seed:dev`; record credentials as e2e env vars. Resolve the e2e user's
+  `id` once in global setup (store for teardown scoping). **No product seeding**
+  — products come from the mocked external API.
 - **Auth fixture:** a Playwright fixture that signs in once (credentials) and
-  **reuses `storageState`** so each spec starts authenticated without re-logging
-  in — except the dedicated login specs (6.1), which drive the form directly.
+  **reuses `storageState`** so each spec starts authenticated — except the
+  dedicated login specs (6.6), which drive the form directly.
 - **Cleanup harness:** a small `e2e/_support/db.ts` using a direct `postgres`
   client over `DIRECT_URL`:
   - `deleteQuotationsForUser(userId)` → `DELETE FROM mm_web_quotation WHERE
@@ -363,91 +379,132 @@ user_id = $1`.
 - **Effort:** medium–large (one-time). **Risk:** medium — teardown scoping is
   safety-critical; always filter by the e2e `user_id`, never a bare `LIKE`.
 
-### Task 6.1 — Auth flows (Phase 6)
+## Flow track — the reachable end-to-end journey
 
-- **Specs:** (a) **login success** — seeded credentials → lands on `/` catalog,
-  nav shows the signed-in user; (b) **invalid credentials** — wrong password →
-  `role="alert"` with the invalid-credentials message, stays signed out;
-  (c) **auth guard round-trip** — visit `/editor` signed out → redirected to
-  login with `callbackUrl=/editor` → after login returns to `/editor`;
-  (d) **logout** — sign out → back to login, `/editor` blocked again.
-- **Notes:** these specs drive the login form directly (not the shared
-  `storageState` fixture). Microsoft Entra login is **out of scope** (external
-  IdP, non-deterministic) — at most a render/redirect smoke check, no live SSO.
-- **Acceptance:** all four behaviours asserted; no rows created (no teardown
-  needed beyond the shared sweep).
-- **Effort:** small. **Risk:** low. **Depends on:** 6.0.
+### Task 6.1 — SKU lookup → create quotation (Phase 6, flow entry)
 
-### Task 6.2 — Catalog selection & handoff (Phase 6)
-
-- **Specs:** (a) **select a product** — click "Add" on a seeded card → button
-  flips to "Added", floating `QuotationBar` appears with the right count;
-  (b) **persistence across nav** — add, go to `/editor`, navigate back → card
-  still "Added", count preserved (sessionStorage survives nav);
-  (c) **catalog → editor handoff** — click the QuotationBar link → `/editor`
-  renders a product page per selected product (name / reference / inventory
-  table present).
-- **Notes:** uses real seeded catalog data (no external mock needed here).
-- **Acceptance:** selection, persistence, and handoff asserted against known
-  seeded products. No DB writes (selection is client-side sessionStorage).
-- **Effort:** small–medium. **Risk:** low. **Depends on:** 6.0 (seeded catalog).
-
-### Task 6.3 — Editor core: inline edit + undo/redo (Phase 6)
-
-- **Spec:** in `/editor` (with a selection handed off), edit a field/cell →
-  value changes; **undo** → reverts; **redo** → reapplies. Assert the dirty
-  state is reflected (save becomes enabled).
-- **Notes:** exercises the inline-edit overlay + `useQuotationHistory` through
-  the real UI. Konva renders in a real browser here (unlike jsdom), so this is
-  the right layer for canvas-interaction confidence.
-- **Acceptance:** edit/undo/redo observable via the rendered value and save
-  enablement. No DB writes.
-- **Effort:** medium. **Risk:** medium (canvas interaction selectors — prefer
-  stable `data-testid`/roles over pixel hit-testing).
-- **Depends on:** 6.2 (handoff to reach a populated editor).
-
-### Task 6.4 — Save a quotation (DB write + cleanup) (Phase 6)
-
-- **Spec:** from a populated editor, pick/create a client (tagged `[E2E] …`),
-  make an edit, click **Save** → success state; saved identity set; dirty flag
-  clears. Capture the created `quotation` id (and any created `client` id) from
-  the response.
-- **Cleanup:** `afterEach` deletes the captured quotation/client ids; global
-  teardown sweeps by e2e `user_id` as backstop.
-- **Acceptance:** save succeeds and persists (optionally re-query by id to
-  confirm `user_id`, `product_count`, `references`); after the spec, teardown
-  leaves zero e2e-user quotations/`[E2E]` clients.
-- **Effort:** medium. **Risk:** medium (the only DB-writing flow — cleanup
-  correctness is the main risk; always scope by e2e `user_id`).
-- **Depends on:** 6.0 (cleanup harness), 6.2/6.3.
-
-### Task 6.5 — PDF export (Phase 6)
-
-- **Spec:** from a populated editor, click **Export PDF** → assert a download is
-  triggered (Playwright `page.on('download')` / `waitForEvent('download')`) with
-  a sensible filename; optionally assert the download is non-empty. Do **not**
-  assert PDF pixel contents.
-- **Notes:** jsPDF runs client-side; this validates the export wiring, not
-  rendering fidelity (that stays manual / future visual testing).
-- **Acceptance:** a download event fires and produces a non-empty file. No DB
-  writes.
-- **Effort:** small. **Risk:** low. **Depends on:** 6.2/6.3.
-
-### Task 6.6 — Reference/SKU lookup with mocked external API (Phase 6)
-
-- **Specs:** using the external-API mock (`mockResolveReferences`): (a) **all
-  resolved** — enter known SKUs → products resolve and can be added to the
-  quotation; (b) **mixed** — some unresolved → UI reports which codes were not
-  found while letting the user proceed with the resolved ones; (c) optional
-  **malformed payload** → treated as unresolved (no crash).
-- **Entry points:** `reference-lookup.tsx` (manual-start flow) and/or the
-  editor's `add-product-modal.tsx` — both call `api.product.resolveReferences`.
-- **Acceptance:** resolved/unresolved branches render correctly against mocked
-  responses; no live external call (assert via the route interception). No DB
-  writes unless the spec also saves (then reuse 6.4 cleanup).
+- **Specs** (external API mocked via `mockResolveReferences`): (a) **all
+  resolved** — on `/`, pick a client + enter known SKUs → resolve → "Cargar en el
+  editor" → `/editor` renders a product page per resolved product (name /
+  reference / inventory table present); (b) **manual start** —
+  "Crear cotización manual" with a client → `/editor` opens with blank item
+  fields.
+- **Entry point:** `reference-lookup.tsx`. This is the app's real entry to the
+  editor (the catalog is hidden).
+- **Acceptance:** resolved products reach the editor; no live external call
+  (assert via interception). No DB writes.
 - **Effort:** medium. **Risk:** medium (tRPC batch/superjson envelope in the
-  mock — the stub-server fallback de-risks this if needed).
-- **Depends on:** 6.0 (mock helper).
+  mock — stub-server fallback de-risks). **Depends on:** 6.0.
+
+### Task 6.2 — Edit data in the editor (flow step) (Phase 6)
+
+- **Spec:** in the populated editor from 6.1, edit a header field / line-item
+  cell → value changes; **undo** reverts; **redo** reapplies; dirty state is
+  reflected (Save enables).
+- **Notes:** the flow-level smoke of editing; the **exhaustive** editor coverage
+  lives in the editor track (6.5). Konva renders in a real browser here.
+- **Acceptance:** edit/undo/redo observable via rendered value + Save enablement.
+  No DB writes.
+- **Effort:** small–medium. **Risk:** medium (canvas selectors — prefer
+  `data-testid`/roles). **Depends on:** 6.1.
+
+### Task 6.3 — Save a quotation (DB write + cleanup) (Phase 6)
+
+- **Spec:** from the edited editor, pick/create a client (tagged `[E2E] …`),
+  click **Save** → success state; saved identity set; dirty clears. Capture the
+  created `quotation` id (and any `client` id) from the response.
+- **Cleanup:** `afterEach` deletes captured ids; global teardown sweeps by e2e
+  `user_id` as backstop.
+- **Acceptance:** save persists (optionally re-query by id to confirm `user_id`,
+  `product_count`, `references`); after the spec, teardown leaves zero e2e-user
+  quotations / `[E2E]` clients.
+- **Effort:** medium. **Risk:** medium (**the only DB-writing flow** — cleanup
+  correctness is the main risk; always scope by e2e `user_id`).
+- **Depends on:** 6.0 (cleanup harness), 6.2.
+
+### Task 6.4 — PDF export (flow finish) (Phase 6)
+
+- **Spec:** from a populated editor, click **Export PDF** → assert a download
+  fires (`page.waitForEvent('download')`) with a sensible filename; assert the
+  file is non-empty. Do **not** assert PDF pixel contents.
+- **Notes:** jsPDF runs client-side; validates export wiring, not fidelity.
+- **Acceptance:** a download event fires and produces a non-empty file. No DB
+  writes. **Effort:** small. **Risk:** low. **Depends on:** 6.2.
+
+## Editor track — dedicated functionality suite (the app's core)
+
+### Task 6.5 — Editor functionality suite (Phase 6)
+
+The editor is the core of the app; cover its capabilities as **focused,
+independent specs** (not one journey), each starting from a populated editor
+reached via a shared mocked-lookup fixture. All stop short of Save, so they
+create **no DB rows and need no teardown**.
+
+- **Specs (by feature area):**
+  1. **Selection & transform** — click an element selects it (floating toolbar
+     appears); drag moves it; a resize handle changes size; click empty canvas
+     deselects.
+  2. **Inline text edit** — edit a text element's value → commit → persists.
+  3. **Text formatting** (`text-format-controls`) — bold / italic / underline
+     toggles, font size / family, color on a selected text element apply.
+  4. **Element creation** (`editor-toolbar` / `actions-menu`) — add text / rect /
+     table / image; add page → new elements/page appear.
+  5. **Duplicate & delete** (`floating-toolbar`) — duplicate (button + Ctrl+D)
+     copies; delete (button + Supr) removes.
+  6. **Table operations** (`table-controls`) — add/remove row, add/remove column,
+     select rows + remove selected → table dimensions change.
+  7. **Undo/redo** — an edit, undo reverts, redo reapplies; buttons
+     enable/disable correctly.
+- **Selectors (main risk):** elements render to `<canvas>`, so prefer the DOM
+  overlays/toolbars (inline editor, floating/format/table controls) with stable
+  `data-testid`/roles; treat coordinate hit-testing as a last resort. Adding a
+  few `data-testid`s to editor DOM is in scope.
+- **Land incrementally:** **core subset first** — specs 1, 2, 5, 7 — to prove the
+  canvas harness; then 3, 4, 6.
+- **Acceptance:** each feature area asserted via rendered state; no DB writes.
+- **Effort:** large (the biggest Phase 6 piece). **Risk:** medium–high (canvas
+  selectors). **Depends on:** 6.0 + the mocked-lookup fixture from 6.1.
+
+## Shared / follow-ups
+
+### Task 6.6 — Auth flows (Phase 6, underpins both tracks)
+
+- **Specs:** (a) **login success** — seeded credentials → lands on `/`, nav shows
+  the signed-in user; (b) **invalid credentials** — wrong password →
+  `role="alert"` message, stays signed out; (c) **auth guard round-trip** — visit
+  `/editor` signed out → redirect to login with `callbackUrl=/editor` → after
+  login returns to `/editor`; (d) **logout** — sign out → back to login,
+  `/editor` blocked again.
+- **Notes:** drive the login form directly (not the shared `storageState`
+  fixture). Microsoft Entra login is **out of scope** (external IdP) — at most a
+  render/redirect smoke check, no live SSO.
+- **Acceptance:** all four asserted; no rows created. **Effort:** small.
+  **Risk:** low. **Depends on:** 6.0.
+
+### Task 6.7 — SKU lookup negative paths (Phase 6, follow-up)
+
+- **Specs** (mocked): (a) **mixed** — some unresolved → UI reports which codes
+  were not found while letting the user proceed with the resolved ones;
+  (b) optional **malformed payload** → treated as unresolved (no crash).
+- **Entry points:** `reference-lookup.tsx` and the editor's
+  `add-product-modal.tsx` (both call `product.resolveReferences`).
+- **Acceptance:** unresolved/malformed branches render correctly; no live call.
+  No DB writes. **Effort:** small–medium. **Risk:** low–medium.
+  **Depends on:** 6.1 (reuses the mock helper).
+
+### Task 6.8 — Nightly scheduled run (Phase 6, optional, decide later)
+
+Deferred by choice: **run e2e locally first**, then decide whether to schedule.
+When wanted, add a GitHub Actions workflow with `on: schedule` (cron is **UTC**;
+e.g. `0 7 * * *` ≈ 02:00 America/Bogotá) **plus** `workflow_dispatch` for manual
+runs. Notes: scheduled runs fire only on the **default branch**, timing is
+best-effort (can lag/skip under load), and workflows **auto-disable after 60 days**
+of repo inactivity. The job should **build + serve the app on the runner** (not
+target the shared Vercel dev deployment) so it tests the exact `main` commit;
+secrets (`DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, external-API vars) point at
+Supabase dev; add a seed step for the e2e user and a failure notification
+(the shared dev DB means teardown must stay reliable under CI parallelism).
+**Depends on:** a stable 6.0–6.5 suite.
 
 ## Phase 7 — Revisit unit tests & raise coverage further
 
