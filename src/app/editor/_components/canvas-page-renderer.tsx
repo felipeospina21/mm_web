@@ -18,7 +18,7 @@ export interface CanvasSelection {
 
 export interface CanvasPageRendererProps {
   pages: PageData[];
-  visiblePageNumbers: Set<number>;
+  visiblePageNumbers: ReadonlySet<number>;
   activePageNumber: number;
   selectedId: string | null;
   selection: CanvasSelection;

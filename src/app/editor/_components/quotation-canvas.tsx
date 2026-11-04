@@ -19,6 +19,7 @@ import {
   makePastedElement,
   pasteIntoTable,
 } from "../_lib/clipboard";
+import { withActivePage } from "../_lib/visible-pages";
 import { getPageOffset } from "../_lib/quotation-canvas-geometry";
 import { clampToPageBounds } from "../_lib/drag-bounds";
 import { resizeColumn } from "../_lib/table-ops";
@@ -67,7 +68,6 @@ export default function QuotationCanvas({
   const [visiblePageNumbers, setVisiblePageNumbers] = useState<Set<number>>(
     () => new Set([1, 2, 3]),
   );
-  const visiblePageNumbersRef = useRef(visiblePageNumbers);
   const {
     refs: { stageRef, containerRef, pastePositionRef },
     stageSize,
@@ -97,6 +97,9 @@ export default function QuotationCanvas({
   // resolve an element + its page by the dragged node's id without being
   // recreated whenever `pages` changes (which would defeat React.memo in 4.2).
   const pagesRef = useRef(pages);
+  // Keep as an effect: assigning a ref during render violates
+  // `react-hooks/refs` (an error here). Needed so the stable `dragBoundFunc`
+  // always reads the latest pages.
   useEffect(() => {
     pagesRef.current = pages;
   }, [pages]);
@@ -135,7 +138,6 @@ export default function QuotationCanvas({
         ) {
           return current;
         }
-        visiblePageNumbersRef.current = next;
         return next;
       });
     };
@@ -150,12 +152,10 @@ export default function QuotationCanvas({
     };
   }, [pages.length, containerRef, scrollTopRef]);
 
-  useEffect(() => {
-    if (visiblePageNumbersRef.current.has(activePageNumber)) return;
-    const next = new Set(visiblePageNumbersRef.current).add(activePageNumber);
-    visiblePageNumbersRef.current = next;
-    setVisiblePageNumbers(next);
-  }, [activePageNumber]);
+  const renderedPageNumbers = useMemo(
+    () => withActivePage(visiblePageNumbers, activePageNumber),
+    [visiblePageNumbers, activePageNumber],
+  );
 
   const handlePaste = useCallback(
     (event: ReactClipboardEvent<HTMLDivElement>) => {
@@ -552,7 +552,7 @@ export default function QuotationCanvas({
         <Layer y={-scrollTop}>
           <CanvasPageRenderer
             pages={pages}
-            visiblePageNumbers={visiblePageNumbers}
+            visiblePageNumbers={renderedPageNumbers}
             activePageNumber={activePageNumber}
             selectedId={selectedId}
             selection={selection}
