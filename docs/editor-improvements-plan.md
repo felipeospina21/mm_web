@@ -21,7 +21,7 @@
 ## Status (updated 2026-11-03)
 
 **Next up:** Phase 5 remaining cleanup — all decision-heavy: logging (5.2), the
-`set-state-in-effect` + app-wide `useEffect` sweep (5.7), app-wide splits (5.6).
+app-wide `useEffect` sweep (5.7b–e; 5.7a done), app-wide splits (5.6).
 Phases 1–4 are complete; Phase 6 (e2e) and
 Phase 7 (coverage) are not started.
 
@@ -156,6 +156,52 @@ other storage-reading initializers in `editor-client.tsx` (`isManualStart`,
 `getQuotationProducts`) — they carry the same latent risk but aren't flagged today
 because they don't drive a rendered attribute.
 
+**Audit result (2026-11-04) and split into sub-tasks.** Every `useEffect` was
+classified; one change per sub-task, each on its own branch, verified
+independently.
+
+_Genuine effects — KEEP, no change:_ `quotation-list.tsx:40` and
+`product-catalog.tsx:42` (IntersectionObserver); `quotation-bar.tsx:13` and
+`product-card.tsx:46` (`STORAGE_EVENT` subscription); `confirm-modal.tsx:37`,
+`add-product-modal.tsx:88`, `actions-menu.tsx:38` (document key/click listeners);
+`toast-context.tsx:110` (unmount timer cleanup) and `:169` (rAF enter
+transition); `quotation-canvas.tsx:104` (scroll/visible-pages),
+`use-canvas-stage.ts:44` (ResizeObserver), `use-inline-editing.ts:86` (scroll
+listener); `canvas-page-renderer.tsx:294` (imperative `Image` load, see 5.4);
+`use-editor-keyboard-shortcuts.ts:29` (global keydown); `editor-client.tsx:191`
+(`beforeunload`).
+
+_Sub-tasks:_
+
+- **5.7a — `selectedClientId` hydration effect** — ✅ DONE. Replaced the
+  post-mount effect with `usePendingQuotationClient` (`useSyncExternalStore`, null
+  server snapshot) plus a user/load override in `editor-client.tsx`. Lint warning
+  gone (0 warnings).
+- **5.7b — Derived state / event-handler candidates:** `quotation-canvas.tsx:153`
+  (`visiblePageNumbers` derived from `activePageNumber`; compute in render or in
+  the handler that changes it); `use-canvas-stage.ts:40` (`onSelectionChange`
+  effect; call from the handler that sets `selectedId` if all setters are local);
+  `quotation-canvas.tsx:100` (`pagesRef.current = pages` mirror; drop or assign
+  without an effect).
+- **5.7c — Apply-on-data-arrival effects (ref-guarded):**
+  `use-representative-profile.ts:32`, `use-quotation-load.ts:67`,
+  `editor-client.tsx:359`. Evaluate lazy-initializer / derived-initial-value
+  alternatives; keep if the effect is the least-bad option. The quotation-load
+  path is feature-flagged off (see 2.3/3.3), so it cannot be verified end to end.
+- **5.7d — Keep-but-confirm:** `quotation-canvas.tsx:365` (Konva `Transformer`
+  `nodes()` sync, imperative canvas API → likely genuine) and
+  `editor-client.tsx:207` (`isDraft` publish to context; the comment explains why
+  it must reach the nav bar outside the render subtree → likely keep, and do not
+  reintroduce a ref, see 5.10). Record the final decision, change only if clearly
+  better.
+- **5.7e — Latent storage-reading initializers (document, don't change unless
+  asked):** `isManualStart`, `hasInitialProducts`, `pendingHomeContactIdRef`,
+  and the initial pages/meta via `getQuotationProducts`. They don't drive a
+  rendered attribute today; record why each is safe (or harden).
+
+Order: 5.7a → 5.7b → 5.7c → 5.7d → 5.7e. Mark each done in the Status block as it
+lands; collapse 5.7 to a one-line reference when all are finished.
+
 ### Task 5.9 — Draft protection is an in-session band-aid (Phase 5) — deferred to the quotation module
 
 `editor-client.tsx` derives `isDraft` ("unsaved content worth protecting") and
@@ -215,7 +261,7 @@ exhaustive coverage.
 >      has **no user-controlled text column**, so quotations are deleted purely by
 >      `user_id = <e2e user>`. `client` **is** tagged with a sentinel
 >      (`name LIKE '[E2E]%'`) and deleted by `user_id = <e2e user> AND name LIKE
->      '[E2E]%'`; `client_contact` cascades from `client`. (Table names are
+'[E2E]%'`; `client_contact` cascades from `client`. (Table names are
 >      physically prefixed `mm_web_`.)
 >    - **Two-layer cleanup:** per-test `afterEach` deletes the IDs a test created
 >      (captured from the save response), and a Playwright **global teardown**
@@ -264,9 +310,9 @@ writing flow specs, so every spec is clean-by-construction.
 - **Cleanup harness:** a small `e2e/_support/db.ts` using a direct `postgres`
   client over `DIRECT_URL`:
   - `deleteQuotationsForUser(userId)` → `DELETE FROM mm_web_quotation WHERE
-    user_id = $1`.
+user_id = $1`.
   - `deleteE2eClientsForUser(userId)` → `DELETE FROM mm_web_client WHERE user_id
-    = $1 AND name LIKE '[E2E]%'` (contacts cascade).
+= $1 AND name LIKE '[E2E]%'` (contacts cascade).
   - Wire per-test `afterEach` (delete captured IDs) **and** `globalTeardown`
     (sweep by e2e `user_id`).
 - **External-API mock helper:** `e2e/_support/mock-external.ts` exposing
