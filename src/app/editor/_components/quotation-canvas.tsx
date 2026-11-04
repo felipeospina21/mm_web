@@ -362,6 +362,9 @@ export default function QuotationCanvas({
     [onElementChange, pages],
   );
 
+  // Imperative Konva sync (genuine effect): the Transformer lives outside
+  // React's tree, so it must be told which stage node to attach to whenever the
+  // selection or pages change. No declarative/render equivalent.
   useEffect(() => {
     const transformer = transformerRef.current;
     const canvasStage = transformer?.getStage();

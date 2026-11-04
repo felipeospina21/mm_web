@@ -21,7 +21,7 @@
 ## Status (updated 2026-11-03)
 
 **Next up:** Phase 5 remaining cleanup — all decision-heavy: logging (5.2), the
-app-wide `useEffect` sweep (5.7d–e; 5.7a–c done), app-wide splits (5.6).
+app-wide `useEffect` sweep (5.7e; 5.7a–d done), app-wide splits (5.6).
 Phases 1–4 are complete; Phase 6 (e2e) and
 Phase 7 (coverage) are not started.
 
@@ -193,12 +193,12 @@ _Sub-tasks:_
   in the body). `use-quotation-load.ts:67` belongs to the feature-flagged
   quotation module (2.3/3.3) — not touched until that path is live and
   verifiable.
-- **5.7d — Keep-but-confirm:** `quotation-canvas.tsx:365` (Konva `Transformer`
-  `nodes()` sync, imperative canvas API → likely genuine) and
-  `editor-client.tsx:207` (`isDraft` publish to context; the comment explains why
-  it must reach the nav bar outside the render subtree → likely keep, and do not
-  reintroduce a ref, see 5.10). Record the final decision, change only if clearly
-  better.
+- **5.7d — Keep-but-confirm** — ✅ DONE, both KEPT (comment-only).
+  `quotation-canvas.tsx:365` is a genuine imperative Konva `Transformer.nodes()`
+  sync (node lives outside React's tree). `editor-client.tsx:207` is a genuine
+  external-sync effect publishing `isDraft` to the nav bar (a non-descendant
+  sibling via context), with unmount cleanup; kept as state, not a ref (ref
+  de-synced across remount — see 5.10). Both annotated in code.
 - **5.7e — Latent storage-reading initializers (document, don't change unless
   asked):** `isManualStart`, `hasInitialProducts`, `pendingHomeContactIdRef`,
   and the initial pages/meta via `getQuotationProducts`. They don't drive a

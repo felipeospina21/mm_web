@@ -201,9 +201,12 @@ export default function EditorPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDraft]);
 
-  // Publish the draft state so the nav bar can guard in-app navigations
-  // (client route changes never fire `beforeunload`). Clear on unmount so a
-  // stale draft flag doesn't block navigation after the editor is gone.
+  // Publish the draft state to the nav bar (a sibling outside this subtree) so
+  // it can guard in-app navigations — client route changes never fire
+  // `beforeunload`. This is a genuine external-sync effect: the consumer is not
+  // a descendant, so it can't be derived in render. Clear on unmount so a stale
+  // draft flag doesn't block navigation after the editor is gone. Keep this as
+  // state, not a ref (a ref version de-synced across editor remount — see 5.10).
   const { setIsDraft } = useEditorDraft();
   useEffect(() => {
     setIsDraft(isDraft);
