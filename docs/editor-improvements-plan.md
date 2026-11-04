@@ -21,7 +21,7 @@
 ## Status (updated 2026-11-03)
 
 **Next up:** Phase 5 remaining cleanup — all decision-heavy: logging (5.2), the
-app-wide `useEffect` sweep (5.7b–e; 5.7a done), app-wide splits (5.6).
+app-wide `useEffect` sweep (5.7c–e; 5.7a–b done), app-wide splits (5.6).
 Phases 1–4 are complete; Phase 6 (e2e) and
 Phase 7 (coverage) are not started.
 
@@ -177,12 +177,12 @@ _Sub-tasks:_
   post-mount effect with `usePendingQuotationClient` (`useSyncExternalStore`, null
   server snapshot) plus a user/load override in `editor-client.tsx`. Lint warning
   gone (0 warnings).
-- **5.7b — Derived state / event-handler candidates:** `quotation-canvas.tsx:153`
-  (`visiblePageNumbers` derived from `activePageNumber`; compute in render or in
-  the handler that changes it); `use-canvas-stage.ts:40` (`onSelectionChange`
-  effect; call from the handler that sets `selectedId` if all setters are local);
-  `quotation-canvas.tsx:100` (`pagesRef.current = pages` mirror; drop or assign
-  without an effect).
+- **5.7b — Derived state / event-handler candidates** — ✅ DONE.
+  `visiblePageNumbers` + active page now derived in render (`_lib/visible-pages`
+  `withActivePage` + `useMemo`; the active page now always stays mounted);
+  `use-canvas-stage` wraps `setSelectedId` to notify `onSelectionChange`
+  directly (effect removed). `pagesRef.current = pages` mirror **kept** as an
+  effect (render-time assignment violates `react-hooks/refs`); commented in code.
 - **5.7c — Apply-on-data-arrival effects (ref-guarded):**
   `use-representative-profile.ts:32`, `use-quotation-load.ts:67`,
   `editor-client.tsx:359`. Evaluate lazy-initializer / derived-initial-value

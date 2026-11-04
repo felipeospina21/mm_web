@@ -30,16 +30,22 @@ export function useCanvasStage({
   const stageRef = useRef<Konva.Stage | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedIdState] = useState<string | null>(null);
   const pastePositionRef = useRef<PastePosition>({
     pageNumber: 1,
     x: 100,
     y: 100,
   });
 
-  useEffect(() => {
-    onSelectionChange(selectedId);
-  }, [selectedId, onSelectionChange]);
+  // Every selection change goes through here so the parent is notified in the
+  // same tick as the click (no state-mirroring effect).
+  const setSelectedId = useCallback(
+    (id: string | null) => {
+      setSelectedIdState(id);
+      onSelectionChange(id);
+    },
+    [onSelectionChange],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -95,10 +101,10 @@ export function useCanvasStage({
       onActivePageChange(pageNumber);
       updatePastePositionFromPointer(pageNumber);
     },
-    [onActivePageChange, updatePastePositionFromPointer],
+    [onActivePageChange, setSelectedId, updatePastePositionFromPointer],
   );
 
-  const deselect = useCallback(() => setSelectedId(null), []);
+  const deselect = useCallback(() => setSelectedId(null), [setSelectedId]);
 
   const handleStageMouseDown = useCallback(
     (
