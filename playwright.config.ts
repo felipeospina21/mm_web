@@ -37,11 +37,15 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 
   webServer: {
-    // Reuse the existing env-loading dev script so the app and the harness read
-    // the same `.env.development`.
-    command: "pnpm dev:db:dev",
+    // Call the dev chain directly (not via `pnpm dev:db:dev`) so the `-p` flag
+    // reaches `next dev` with a single `--` separator — routing the port
+    // through the pnpm script produced a double `--` that broke arg parsing.
+    // Mirrors `dev:db:dev` (same `.env.local` loader). `E2E_PORT` moves the app
+    // off a busy 3000 (e.g. another local server).
+    command: `dotenv -e .env.local -- next dev -p ${PORT}`,
     url: BASE_URL,
     timeout: 120_000,
-    reuseExistingServer: !process.env.CI,
+    // Always boot our own app rather than hijacking an unrelated server.
+    reuseExistingServer: false,
   },
 });

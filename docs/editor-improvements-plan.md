@@ -344,7 +344,7 @@ name LIKE '[E2E]%'`; `client_contact` cascades. (Tables are physically
 > 6.6 (auth) underpins both. 6.7 (lookup negative paths) and 6.8 (nightly
 > schedule) are follow-ups.
 
-### Task 6.0 — Playwright setup & DB-cleanup harness (Phase 6, prerequisite) — ✅ DONE (code; needs a DB run)
+### Task 6.0 — Playwright setup & DB-cleanup harness (Phase 6, prerequisite) — ✅ DONE & VERIFIED
 
 Stand up the e2e infrastructure and the isolation/teardown harness **before**
 writing specs, so every spec is clean-by-construction.
@@ -362,9 +362,13 @@ writing specs, so every spec is clean-by-construction.
 > Verified without a DB: `typecheck`/`lint` clean, Vitest unaffected (270/270),
 > `playwright test --list` finds both specs, Chromium installed, and `test:e2e`
 > reaches global setup (fails with the intended "seed E2E_USER…" message).
-> **Not yet run green** — needs `.env.local` (DB creds + `E2E_USER_EMAIL`/
-> `E2E_USER_PASSWORD`) and `pnpm db:seed:dev` for the e2e user. Run once:
-> `pnpm db:seed:dev "<e2e-email>" "<pw>" "E2E User"` then `pnpm test:e2e`.
+> **Verified green (2026-11-04)** against the dev DB: both smoke specs pass
+> (login page renders; authenticated `storageState` reaches `/editor`).
+> **Run locally:** scripts load `.env.local` (needs DB creds + `E2E_USER_EMAIL`/
+> `E2E_USER_PASSWORD`); seed the e2e user once, then `pnpm test:e2e`. Use
+> `E2E_PORT=<n>` if 3000 is busy. Seed with the exact env value to avoid a
+> shell-mangled password mismatch:
+> `pnpm exec dotenv -e .env.local -- sh -c 'node scripts/seed-user.mjs "$E2E_USER_EMAIL" "$E2E_USER_PASSWORD" "E2E User"'`
 
 - **Add:** `@playwright/test` (pinned devDep); `playwright.config.ts` (own
   `testDir`, e.g. `e2e/`, separate from Vitest's `src/**/*.test.*`); `test:e2e`
