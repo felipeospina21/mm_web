@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
 import { api } from "@/trpc/react";
 import { ProductCard, type CatalogProduct } from "./product-card";
+import { useInfiniteScrollSentinel } from "../_hooks/use-infinite-scroll-sentinel";
 
 /** Number of products fetched per page. */
 const PAGE_SIZE = 12;
@@ -37,24 +36,11 @@ export function ProductCatalog() {
 
   // Infinite scroll: observe a sentinel below the grid and fetch the next
   // page when it (or the 200px margin around it) enters the viewport.
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !hasNextPage) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
-          void fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const sentinelRef = useInfiniteScrollSentinel({
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  });
 
   if (status === "pending") {
     return (

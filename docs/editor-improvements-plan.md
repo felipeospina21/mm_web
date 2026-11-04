@@ -218,6 +218,27 @@ _Sub-tasks:_
 `use-quotation-load.ts:67` (quotation module, 2.3/3.3) and the optional hardening
 of the two latent initializers in 5.7e if a hydration warning surfaces.
 
+### Task 5.7f — Extract shared effect hooks (Phase 5, follow-up to the 5.7 audit)
+
+The audit asked whether the kept effects should become custom hooks. Verdict:
+only where it removes real duplication — a lone subscription effect
+(Escape/outside-click, timer, image load) is clearer inline, so those stay.
+
+- **Infinite-scroll `IntersectionObserver`** — ✅ DONE. `product-catalog.tsx` and
+  `quotation-list.tsx` had an identical observer effect; extracted to
+  `src/app/_hooks/use-infinite-scroll-sentinel.ts` (unit-tested: no-observe when
+  no next page, default 200px margin, fetch on intersect, skip while fetching,
+  skip when not intersecting, disconnect on unmount). Behaviour-preserving.
+- **Modal Escape / outside-click** (`confirm-modal`, `add-product-modal`,
+  `actions-menu`) — **deferred to Task 5.6**, which already scopes a shared
+  Escape/outside-click hook "only if its API stays simpler than the current
+  effects." Risk: a flag-laden hook (`closeOnEscape`/`closeOnOutsideClick`/
+  `autoFocusRef`) muddier than the three bespoke effects.
+- **`STORAGE_EVENT` sync** (`quotation-bar.tsx`, `product-card.tsx`) — **optional
+  follow-up.** Mild duplication; the correct primitive is a
+  `useQuotationSelection()` built on `useSyncExternalStore` (also SSR-safe,
+  unlike the current mount effect). Bundle with any 5.7e storage hardening.
+
 ### Task 5.9 — Draft protection is an in-session band-aid (Phase 5) — deferred to the quotation module
 
 `editor-client.tsx` derives `isDraft` ("unsaved content worth protecting") and
