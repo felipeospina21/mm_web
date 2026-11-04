@@ -156,6 +156,51 @@ other storage-reading initializers in `editor-client.tsx` (`isManualStart`,
 `getQuotationProducts`) — they carry the same latent risk but aren't flagged today
 because they don't drive a rendered attribute.
 
+**Audit result (2026-11-04) and split into sub-tasks.** Every `useEffect` was
+classified; one change per sub-task, each on its own branch, verified
+independently.
+
+_Genuine effects — KEEP, no change:_ `quotation-list.tsx:40` and
+`product-catalog.tsx:42` (IntersectionObserver); `quotation-bar.tsx:13` and
+`product-card.tsx:46` (`STORAGE_EVENT` subscription); `confirm-modal.tsx:37`,
+`add-product-modal.tsx:88`, `actions-menu.tsx:38` (document key/click listeners);
+`toast-context.tsx:110` (unmount timer cleanup) and `:169` (rAF enter
+transition); `quotation-canvas.tsx:104` (scroll/visible-pages),
+`use-canvas-stage.ts:44` (ResizeObserver), `use-inline-editing.ts:86` (scroll
+listener); `canvas-page-renderer.tsx:294` (imperative `Image` load, see 5.4);
+`use-editor-keyboard-shortcuts.ts:29` (global keydown); `editor-client.tsx:191`
+(`beforeunload`).
+
+_Sub-tasks:_
+
+- **5.7a — `selectedClientId` hydration effect** (`editor-client.tsx:129`). The
+  named lint warning. Pick one: `useSyncExternalStore` (null server snapshot),
+  `mounted` gate, or move the handoff to a cookie/search param. Do this first.
+- **5.7b — Derived state / event-handler candidates:** `quotation-canvas.tsx:153`
+  (`visiblePageNumbers` derived from `activePageNumber`; compute in render or in
+  the handler that changes it); `use-canvas-stage.ts:40` (`onSelectionChange`
+  effect; call from the handler that sets `selectedId` if all setters are local);
+  `quotation-canvas.tsx:100` (`pagesRef.current = pages` mirror; drop or assign
+  without an effect).
+- **5.7c — Apply-on-data-arrival effects (ref-guarded):**
+  `use-representative-profile.ts:32`, `use-quotation-load.ts:67`,
+  `editor-client.tsx:359`. Evaluate lazy-initializer / derived-initial-value
+  alternatives; keep if the effect is the least-bad option. The quotation-load
+  path is feature-flagged off (see 2.3/3.3), so it cannot be verified end to end.
+- **5.7d — Keep-but-confirm:** `quotation-canvas.tsx:365` (Konva `Transformer`
+  `nodes()` sync, imperative canvas API → likely genuine) and
+  `editor-client.tsx:207` (`isDraft` publish to context; the comment explains why
+  it must reach the nav bar outside the render subtree → likely keep, and do not
+  reintroduce a ref, see 5.10). Record the final decision, change only if clearly
+  better.
+- **5.7e — Latent storage-reading initializers (document, don't change unless
+  asked):** `isManualStart`, `hasInitialProducts`, `pendingHomeContactIdRef`,
+  and the initial pages/meta via `getQuotationProducts`. They don't drive a
+  rendered attribute today; record why each is safe (or harden).
+
+Order: 5.7a → 5.7b → 5.7c → 5.7d → 5.7e. Mark each done in the Status block as it
+lands; collapse 5.7 to a one-line reference when all are finished.
+
 ### Task 5.9 — Draft protection is an in-session band-aid (Phase 5) — deferred to the quotation module
 
 `editor-client.tsx` derives `isDraft` ("unsaved content worth protecting") and
