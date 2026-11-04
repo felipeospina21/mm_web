@@ -1,6 +1,6 @@
 /**
  * E2E env resolution (Task 6.0). The `test:e2e` script wraps the run in
- * `dotenv -e .env.development`, so DB + app vars are already in `process.env`.
+ * `dotenv -e .env.local`, so DB + app vars are already in `process.env`.
  * These helpers surface the e2e-only credentials with clear errors when unset.
  */
 
@@ -15,7 +15,7 @@ export function e2eConfig(): E2eConfig {
 
   if (!userEmail || !userPassword) {
     throw new Error(
-      "E2E setup: set E2E_USER_EMAIL and E2E_USER_PASSWORD in .env.development, " +
+      "E2E setup: set E2E_USER_EMAIL and E2E_USER_PASSWORD in .env.local, " +
         'then seed the user: pnpm db:seed:dev "$E2E_USER_EMAIL" "$E2E_USER_PASSWORD" "E2E User"',
     );
   }

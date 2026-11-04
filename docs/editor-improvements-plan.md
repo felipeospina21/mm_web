@@ -291,7 +291,7 @@ few high-value negative paths — not exhaustive coverage.
 > create **nothing** and need no teardown.
 
 > **Prereqs & tooling.** Playwright drives a real browser against the app wired
-> to the **Supabase dev** project (`.env.development`). Pin `@playwright/test` as
+> to the **Supabase dev** project (`.env.local`). Pin `@playwright/test` as
 > a devDep; confirm `pnpm exec playwright --version` before Task 6.0. These tests
 > **require a DB and a mocked external API**, unlike the Vitest suite — so they
 > live under a separate `test:e2e` script and config and do **not** run as part
@@ -362,13 +362,13 @@ writing specs, so every spec is clean-by-construction.
 > Verified without a DB: `typecheck`/`lint` clean, Vitest unaffected (270/270),
 > `playwright test --list` finds both specs, Chromium installed, and `test:e2e`
 > reaches global setup (fails with the intended "seed E2E_USER…" message).
-> **Not yet run green** — needs `.env.development` (DB creds + `E2E_USER_EMAIL`/
+> **Not yet run green** — needs `.env.local` (DB creds + `E2E_USER_EMAIL`/
 > `E2E_USER_PASSWORD`) and `pnpm db:seed:dev` for the e2e user. Run once:
 > `pnpm db:seed:dev "<e2e-email>" "<pw>" "E2E User"` then `pnpm test:e2e`.
 
 - **Add:** `@playwright/test` (pinned devDep); `playwright.config.ts` (own
   `testDir`, e.g. `e2e/`, separate from Vitest's `src/**/*.test.*`); `test:e2e`
-  (+ `test:e2e:ui`) scripts loading `.env.development`; a `webServer` entry so
+  (+ `test:e2e:ui`) scripts loading `.env.local`; a `webServer` entry so
   Playwright boots the app. Browser install is `pnpm exec playwright install`.
 - **E2e user:** seed one dedicated user (e.g. `e2e@test.local`) via
   `pnpm db:seed:dev`; record credentials as e2e env vars. Resolve the e2e user's

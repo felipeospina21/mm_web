@@ -21,7 +21,7 @@ function db() {
     const url = connectionString();
     if (!url) {
       throw new Error(
-        "E2E db harness: set DIRECT_URL (or DATABASE_URL) in .env.development",
+        "E2E db harness: set DIRECT_URL (or DATABASE_URL) in .env.local",
       );
     }
     client = postgres(url, { max: 2, prepare: false });
