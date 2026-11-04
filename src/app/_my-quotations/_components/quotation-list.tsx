@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import { api } from "@/trpc/react";
 import { setPendingQuotationLoad } from "@/lib/quotation-load";
 import { capitalizeName } from "@/lib/capitalize-name";
+import { useInfiniteScrollSentinel } from "../../_hooks/use-infinite-scroll-sentinel";
 
 const PAGE_SIZE = 12;
 
@@ -36,21 +36,11 @@ export function QuotationList() {
   const quotations = data?.pages.flatMap((page) => page.items) ?? [];
   const total = data?.pages[0]?.total ?? 0;
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !hasNextPage) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
-          void fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const sentinelRef = useInfiniteScrollSentinel({
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  });
 
   const handleOpen = (id: string) => {
     setPendingQuotationLoad(id);
