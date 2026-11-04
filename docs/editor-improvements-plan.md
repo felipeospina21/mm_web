@@ -21,7 +21,7 @@
 ## Status (updated 2026-11-03)
 
 **Next up:** Phase 5 remaining cleanup — all decision-heavy: logging (5.2), the
-`set-state-in-effect` + app-wide `useEffect` sweep (5.7), app-wide splits (5.6).
+app-wide `useEffect` sweep (5.7b–e; 5.7a done), app-wide splits (5.6).
 Phases 1–4 are complete; Phase 6 (e2e) and
 Phase 7 (coverage) are not started.
 
@@ -173,9 +173,10 @@ listener); `canvas-page-renderer.tsx:294` (imperative `Image` load, see 5.4);
 
 _Sub-tasks:_
 
-- **5.7a — `selectedClientId` hydration effect** (`editor-client.tsx:129`). The
-  named lint warning. Pick one: `useSyncExternalStore` (null server snapshot),
-  `mounted` gate, or move the handoff to a cookie/search param. Do this first.
+- **5.7a — `selectedClientId` hydration effect** — ✅ DONE. Replaced the
+  post-mount effect with `usePendingQuotationClient` (`useSyncExternalStore`, null
+  server snapshot) plus a user/load override in `editor-client.tsx`. Lint warning
+  gone (0 warnings).
 - **5.7b — Derived state / event-handler candidates:** `quotation-canvas.tsx:153`
   (`visiblePageNumbers` derived from `activePageNumber`; compute in render or in
   the handler that changes it); `use-canvas-stage.ts:40` (`onSelectionChange`
@@ -260,7 +261,7 @@ exhaustive coverage.
 >      has **no user-controlled text column**, so quotations are deleted purely by
 >      `user_id = <e2e user>`. `client` **is** tagged with a sentinel
 >      (`name LIKE '[E2E]%'`) and deleted by `user_id = <e2e user> AND name LIKE
->      '[E2E]%'`; `client_contact` cascades from `client`. (Table names are
+'[E2E]%'`; `client_contact` cascades from `client`. (Table names are
 >      physically prefixed `mm_web_`.)
 >    - **Two-layer cleanup:** per-test `afterEach` deletes the IDs a test created
 >      (captured from the save response), and a Playwright **global teardown**
@@ -309,9 +310,9 @@ writing flow specs, so every spec is clean-by-construction.
 - **Cleanup harness:** a small `e2e/_support/db.ts` using a direct `postgres`
   client over `DIRECT_URL`:
   - `deleteQuotationsForUser(userId)` → `DELETE FROM mm_web_quotation WHERE
-    user_id = $1`.
+user_id = $1`.
   - `deleteE2eClientsForUser(userId)` → `DELETE FROM mm_web_client WHERE user_id
-    = $1 AND name LIKE '[E2E]%'` (contacts cascade).
+= $1 AND name LIKE '[E2E]%'` (contacts cascade).
   - Wire per-test `afterEach` (delete captured IDs) **and** `globalTeardown`
     (sweep by e2e `user_id`).
 - **External-API mock helper:** `e2e/_support/mock-external.ts` exposing
