@@ -283,30 +283,32 @@ by message signature and mapped to a clean user sentence with the infra detail
 (Vercel) carried only in the code `QUOT-TOO-LARGE-VERCEL`. `onError` keeps full
 technical detail in `console.error`.
 
-### Task 5.13 — Audit & guard remaining copy-reachable schema caps (Phase 5)
+### Task 5.13 — Audit & guard remaining copy-reachable schema caps (Phase 5) — ✅ DONE
 
-Follow-up to the element-`id` compounding fix (branch
-`fix/duplicate-element-id-compounding`), where copy/duplicate appended
-`-copy-<ts>` to the source id until it breached the 200-char `id` cap and blocked
-save. `freshCopyId` (strip-to-base + fresh suffix) closed that specific growth.
+Done on branch `chore/audit-copy-reachable-caps`. Follow-up to the element-`id`
+compounding fix (#24).
 
-**Audit result (2026-11-05):** the id case was the ONLY field a copy made *grow
-past its own cap*. Other caps are either abuse-ceilings not reachable by normal
-editing (page `id` 200, color fields 64, `fontFamily` 200, `colWidths` 100,
-`cells` 1,000 rows, pages 500) or copy *content* verbatim without inflating it
-(element `text` 20k, table cell 10k, image `src` 5M). The one adjacent
-copy-reachable case is **elements-per-page (1,000)** via repeated pasting onto a
-single page — volume, not per-copy growth.
+**Audit result (2026-11-05, verified against the code):** the id case was the ONLY
+field a copy made *grow past its own cap*. Other caps are either abuse-ceilings
+not reachable by normal editing (page `id` 200, color fields 64, `fontFamily` 200,
+`colWidths` 100, `cells` 1,000 rows, pages 500) or copy *content* verbatim without
+inflating it (element `text` 20k, table cell 10k, image `src` 5M). Resolutions to
+the open questions:
 
-**Open questions (decide before coding):**
-1. Is a code guard warranted for elements-per-page (e.g. warn/block before the
-   1,000th paste), or is the Task 5.12 friendly message enough?
-2. Should `freshCopyId` move to cover any *other* runtime id-mint site, or are
-   `makePastedElement` + `handleDuplicateElement` the only two? (`handleAddElement`
-   / `handlePasteImage` already mint fresh `el-<type>-<ts>` ids — confirm no other
-   path appends to an existing id.)
-3. Add a lightweight schema-level regression test asserting no app-generated id
-   lineage can exceed 200 chars under N copies (guards against reintroduction)?
+1. **elements-per-page (1,000):** message-only — already surfaced clearly by Task
+   5.12's `QUOT-TOO-MANY-ELEMENTS` toast. A hard mid-edit block is worse UX and
+   1,000 is far beyond real use; no runtime guard added.
+2. **Other id-mint sites:** confirmed there are none that append to an existing
+   id. Element ids are minted at exactly 4 sites — `makePastedElement` and
+   `handleDuplicateElement` (both use `freshCopyId`), `handleAddElement` and
+   `handlePasteImage` (both mint fresh `el-<type>-<ts>`). Page ids are reassigned
+   from the array index (`page-${index+1}`) at both renumber sites, so they also
+   cannot compound.
+3. **Regression test:** added to `quotation-schema.test.ts` — drives `freshCopyId`
+   through 100 successive copies from the longest real base id and asserts the
+   lineage both stays ≤ 200 chars AND parses against the real
+   `quotationDocumentSchema` every step (locks the helper and the id cap together;
+   fails on either regressing), plus a sanity case that a 201-char id is rejected.
 
 ## Phase 6 — End-to-end tests (Playwright, main-flow coverage)
 

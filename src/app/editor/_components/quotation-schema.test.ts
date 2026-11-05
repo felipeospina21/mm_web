@@ -4,6 +4,7 @@ import {
   makeEmptyQuotationPages,
   makeMasterTemplate,
 } from "../_lib/template-data";
+import { freshCopyId } from "../_lib/clipboard";
 import type { PageData } from "./types";
 import {
   isAllowedImageSrc,
@@ -221,6 +222,61 @@ describe("quotationDocumentSchema — image src enforcement", () => {
   it("rejects a remote http(s) image src", () => {
     expect(() =>
       quotationDocumentSchema.parse(docWithSrc("http://evil.example/x.png")),
+    ).toThrow();
+  });
+});
+
+/**
+ * Regression guard for the element-id compounding bug (fixed by `freshCopyId`,
+ * PR #24): copying a copy used to append `-copy-<ts>` to the source id until it
+ * breached the schema's 200-char `id` cap and silently blocked save. This test
+ * fails if EITHER the helper regresses to compounding OR the schema id cap is
+ * lowered below what a copy lineage needs — i.e. it locks the two together.
+ */
+describe("element-id lineage stays under the save schema cap (copy/duplicate)", () => {
+  // The longest id the app template builders actually produce, so the base
+  // we stress is realistic rather than contrived.
+  const LONGEST_REAL_BASE = "inventory-footnote-p999";
+
+  function elementWithId(id: string): PageData[] {
+    return [
+      {
+        id: "p1",
+        pageNumber: 1,
+        elements: [
+          {
+            id,
+            type: "text",
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 10,
+            text: "",
+            fontSize: 12,
+            fill: "#000",
+            isDraggable: true,
+          },
+        ],
+      },
+    ];
+  }
+
+  it("100 successive copies never exceed 200 chars and stay schema-valid", () => {
+    let id = LONGEST_REAL_BASE;
+    for (let i = 0; i < 100; i++) {
+      id = freshCopyId(id);
+      expect(id.length).toBeLessThanOrEqual(200);
+      // The real schema must accept an element carrying this id, every step.
+      expect(() =>
+        quotationDocumentSchema.parse(elementWithId(id)),
+      ).not.toThrow();
+    }
+  });
+
+  it("the schema rejects an id that DOES exceed the cap (sanity on the guard)", () => {
+    const tooLong = "x".repeat(201);
+    expect(() =>
+      quotationDocumentSchema.parse(elementWithId(tooLong)),
     ).toThrow();
   });
 });
