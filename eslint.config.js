@@ -79,6 +79,15 @@ export default tseslint.config(
     },
   },
   {
+    // Playwright e2e lives under `e2e/` and is Node/Playwright code, not React.
+    // Its fixture callbacks use a param named `use`, which the React Hooks
+    // plugin misreads as a hook call — disable those rules here.
+    files: ["e2e/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
+  {
     linterOptions: {
       reportUnusedDisableDirectives: true,
     },
