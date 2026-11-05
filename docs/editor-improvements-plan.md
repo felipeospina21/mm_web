@@ -310,6 +310,22 @@ the open questions:
    `quotationDocumentSchema` every step (locks the helper and the id cap together;
    fails on either regressing), plus a sanity case that a 201-char id is rejected.
 
+### Task 5.14 — Inline editor no-op commits dirty the draft (Phase 5) — ✅ DONE
+
+Branch `fix/inline-editor-noop-commit`. Found while writing the 6.2 e2e spec:
+closing the inline textarea always called `onElementChange` — blur re-wrote the
+same text and **Esc** (meant as cancel) re-wrote the original — so merely
+opening/closing an editor marked the draft dirty ("Cambios sin guardar", false
+draft-protection prompts) and pushed an empty undo step. **Fix:** pure
+`_lib/inline-commit.ts` (`buildTextCommitPatch` / `buildCellCommitPatch`)
+returns `null` when the commit changes nothing; `use-inline-editing` skips the
+write on `null` for blur, Esc and Tab-to-next-cell. Cells compare the
+**normalized** row (line-items price formatting + subtotal), so a price that
+formats back to the stored value is a no-op, while correcting a stale subtotal
+still commits. Scope kept to inline commits (option A); drag/resize no-ops
+untouched. Once PR #27 merges, the 6.2 spec's "read only as the last step"
+workaround can be dropped.
+
 ## Phase 6 — End-to-end tests (Playwright, main-flow coverage)
 
 Complements the unit-test push (Task 3.7). Unit tests pin pure logic and hooks;
