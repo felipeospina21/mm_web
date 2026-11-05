@@ -324,8 +324,8 @@ write on `null` for blur, Esc and Tab-to-next-cell. Cells compare the
 **normalized** row (line-items price formatting + subtotal), so a price that
 formats back to the stored value is a no-op, while correcting a stale subtotal
 still commits. Scope kept to inline commits (option A); drag/resize no-ops
-untouched. Once PR #27 merges, the 6.2 spec's "read only as the last step"
-workaround can be dropped.
+untouched. Follow-up (after #27 + #28): the 6.2 spec dropped its "read only as
+the last step" workaround and gained Esc/blur no-op regression specs.
 
 ## Phase 6 — End-to-end tests (Playwright, main-flow coverage)
 
@@ -392,7 +392,7 @@ name LIKE '[E2E]%'`; `client_contact` cascades. (Tables are physically
 > **Status (Phase 6):** **Flow track complete** (6.0–6.4, branch
 > `test/e2e-flow-track-6-1-6-4`). Next: the **editor track (6.5)** — core subset
 > first (selection, inline edit, duplicate/delete, undo/redo) — then 6.6 auth,
-> 6.7 lookup negative paths, 6.8 nightly (optional). `pnpm test:e2e` = 8/8 green
+> 6.7 lookup negative paths, 6.8 nightly (optional). `pnpm test:e2e` = 9/9 green
 > against the dev DB; zero residual e2e rows after a run (verified by count).
 >
 > - **Flow track** (one linear journey): 6.0 → 6.1 → 6.2 → 6.3 → 6.4 — ✅ DONE.
@@ -479,9 +479,9 @@ Same spec file: edit the page-1 product name via the inline editor → dirty +
 undo enabled; undo → nothing to undo, redo enabled; redo reapplies; undo restores
 the original value. Canvas interaction is by template coordinates
 (`e2e/_support/editor.ts`), values are read back through the DOM `<textarea>`.
-**Findings:** (1) closing the inline editor **commits even when unchanged**, which
-marks the draft dirty and pushes an undo step — so reads happen only as the last
-step of a test (possible UX nit: a no-op edit dirties the draft); (2) the selected
+**Findings:** (1) closing the inline editor **committed even when unchanged**
+(dirtied the draft + empty undo step) — fixed in Task 5.14 (#28); the spec now
+reads values freely mid-flow and has Esc/blur no-op regression checks; (2) the selected
 element's floating toolbar overlaps the "Acciones" button at the default
 viewport, so helpers deselect (click stage margin) after each edit.
 

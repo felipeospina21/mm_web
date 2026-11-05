@@ -2,7 +2,9 @@ import { expect, test } from "./_support/fixtures";
 import {
   actionsMenuItem,
   clickAction,
+  deselect,
   editProductName,
+  openProductNameEditor,
   pickClient,
   readProductName,
   resolveAndLoadIntoEditor,
@@ -111,41 +113,50 @@ test.describe("edit data in the editor (6.2)", () => {
     await resolveAndLoadIntoEditor(page);
   });
 
-  // NOTE: reading a value via the inline editor is NOT side-effect free — the
-  // app commits on close even when the text is unchanged, which marks the draft
-  // dirty and pushes an undo step (observed while writing these specs). So
-  // undo/redo is asserted through button enablement + dirty state, and a value
-  // is read back only as the LAST step of each test.
-
-  test("edit → undo → redo toggles dirty state and undo/redo availability", async ({
+  test("edit → undo → redo changes the value, dirty state and history", async ({
     page,
   }) => {
+    // Reading via the inline editor is side-effect free (Task 5.14), so the
+    // draft is still clean after a read.
+    expect(await readProductName(page)).toBe(original);
     await expect(page.getByText("Cambios sin guardar")).toBeHidden();
     await expect(await actionsMenuItem(page, "Deshacer")).toBeDisabled();
     await page.keyboard.press("Escape");
 
+    // Edit → new value, dirty, undo available.
     await editProductName(page, edited);
+    expect(await readProductName(page)).toBe(edited);
     await expect(page.getByText("Cambios sin guardar")).toBeVisible();
     await expect(await actionsMenuItem(page, "Deshacer")).toBeEnabled();
     await expect(await actionsMenuItem(page, "Rehacer")).toBeDisabled();
 
-    // Undo → back at the initial snapshot: nothing to undo, redo available.
+    // Undo → original value; back at the baseline, redo available.
     await clickAction(page, "Deshacer");
+    expect(await readProductName(page)).toBe(original);
     await expect(await actionsMenuItem(page, "Deshacer")).toBeDisabled();
     await expect(await actionsMenuItem(page, "Rehacer")).toBeEnabled();
 
-    // Redo → edit reapplied: undo available again, nothing to redo.
+    // Redo → edited value reapplied.
     await clickAction(page, "Rehacer");
+    expect(await readProductName(page)).toBe(edited);
     await expect(await actionsMenuItem(page, "Deshacer")).toBeEnabled();
     await expect(await actionsMenuItem(page, "Rehacer")).toBeDisabled();
-    await page.keyboard.press("Escape");
-
-    expect(await readProductName(page)).toBe(edited);
   });
 
-  test("undo restores the original product name", async ({ page }) => {
-    await editProductName(page, edited);
-    await clickAction(page, "Deshacer");
-    expect(await readProductName(page)).toBe(original);
-  });
+  // Regression for Task 5.14: closing the inline editor without a change must
+  // not dirty the draft or push an (empty) undo step.
+  for (const close of ["Escape", "blur"] as const) {
+    test(`closing the editor with ${close} and no change keeps the draft clean`, async ({
+      page,
+    }) => {
+      const editor = await openProductNameEditor(page);
+      if (close === "Escape") await editor.press("Escape");
+      else await editor.blur();
+      await expect(editor).toBeHidden();
+      await deselect(page);
+
+      await expect(page.getByText("Cambios sin guardar")).toBeHidden();
+      await expect(await actionsMenuItem(page, "Deshacer")).toBeDisabled();
+    });
+  }
 });
