@@ -63,11 +63,14 @@ export async function deleteQuotationsForUser(userId: string): Promise<number> {
  * Delete the e2e user's `[E2E]`-tagged clients (contacts cascade via FK).
  * Double-scoped: user_id AND the `[E2E]%` sentinel, so untagged clients are
  * never touched even within the e2e user's data.
+ *
+ * `ILIKE`, not `LIKE`: `customer.create` lowercases the name, so a client
+ * created through the UI as "[E2E] …" is stored as "[e2e] …" (found in 6.3).
  */
 export async function deleteE2eClientsForUser(userId: string): Promise<number> {
   const result = await db()`
     DELETE FROM mm_web_client
-    WHERE user_id = ${userId} AND name LIKE '[E2E]%'
+    WHERE user_id = ${userId} AND name ILIKE '[E2E]%'
   `;
   return result.count;
 }
@@ -82,7 +85,27 @@ export async function countE2eRowsForUser(userId: string): Promise<{
   `;
   const [c] = await db()<{ n: number }[]>`
     SELECT count(*)::int AS n FROM mm_web_client
-    WHERE user_id = ${userId} AND name LIKE '[E2E]%'
+    WHERE user_id = ${userId} AND name ILIKE '[E2E]%'
   `;
   return { quotations: q?.n ?? 0, e2eClients: c?.n ?? 0 };
+}
+
+/** A saved quotation row, for asserting what Save persisted (Task 6.3). */
+export interface E2eQuotationRow {
+  id: string;
+  quotationNumber: string;
+  clientId: string | null;
+  productCount: number;
+  references: string[] | null;
+}
+
+/** The e2e user's quotations (scoped by user_id). */
+export async function getQuotationsForUser(
+  userId: string,
+): Promise<E2eQuotationRow[]> {
+  return db()<E2eQuotationRow[]>`
+    SELECT id, quotation_number AS "quotationNumber", client_id AS "clientId",
+           product_count AS "productCount", "references"
+    FROM mm_web_quotation WHERE user_id = ${userId}
+  `;
 }
