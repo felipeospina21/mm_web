@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
+import { FEATURE_MY_QUOTATIONS } from "@/lib/feature-flags";
 import { auth } from "@/server/auth";
 import { api, HydrateClient } from "@/trpc/server";
 
@@ -7,10 +8,10 @@ import { QuotationList } from "./_components/quotation-list";
 
 /** Must match PAGE_SIZE in quotation-list.tsx so query keys line up. */
 const PAGE_SIZE = 12;
-const ENABLE_QUOTATIONS_PAGE = false;
 
 export default async function MyQuotationsPage() {
-  if (!ENABLE_QUOTATIONS_PAGE) redirect("/");
+  // Feature-flagged: 404 outside `next dev` (see feature-flags.ts).
+  if (!FEATURE_MY_QUOTATIONS) notFound();
 
   const session = await auth();
   if (!session?.user) redirect("/login?callbackUrl=%2Fmy-quotations");

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
+import { FEATURE_MY_QUOTATIONS } from "@/lib/feature-flags";
 import { useEditorDraft } from "./editor-draft-context";
 import { ConfirmModal } from "./confirm-modal";
 
@@ -31,7 +32,11 @@ export function NavBarClient({ userLabel }: NavBarClientProps) {
   const navLinks = [
     { href: "/", label: "Nueva cotización" },
     { href: "/editor", label: "Editor" },
-  ] as const;
+    // Feature-flagged (see feature-flags.ts).
+    ...(FEATURE_MY_QUOTATIONS
+      ? [{ href: "/my-quotations", label: "Mis cotizaciones" }]
+      : []),
+  ];
 
   const handleNavClick = (event: React.MouseEvent, href: string) => {
     // Only guard when leaving an existing draft for a different route.
