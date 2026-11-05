@@ -22,7 +22,8 @@
 
 **Next up:** Phase 5 remaining cleanup — all decision-heavy: logging (5.2),
 app-wide splits (5.6). Task 5.7 (useEffect audit) is complete. Phases 1–4 are
-complete; Phase 6 (e2e) and Phase 7 (coverage) are not started.
+complete. Phase 6 (e2e): harness (6.0) + flow track (6.1–6.4) done — editor
+track (6.5) is next. Phase 7 (coverage) not started.
 
 **Session log — 2026-11-03** (branch-per-task; all merged to `main`):
 
@@ -372,18 +373,18 @@ name LIKE '[E2E]%'`; `client_contact` cascades. (Tables are physically
 >    **stub server** so interception happens at the `externalGet` boundary and the
 >    tRPC layer stays real. Start with `page.route`; fall back only if needed.
 
-> **Status (Phase 6):** not started. Two independent tracks share the 6.0
-> harness:
+> **Status (Phase 6):** **Flow track complete** (6.0–6.4, branch
+> `test/e2e-flow-track-6-1-6-4`). Next: the **editor track (6.5)** — core subset
+> first (selection, inline edit, duplicate/delete, undo/redo) — then 6.6 auth,
+> 6.7 lookup negative paths, 6.8 nightly (optional). `pnpm test:e2e` = 8/8 green
+> against the dev DB; zero residual e2e rows after a run (verified by count).
 >
-> - **Flow track** (one linear journey): 6.0 → 6.1 → 6.2 → 6.3 → 6.4. MVP =
->   6.0 + 6.1(a) + 6.2 + 6.3.
+> - **Flow track** (one linear journey): 6.0 → 6.1 → 6.2 → 6.3 → 6.4 — ✅ DONE.
 > - **Editor track** (the app's core, many focused specs): 6.0 → 6.5. This is the
 >   largest single piece; land a **core subset first** (selection, inline edit,
 >   undo/redo, duplicate/delete) to prove the canvas-interaction harness, then add
->   formatting + table ops.
->
-> 6.6 (auth) underpins both. 6.7 (lookup negative paths) and 6.8 (nightly
-> schedule) are follow-ups.
+>   formatting + table ops. The 6.2 helpers (`e2e/_support/editor.ts`) already
+>   prove coordinate-based canvas interaction + DOM read-back.
 
 ### Task 6.0 — Playwright setup & DB-cleanup harness (Phase 6, prerequisite) — ✅ DONE & VERIFIED
 
@@ -443,55 +444,48 @@ user_id = $1`.
 
 ## Flow track — the reachable end-to-end journey
 
-### Task 6.1 — SKU lookup → create quotation (Phase 6, flow entry)
+### Task 6.1 — SKU lookup → create quotation (Phase 6) — ✅ DONE
 
-- **Specs** (external API mocked via `mockResolveReferences`): (a) **all
-  resolved** — on `/`, pick a client + enter known SKUs → resolve → "Cargar en el
-  editor" → `/editor` renders a product page per resolved product (name /
-  reference / inventory table present); (b) **manual start** —
-  "Crear cotización manual" with a client → `/editor` opens with blank item
-  fields.
-- **Entry point:** `reference-lookup.tsx`. This is the app's real entry to the
-  editor (the catalog is hidden).
-- **Acceptance:** resolved products reach the editor; no live external call
-  (assert via interception). No DB writes.
-- **Effort:** medium. **Risk:** medium (tRPC batch/superjson envelope in the
-  mock — stub-server fallback de-risks). **Depends on:** 6.0.
+`e2e/lookup-flow.spec.ts`: (a) all-resolved lookup → "Cargar en el editor" →
+editor with 2 product pages + policies; (b) manual start → blank draft (header +
+policies), client handoff reaches the editor. **Decisions/findings:**
+`customer.list` is **mocked too** (`mockClientList`), so 6.1/6.2 write nothing.
+The mock had to speak tRPC's **JSONL stream** format — `httpBatchStreamLink`
+always parses the body as a stream even though the server labels it
+`application/json`, so the plain `[{result}]` array from 6.0 failed (captured the
+real wire format; see `mock-external.ts`). Single-procedure requests only;
+batches fall through. Added a DOM hook on the canvas container:
+`data-testid="quotation-canvas"` + `data-page-count`.
 
-### Task 6.2 — Edit data in the editor (flow step) (Phase 6)
+### Task 6.2 — Edit data in the editor (Phase 6) — ✅ DONE
 
-- **Spec:** in the populated editor from 6.1, edit a header field / line-item
-  cell → value changes; **undo** reverts; **redo** reapplies; dirty state is
-  reflected (Save enables).
-- **Notes:** the flow-level smoke of editing; the **exhaustive** editor coverage
-  lives in the editor track (6.5). Konva renders in a real browser here.
-- **Acceptance:** edit/undo/redo observable via rendered value + Save enablement.
-  No DB writes.
-- **Effort:** small–medium. **Risk:** medium (canvas selectors — prefer
-  `data-testid`/roles). **Depends on:** 6.1.
+Same spec file: edit the page-1 product name via the inline editor → dirty +
+undo enabled; undo → nothing to undo, redo enabled; redo reapplies; undo restores
+the original value. Canvas interaction is by template coordinates
+(`e2e/_support/editor.ts`), values are read back through the DOM `<textarea>`.
+**Findings:** (1) closing the inline editor **commits even when unchanged**, which
+marks the draft dirty and pushes an undo step — so reads happen only as the last
+step of a test (possible UX nit: a no-op edit dirties the draft); (2) the selected
+element's floating toolbar overlaps the "Acciones" button at the default
+viewport, so helpers deselect (click stage margin) after each edit.
 
-### Task 6.3 — Save a quotation (DB write + cleanup) (Phase 6)
+### Task 6.3 — Save a quotation (Phase 6) — ✅ DONE
 
-- **Spec:** from the edited editor, pick/create a client (tagged `[E2E] …`),
-  click **Save** → success state; saved identity set; dirty clears. Capture the
-  created `quotation` id (and any `client` id) from the response.
-- **Cleanup:** `afterEach` deletes captured ids; global teardown sweeps by e2e
-  `user_id` as backstop.
-- **Acceptance:** save persists (optionally re-query by id to confirm `user_id`,
-  `product_count`, `references`); after the spec, teardown leaves zero e2e-user
-  quotations / `[E2E]` clients.
-- **Effort:** medium. **Risk:** medium (**the only DB-writing flow** — cleanup
-  correctness is the main risk; always scope by e2e `user_id`).
-- **Depends on:** 6.0 (cleanup harness), 6.2.
+`e2e/save-export.spec.ts`: creates an `[E2E] cliente <ts>` client through the
+real UI (Save checks client ownership server-side, so it can't be mocked), loads
+mocked products, saves → `Cotización n.º M…` badge, dirty cleared, export
+unlocked; the row is re-queried (`getQuotationsForUser`) for `client_id`,
+`product_count = 2`, `references`. **Bug fixed in the harness:**
+`customer.create` lowercases names, so the `LIKE '[E2E]%'` sentinel never matched
+UI-created clients (they'd leak) → now `ILIKE`, still double-scoped by `user_id`.
+Cleanup flags are set **before** writing so a mid-test failure still sweeps.
 
-### Task 6.4 — PDF export (flow finish) (Phase 6)
+### Task 6.4 — PDF export (Phase 6) — ✅ DONE
 
-- **Spec:** from a populated editor, click **Export PDF** → assert a download
-  fires (`page.waitForEvent('download')`) with a sensible filename; assert the
-  file is non-empty. Do **not** assert PDF pixel contents.
-- **Notes:** jsPDF runs client-side; validates export wiring, not fidelity.
-- **Acceptance:** a download event fires and produces a non-empty file. No DB
-  writes. **Effort:** small. **Risk:** low. **Depends on:** 6.2.
+Same file: export is only enabled after Save (`disabled={!saved}`), so the spec
+saves first, then asserts the download name
+`Cotización N°<n> - [E2E] CLIENTE <ts> - Magic Medios SAS.pdf`, non-empty size and
+`%PDF-` magic bytes (wiring, not fidelity).
 
 ## Editor track — dedicated functionality suite (the app's core)
 

@@ -492,6 +492,10 @@ export default function QuotationCanvas({
   return (
     <div
       ref={containerRef}
+      // e2e hook: the whole document is one Konva <canvas>, so expose the page
+      // count in the DOM for specs (see e2e/ Task 6.1).
+      data-testid="quotation-canvas"
+      data-page-count={pages.length}
       tabIndex={0}
       onCopy={handleCopy}
       onPaste={handlePaste}
