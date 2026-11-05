@@ -46,10 +46,10 @@ hippo capture --stdin <<< '<decisions, errors, lessons: 2-5 bullets>'
 - Work the plan task-by-task. For each task, briefly discuss problem/fix/
   architecture and wait for explicit confirmation before coding. Keep
   explanations brief.
-- Commit directly to `main`, one self-contained commit per task; keep unrelated
-  concerns in separate commits. After each task, mark it done in the plan's
-  Status block (the source of truth) and collapse the finished task section to a
-  one-line reference with its commit SHA.
+- Branch per task (off `origin/main`), one self-contained commit per task, then
+  open a PR; keep unrelated concerns in separate commits. After each task, mark it
+  done in the plan's Status block (the source of truth) and collapse the finished
+  task section to a one-line reference with its commit SHA / PR.
 - Layout: custom hooks live in `src/app/editor/_hooks/` (`use-*`); pure
   decision/transform logic lives in `src/app/editor/_lib/` WITH unit tests
   (e.g. history.ts, keyboard.ts, table-ops.ts, line-items.ts). Hooks stay thin;

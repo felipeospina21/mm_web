@@ -269,6 +269,65 @@ Task 4.4 added direct tests (`parseColor`, `wrapText`, `collectImageElements`,
 `table-ops` / `line-items` tests. Add a focused test when next touching the
 exporter.
 
+### Task 5.12 — Human-readable, shareable save-validation errors (Phase 5)
+
+**Problem.** When `quotation.save` fails Zod validation at the trust boundary
+(`quotation-schema.ts`), tRPC serializes the raw Zod issues into `error.message`,
+and `use-quotation-persistence.ts` interpolates that straight into the toast
+(`onSaveError(\`No se pudo guardar…: ${error.message}\`)`). The user sees raw JSON
+like `[{"code":"too_big","maximum":200,"type":"string","path":["data",13,"elements",7,"id"]}]`
+— unreadable and impossible to describe in a support capture.
+
+**Fix (sketch).** Map the top Zod issue (`path` + `code` + `maximum`) to a stable,
+localized message that includes a short, quotable error code, e.g.:
+> "No se pudo guardar: un elemento supera el límite permitido (campo: id, máx.
+> 200). Código: QUOT-ID-TOO-LONG."
+
+Stop interpolating raw `error.message`; detect the validation-error shape and show
+the mapped message. Keep the technical detail in `console.error` for devs.
+
+**Open design questions (decide before coding):**
+1. **Where does the Zod→human mapping live?**
+   - (a) tRPC `errorFormatter` on the server — central, every mutation benefits,
+     client just displays `error.message`; but touches the root tRPC setup
+     (larger blast radius).
+   - (b) A shared `_lib` helper (e.g. `formatSaveError(error)`) called in
+     `onError` — editor-scoped, easy to unit-test (fits the `_lib`+tests
+     convention), smaller blast radius. **Leaning (b).**
+2. Which fields/caps get bespoke messages vs. a generic "un campo supera el
+   límite permitido" fallback? (At minimum the copy-reachable ones: `id`, element
+   `text`, table cell text, elements-per-page.)
+3. Error-code scheme: per-field (`QUOT-ID-TOO-LONG`) vs. per-Zod-code
+   (`QUOT-TOO-BIG`)? Per-field is more actionable in a capture.
+4. Also surface the **4.5 MB body-limit 413** (the `Unexpected token 'R'` parse
+   error, see `docs/quotation-size-limits.md` §1) as a clear "cotización
+   demasiado grande" message, since it shares the same toast path?
+
+### Task 5.13 — Audit & guard remaining copy-reachable schema caps (Phase 5)
+
+Follow-up to the element-`id` compounding fix (branch
+`fix/duplicate-element-id-compounding`), where copy/duplicate appended
+`-copy-<ts>` to the source id until it breached the 200-char `id` cap and blocked
+save. `freshCopyId` (strip-to-base + fresh suffix) closed that specific growth.
+
+**Audit result (2026-11-05):** the id case was the ONLY field a copy made *grow
+past its own cap*. Other caps are either abuse-ceilings not reachable by normal
+editing (page `id` 200, color fields 64, `fontFamily` 200, `colWidths` 100,
+`cells` 1,000 rows, pages 500) or copy *content* verbatim without inflating it
+(element `text` 20k, table cell 10k, image `src` 5M). The one adjacent
+copy-reachable case is **elements-per-page (1,000)** via repeated pasting onto a
+single page — volume, not per-copy growth.
+
+**Open questions (decide before coding):**
+1. Is a code guard warranted for elements-per-page (e.g. warn/block before the
+   1,000th paste), or is the Task 5.12 friendly message enough?
+2. Should `freshCopyId` move to cover any *other* runtime id-mint site, or are
+   `makePastedElement` + `handleDuplicateElement` the only two? (`handleAddElement`
+   / `handlePasteImage` already mint fresh `el-<type>-<ts>` ids — confirm no other
+   path appends to an existing id.)
+3. Add a lightweight schema-level regression test asserting no app-generated id
+   lineage can exceed 200 chars under N copies (guards against reintroduction)?
+
 ## Phase 6 — End-to-end tests (Playwright, main-flow coverage)
 
 Complements the unit-test push (Task 3.7). Unit tests pin pure logic and hooks;
