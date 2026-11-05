@@ -269,39 +269,19 @@ Task 4.4 added direct tests (`parseColor`, `wrapText`, `collectImageElements`,
 `table-ops` / `line-items` tests. Add a focused test when next touching the
 exporter.
 
-### Task 5.12 — Human-readable, shareable save-validation errors (Phase 5)
+### Task 5.12 — Human-readable, shareable save-validation errors (Phase 5) — ✅ DONE
 
-**Problem.** When `quotation.save` fails Zod validation at the trust boundary
-(`quotation-schema.ts`), tRPC serializes the raw Zod issues into `error.message`,
-and `use-quotation-persistence.ts` interpolates that straight into the toast
-(`onSaveError(\`No se pudo guardar…: ${error.message}\`)`). The user sees raw JSON
-like `[{"code":"too_big","maximum":200,"type":"string","path":["data",13,"elements",7,"id"]}]`
-— unreadable and impossible to describe in a support capture.
-
-**Fix (sketch).** Map the top Zod issue (`path` + `code` + `maximum`) to a stable,
-localized message that includes a short, quotable error code, e.g.:
-> "No se pudo guardar: un elemento supera el límite permitido (campo: id, máx.
-> 200). Código: QUOT-ID-TOO-LONG."
-
-Stop interpolating raw `error.message`; detect the validation-error shape and show
-the mapped message. Keep the technical detail in `console.error` for devs.
-
-**Open design questions (decide before coding):**
-1. **Where does the Zod→human mapping live?**
-   - (a) tRPC `errorFormatter` on the server — central, every mutation benefits,
-     client just displays `error.message`; but touches the root tRPC setup
-     (larger blast radius).
-   - (b) A shared `_lib` helper (e.g. `formatSaveError(error)`) called in
-     `onError` — editor-scoped, easy to unit-test (fits the `_lib`+tests
-     convention), smaller blast radius. **Leaning (b).**
-2. Which fields/caps get bespoke messages vs. a generic "un campo supera el
-   límite permitido" fallback? (At minimum the copy-reachable ones: `id`, element
-   `text`, table cell text, elements-per-page.)
-3. Error-code scheme: per-field (`QUOT-ID-TOO-LONG`) vs. per-Zod-code
-   (`QUOT-TOO-BIG`)? Per-field is more actionable in a capture.
-4. Also surface the **4.5 MB body-limit 413** (the `Unexpected token 'R'` parse
-   error, see `docs/quotation-size-limits.md` §1) as a clear "cotización
-   demasiado grande" message, since it shares the same toast path?
+Done on branch `fix/save-validation-error-messages`. Decisions taken: **(1A)** the
+server `errorFormatter` (`trpc.ts`) now exposes a trimmed `zodIssues`
+(`{ path, code, maximum }[]`, preserving nested paths `.flatten()` drops) and a
+pure, unit-tested `_lib/format-save-error.ts` maps the first issue to the toast
+message; **(2)** bespoke copy for the copy-reachable caps (`id`, element `text`,
+table cell text, elements-per-page) + a generic fallback; **(3)** per-field codes
+(`QUOT-ID-TOO-LONG`, `QUOT-TEXT-TOO-LONG`, `QUOT-CELL-TOO-LONG`,
+`QUOT-TOO-MANY-ELEMENTS`, `QUOT-SAVE-FAILED`); **(4)** the 4.5 MB 413 is detected
+by message signature and mapped to a clean user sentence with the infra detail
+(Vercel) carried only in the code `QUOT-TOO-LARGE-VERCEL`. `onError` keeps full
+technical detail in `console.error`.
 
 ### Task 5.13 — Audit & guard remaining copy-reachable schema caps (Phase 5)
 

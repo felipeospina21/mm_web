@@ -12,7 +12,16 @@ const mutate = vi.fn();
 let capturedOptions: {
   networkMode?: string;
   onSuccess?: (result: unknown) => void;
-  onError?: (error: { message: string }) => void;
+  onError?: (error: {
+    message: string;
+    data?: {
+      zodIssues?: Array<{
+        path: Array<string | number>;
+        code: string;
+        maximum?: number;
+      }> | null;
+    } | null;
+  }) => void;
 } = {};
 let mutationState = { isPending: false, data: undefined as unknown };
 
@@ -172,18 +181,45 @@ describe("useQuotationPersistence", () => {
     expect(setIsDirty).not.toHaveBeenCalled();
   });
 
-  it("onError reports a localized failure via the injected onSaveError", () => {
+  it("onError reports a localized, mapped failure via the injected onSaveError", () => {
     const { onSaveError } = setup();
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
 
+    // Unclassified error -> generic localized message with a shareable code,
+    // NOT the raw error text (the old behaviour dumped `error.message`).
     act(() => capturedOptions.onError?.({ message: "boom" }));
 
     expect(onSaveError).toHaveBeenCalledTimes(1);
-    // The hook localizes the message and interpolates the error; assert the
-    // raw error text is surfaced to the caller (locale-agnostic substring).
-    expect(onSaveError).toHaveBeenCalledWith(expect.stringContaining("boom"));
+    const msg = onSaveError.mock.calls[0]![0] as string;
+    expect(msg).not.toContain("boom");
+    expect(msg).toContain("No se pudo guardar");
+    // Full technical detail still goes to the console for developers.
+    expect(consoleError).toHaveBeenCalledWith("Save failed:", { message: "boom" });
+    consoleError.mockRestore();
+  });
+
+  it("onError maps a precise Zod issue to a field-specific message + code", () => {
+    const { onSaveError } = setup();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    act(() =>
+      capturedOptions.onError?.({
+        message: "validation",
+        data: {
+          zodIssues: [
+            { path: ["data", 13, "elements", 7, "id"], code: "too_big", maximum: 200 },
+          ],
+        },
+      }),
+    );
+
+    const msg = onSaveError.mock.calls[0]![0] as string;
+    expect(msg).toContain("QUOT-ID-TOO-LONG");
+    expect(msg).toContain("200");
     consoleError.mockRestore();
   });
 });
