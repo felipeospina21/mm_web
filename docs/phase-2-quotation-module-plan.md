@@ -239,11 +239,12 @@ The draft→final transition is a guarded state change, not a boolean flip.
 
 Make the module reachable and render drafts / free / admin views gracefully.
 
-- **Files:** `src/app/_my-quotations/page.tsx` (`ENABLE_QUOTATIONS_PAGE`),
+- **Files:** `src/app/my-quotations/page.tsx` (`FEATURE_MY_QUOTATIONS` in `src/lib/feature-flags.ts`),
   `quotation-list.tsx`, nav (`nav-bar.tsx`), `messages.ts`.
 - **Change:**
-  1. Flip `ENABLE_QUOTATIONS_PAGE = true`; add the nav entry
-     (`nav.myQuotations` already exists in `messages.ts`).
+  1. Release: delete `FEATURE_MY_QUOTATIONS` and its references (the page's
+     `notFound()` guard and the conditional "Mis cotizaciones" nav link) — the
+     route and nav entry already exist behind the flag.
   2. List polish: status badge (draft/final), `templateKind` badge
      (standard/free), owner column **when admin** (the `list` query already
      returns `userName`). Render **0-product / free** docs gracefully — a free

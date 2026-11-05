@@ -57,9 +57,9 @@ rejected documents missing a header would make variant/edge-case snapshots
 unloadable and unsavable.
 
 > **Status: deferred — do NOT build yet.** The quotation module
-> (`src/app/_my-quotations/`) that owns the enforced load/edit/save flows is
-> currently **feature-flagged off** (`ENABLE_QUOTATIONS_PAGE = false`, redirects
-> to `/`) and its enforced-template save/load path does not exist. Both the
+> (`src/app/my-quotations/`) that owns the enforced load/edit/save flows is
+> currently **feature-flagged off in production** (`FEATURE_MY_QUOTATIONS`; on
+> only under `next dev`) and its enforced-template save/load path does not exist. Both the
 > validator primitive **and** its wiring are deferred to that iteration, so the
 > enforcement can be built and verified against a real flow instead of a
 > speculative one. Nothing lands on the universal save path.
@@ -248,7 +248,7 @@ guards `beforeunload` + in-app nav (`a5aecac`). But draft-ness is inferred from
 on read; product selection is read at mount) captured once at mount, so it is
 fragile across **tab duplicate/clone/refresh** (storage is copied at clone time;
 the manual flag may already be consumed). The durable fix is real **draft
-persistence** (the feature-flagged `_my-quotations` module): persist/restore
+persistence** (the feature-flagged `my-quotations` module): persist/restore
 drafts and derive `isDraft` from the loaded content, not one-shot mount flags.
 Re-evaluate the whole `isDraft` derivation then. `isDraft` was named with that
 future in mind.
@@ -337,7 +337,7 @@ few high-value negative paths — not exhaustive coverage.
 > **The real user flow (the only one reachable today):** SKU lookup → create
 > quotation → edit data in the editor → save quotation → export PDF. The product
 > **catalog** (`/catalog`, `ProductCatalog`) is an **unlinked/hidden route** and
-> **My Quotations** (`_my-quotations`) is **feature-flagged off**, so both are
+> **My Quotations** (`my-quotations`) is **feature-flagged off in production** (`FEATURE_MY_QUOTATIONS`, on under `next dev`), so both are
 > **out of scope** until revived (consistent with the Task 2.3 / 3.3 deferrals).
 
 > **What writes to the DB (verified 2026-11-04):** only **Save** writes. SKU

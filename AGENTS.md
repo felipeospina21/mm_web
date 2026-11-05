@@ -62,6 +62,8 @@ hippo capture --stdin <<< '<decisions, errors, lessons: 2-5 bullets>'
   `react-hooks/refs` MUST be re-upgraded to error after the Task 4.0 root fix);
   `pnpm test` has ONE pre-existing unrelated failure in
   `src/server/external/schema.test.ts`.
-- The quotation module (`src/app/_my-quotations/`) is feature-flagged OFF, so the
+- The quotation module (`src/app/my-quotations/`) is feature-flagged by
+  `FEATURE_MY_QUOTATIONS` (`src/lib/feature-flags.ts`): ON under `next dev`, OFF
+  (404 + no nav link) in every Vercel deployment. In production the
   editor's load-saved-quotation path is not reachable end-to-end — enforcement/
   load work that depends on it is deferred (see plan Tasks 2.3, 3.3).
