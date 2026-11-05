@@ -46,12 +46,29 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
+    const zodError = error.cause instanceof ZodError ? error.cause : null;
     return {
       ...shape,
       data: {
         ...shape.data,
-        zodError:
-          error.cause instanceof ZodError ? error.cause.flatten() : null,
+        // Flattened form is kept for frontend typesafety / top-level field errors.
+        zodError: zodError ? zodError.flatten() : null,
+        // Precise, trimmed issues preserve NESTED paths (e.g.
+        // ["data",13,"elements",7,"id"]) that `.flatten()` collapses into
+        // `formErrors`. The client maps the first issue to a human-readable,
+        // shareable message (see editor `_lib/format-save-error`). Only the few
+        // fields we need are projected — never the (possibly large) input value.
+        zodIssues: zodError
+          ? zodError.issues.map((issue) => ({
+              path: issue.path,
+              code: issue.code,
+              // Present on "too_big"/"too_small"; undefined otherwise.
+              maximum:
+                "maximum" in issue && typeof issue.maximum === "number"
+                  ? issue.maximum
+                  : undefined,
+            }))
+          : null,
       },
     };
   },

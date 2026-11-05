@@ -3,6 +3,7 @@ import type { RefObject } from "react";
 
 import { api, type RouterOutputs } from "@/trpc/react";
 import type { PageData } from "../_components/types";
+import { formatSaveError } from "../_lib/format-save-error";
 
 /** Saved identity: `null` while a draft, populated once persisted. */
 export interface SavedIdentity {
@@ -85,8 +86,11 @@ export function useQuotationPersistence({
       setIsDirty(false);
     },
     onError: (error) => {
+      // Full technical detail stays in the console for developers…
       console.error("Save failed:", error);
-      onSaveError(`No se pudo guardar la cotización: ${error.message}`);
+      // …while the user gets a readable, shareable message (field/limit + code).
+      const { message } = formatSaveError(error);
+      onSaveError(message);
     },
   });
 
