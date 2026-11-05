@@ -19,6 +19,34 @@ export interface TablePasteResult {
   clearSelectedCells?: boolean;
 }
 
+/**
+ * Derive a fresh element id for a copy/duplicate of `sourceId`.
+ *
+ * Defensive against id "compounding": copying a copy (or duplicating a
+ * duplicate) used to append `-copy-<ts>` to whatever the source id already was,
+ * so repeated operations on the same lineage grew the id without bound and
+ * eventually breached the save schema's 200-char `id` cap (blocking save). We
+ * instead strip any existing trailing `-copy-<suffix>` segment(s) down to the
+ * stable base before appending a single fresh suffix, keeping the id length
+ * bounded regardless of how many times an element is copied/re-copied.
+ *
+ * The suffix also carries a short random component so many elements pasted
+ * within the same millisecond can't collide on `Date.now()` alone (colliding
+ * ids break id-based lookups like `findSelectedTable` and React keys).
+ */
+export function freshCopyId(sourceId: string): string {
+  // Strip one-or-more trailing copy suffixes back to the stable base. A suffix
+  // is "-copy-<digits>" (legacy) optionally followed by "-<rand>" (current):
+  //   line-items-p1-copy-1730812345678            -> line-items-p1
+  //   line-items-p1-copy-1730812345678-ab12cd      -> line-items-p1
+  //   line-items-p1-copy-173...-copy-173...        -> line-items-p1 (compounded)
+  // The digit-anchored timestamp keeps a dashed base id (e.g. "line-items-p1")
+  // intact while still consuming the optional alphanumeric random tail.
+  const base = sourceId.replace(/(?:-copy-\d+(?:-[a-z0-9]+)?)+$/i, "");
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${base}-copy-${Date.now()}-${rand}`;
+}
+
 export function cloneElement(element: TemplateElement): TemplateElement {
   return {
     ...element,
@@ -42,7 +70,7 @@ export function makePastedElement(
   const copy = cloneElement(element);
   return {
     ...copy,
-    id: `${copy.id}-copy-${Date.now()}`,
+    id: freshCopyId(copy.id),
     x: Math.max(0, Math.min(pageWidth - copy.width, x + 20)),
     y: Math.max(0, Math.min(pageHeight - copy.height, y + 20)),
   };

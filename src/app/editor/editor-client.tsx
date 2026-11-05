@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { exportPagesToPdf } from "./_lib/pdf-export";
 import { elementRole, isLineItems } from "./_lib/element-role";
+import { freshCopyId } from "./_lib/clipboard";
 import { useEditorKeyboardShortcuts } from "./_hooks/use-editor-keyboard-shortcuts";
 import { useQuotationHistory } from "./_hooks/use-quotation-history";
 import { usePendingQuotationClient } from "./_hooks/use-pending-quotation-client";
@@ -626,7 +627,7 @@ export default function EditorPage() {
           if (!source) return page;
           const copy: TemplateElement = {
             ...source,
-            id: `${source.id}-copy-${Date.now()}`,
+            id: freshCopyId(source.id),
             y: source.y + 30,
           };
           return { ...page, elements: [...page.elements, copy] };

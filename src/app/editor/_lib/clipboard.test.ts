@@ -4,6 +4,7 @@ import type { PageData, TableData, TemplateElement } from "../_components/types"
 import {
   cloneElement,
   findSelectedTable,
+  freshCopyId,
   getTableClipboardText,
   makePastedElement,
   pasteIntoTable,
@@ -73,6 +74,53 @@ describe("makePastedElement", () => {
     const pasted = makePastedElement(baseElement(), 900, -50, 800, 1000);
     expect(pasted.x).toBe(700);
     expect(pasted.y).toBe(0);
+  });
+});
+
+describe("freshCopyId", () => {
+  const COPY_SUFFIX = /-copy-\d+-[a-z0-9]+$/i;
+
+  it("appends a single copy suffix to a clean base id", () => {
+    const id = freshCopyId("line-items-p1");
+    expect(id.startsWith("line-items-p1-copy-")).toBe(true);
+    expect(id).toMatch(/^line-items-p1-copy-\d+-[a-z0-9]+$/i);
+  });
+
+  it("does NOT compound when copying an already-copied id", () => {
+    // Strips the prior suffix so the result still has exactly one "-copy-".
+    const once = freshCopyId("line-items-p1");
+    const twice = freshCopyId(once);
+    expect(twice.match(/-copy-/g)).toHaveLength(1);
+    expect(twice.startsWith("line-items-p1-copy-")).toBe(true);
+  });
+
+  it("strips a legacy '-copy-<ts>' suffix (no random tail)", () => {
+    const legacy = "product-name-p7-copy-1730812345678";
+    const next = freshCopyId(legacy);
+    expect(next.startsWith("product-name-p7-copy-")).toBe(true);
+    expect(next.match(/-copy-/g)).toHaveLength(1);
+  });
+
+  it("collapses a deeply compounded id back to its stable base", () => {
+    const compounded =
+      "line-items-p1-copy-1730000000001-copy-1730000000002-copy-1730000000003";
+    const next = freshCopyId(compounded);
+    expect(next.replace(COPY_SUFFIX, "")).toBe("line-items-p1");
+  });
+
+  it("keeps id length bounded across many successive copies", () => {
+    let id = "line-items-p1";
+    for (let i = 0; i < 50; i++) id = freshCopyId(id);
+    // Base (13) + "-copy-" (6) + ms timestamp (~13) + "-" + rand (<=6) < 50.
+    expect(id.length).toBeLessThan(50);
+    // Far under the save schema's 200-char `id` cap that caused the bug.
+    expect(id.length).toBeLessThan(200);
+  });
+
+  it("preserves a base id that itself contains no copy suffix but has digits", () => {
+    // "page-13" style: trailing digits must NOT be mistaken for a suffix.
+    const id = freshCopyId("page-13");
+    expect(id.replace(COPY_SUFFIX, "")).toBe("page-13");
   });
 });
 
