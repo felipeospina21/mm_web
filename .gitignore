@@ -8,6 +8,12 @@
 # testing
 /coverage
 
+# playwright e2e
+/test-results
+/playwright-report
+/playwright/.cache
+/e2e/.auth
+
 # database
 /prisma/db.sqlite
 /prisma/db.sqlite-journal
