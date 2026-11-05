@@ -10,10 +10,10 @@ import { computeContentTop, computeEditingBox } from "../_lib/editing-geometry";
 import { nextEditableCell } from "../_lib/table-navigation";
 import { isLineItems, isLineItemsId } from "../_lib/element-role";
 import {
-  LINE_ITEM_COLS,
-  formatEditedCell,
-  setLineItemSubtotal,
-} from "../_lib/line-items";
+  buildCellCommitPatch,
+  buildTextCommitPatch,
+} from "../_lib/inline-commit";
+import { LINE_ITEM_COLS } from "../_lib/line-items";
 
 interface InlineEditingOptions {
   pages: PageData[];
@@ -183,30 +183,15 @@ export function useInlineEditing({
         const page = pages.find((item) =>
           item.elements.some((element) => element.id === editingId),
         );
-        if (page) {
-          if (editingCell) {
-            const element = page.elements.find((item) => item.id === editingId);
-            if (element?.table) {
-              const cells = element.table.cells.map((row) => [...row]);
-              const row = cells[editingCell.row];
-              if (row) {
-                const lineItems = isLineItems(element);
-                row[editingCell.col] = formatEditedCell(
-                  newText,
-                  editingCell.row,
-                  editingCell.col,
-                  lineItems,
-                );
-                if (lineItems && editingCell.row > 0)
-                  setLineItemSubtotal(row, element.table.colWidths.length);
-                onElementChange(page.id, editingId, {
-                  table: { ...element.table, cells },
-                });
-              }
-            }
-          } else {
-            onElementChange(page.id, editingId, { text: newText });
-          }
+        const element = page?.elements.find((item) => item.id === editingId);
+        if (page && element) {
+          // Null patch = no real change (e.g. Esc, or blur without typing):
+          // skip the write so the draft isn't dirtied and no empty undo step
+          // is pushed.
+          const patch = editingCell
+            ? buildCellCommitPatch(element, editingCell, newText)
+            : buildTextCommitPatch(element, newText);
+          if (patch) onElementChange(page.id, editingId, patch);
         }
       }
       resetEditing();
@@ -255,20 +240,8 @@ export function useInlineEditing({
         const nextCol = next.col;
 
         const { colWidths, rowHeight } = table;
-        const cells = table.cells.map((row) => [...row]);
-        const currentRow = cells[editingCell.row];
-        if (currentRow) {
-          const lineItems = isLineItems(element);
-          currentRow[editingCell.col] = formatEditedCell(
-            currentValue,
-            editingCell.row,
-            editingCell.col,
-            lineItems,
-          );
-          if (lineItems && editingCell.row > 0)
-            setLineItemSubtotal(currentRow, table.colWidths.length);
-          onElementChange(page.id, element.id, { table: { ...table, cells } });
-        }
+        const patch = buildCellCommitPatch(element, editingCell, currentValue);
+        if (patch) onElementChange(page.id, element.id, patch);
 
         const stage = stageRef.current;
         if (!stage) return;
