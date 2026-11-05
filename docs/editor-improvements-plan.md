@@ -18,12 +18,12 @@
 - Follow `AGENTS.md`: kebab-case component files, interfaces over type aliases,
   small components, custom hooks to consolidate related state.
 
-## Status (updated 2026-11-03)
+## Status (updated 2026-11-05)
 
-**Next up:** Phase 5 remaining cleanup — all decision-heavy: logging (5.2),
-app-wide splits (5.6). Task 5.7 (useEffect audit) is complete. Phases 1–4 are
-complete. Phase 6 (e2e): harness (6.0) + flow track (6.1–6.4) done — editor
-track (6.5) is next. Phase 7 (coverage) not started.
+**Next up:** Phase 6 editor track (6.5). Phases 1–4 are complete. Phase 5
+remaining cleanup is decision-heavy: logging (5.2), app-wide splits (5.6),
+pdf-export tests (5.11); 5.7/5.7f and 5.12–5.14 are done. Phase 6 (e2e):
+harness (6.0) + flow track (6.1–6.4) done. Phase 7 (coverage) not started.
 
 **Session log — 2026-11-03** (branch-per-task; all merged to `main`):
 
@@ -132,114 +132,6 @@ Revisit only if image flicker is observed.
 extraction; a shared Escape/outside-click hook for the modal components — only if
 its API stays simpler than the current effects.
 
-### Task 5.7 — Audit `useEffect` usage app-wide (Phase 5)
-
-Keep or replace, per effect. Start with the post-mount effect added in
-`editor-client.tsx` that reads `takePendingQuotationClient()` from
-`sessionStorage` into `selectedClientId` (added to fix a Save-button **hydration
-mismatch**: the old `useState(() => takePendingQuotationClient())` initializer
-returned `null` on the server but the stored value on the client, so the button's
-`disabled`/label diverged during hydration). The effect is correct but trips
-`react-hooks/set-state-in-effect` (a warn under this project's policy). Decide
-whether to keep it or replace it with a better idiom — `useSyncExternalStore`
-with a `null` server snapshot, a `mounted` gate, or moving the handoff off
-`sessionStorage` to a cookie/search param the **server** can read (removes the
-effect entirely but changes the handoff mechanism). Note `selectedClientId` is
-also set elsewhere, so a read-only `useSyncExternalStore` doesn't drop in cleanly.
-Then **sweep every other `useEffect` in the app** (grep) and, for each, decide
-keep vs. replace: is it a genuine effect (subscription, external sync, imperative
-DOM), or is it compensating for something that belongs in render, an event
-handler, derived state, or `useSyncExternalStore`? Record the keep/replace
-decision per effect. Watch for the same SSR/browser-storage hydration trap in the
-other storage-reading initializers in `editor-client.tsx` (`isManualStart`,
-`hasInitialProducts`, `pendingHomeContactIdRef`, and the initial pages/meta via
-`getQuotationProducts`) — they carry the same latent risk but aren't flagged today
-because they don't drive a rendered attribute.
-
-**Audit result (2026-11-04) and split into sub-tasks.** Every `useEffect` was
-classified; one change per sub-task, each on its own branch, verified
-independently.
-
-_Genuine effects — KEEP, no change:_ `quotation-list.tsx:40` and
-`product-catalog.tsx:42` (IntersectionObserver); `quotation-bar.tsx:13` and
-`product-card.tsx:46` (`STORAGE_EVENT` subscription); `confirm-modal.tsx:37`,
-`add-product-modal.tsx:88`, `actions-menu.tsx:38` (document key/click listeners);
-`toast-context.tsx:110` (unmount timer cleanup) and `:169` (rAF enter
-transition); `quotation-canvas.tsx:104` (scroll/visible-pages),
-`use-canvas-stage.ts:44` (ResizeObserver), `use-inline-editing.ts:86` (scroll
-listener); `canvas-page-renderer.tsx:294` (imperative `Image` load, see 5.4);
-`use-editor-keyboard-shortcuts.ts:29` (global keydown); `editor-client.tsx:191`
-(`beforeunload`).
-
-_Sub-tasks:_
-
-- **5.7a — `selectedClientId` hydration effect** — ✅ DONE. Replaced the
-  post-mount effect with `usePendingQuotationClient` (`useSyncExternalStore`, null
-  server snapshot) plus a user/load override in `editor-client.tsx`. Lint warning
-  gone (0 warnings).
-- **5.7b — Derived state / event-handler candidates** — ✅ DONE.
-  `visiblePageNumbers` + active page now derived in render (`_lib/visible-pages`
-  `withActivePage` + `useMemo`; the active page now always stays mounted);
-  `use-canvas-stage` wraps `setSelectedId` to notify `onSelectionChange`
-  directly (effect removed). `pagesRef.current = pages` mirror **kept** as an
-  effect (render-time assignment violates `react-hooks/refs`); commented in code.
-- **5.7c — Apply-on-data-arrival effects (ref-guarded)** — ✅ DONE (live ones);
-  `use-quotation-load.ts:67` DEFERRED. Both live effects are genuine
-  run-once-on-query-data effects (react to async data, imperatively rewrite
-  pages/history/meta — not derivable in render), so **kept** with clarifying
-  comments: `use-representative-profile.ts:32` (guard tests already cover
-  clean/no-data/dirty/saved/pending-load) and `editor-client.tsx:359`, where a
-  **phantom `selectedClientId` dep was removed** (leftover from 5.7a; never read
-  in the body). `use-quotation-load.ts:67` belongs to the feature-flagged
-  quotation module (2.3/3.3) — not touched until that path is live and
-  verifiable.
-- **5.7d — Keep-but-confirm** — ✅ DONE, both KEPT (comment-only).
-  `quotation-canvas.tsx:365` is a genuine imperative Konva `Transformer.nodes()`
-  sync (node lives outside React's tree). `editor-client.tsx:207` is a genuine
-  external-sync effect publishing `isDraft` to the nav bar (a non-descendant
-  sibling via context), with unmount cleanup; kept as state, not a ref (ref
-  de-synced across remount — see 5.10). Both annotated in code.
-- **5.7e — Latent storage-reading initializers** — ✅ DONE (documented, no code
-  change). Verdicts, annotated in code:
-  - `isManualStart` and `hasInitialProducts` — **latent risk.** They read
-    browser storage at mount (false on the server, possibly true on the client)
-    and feed `canSaveWhen`/`isDraft`, which drive the Save button's rendered
-    `disabled` state — the **same class of mismatch 5.7a fixed**. Not reproduced
-    today (`force-dynamic`, consume-on-read handoff). Harden with a shared
-    SSR-safe storage read (`useSyncExternalStore`, null server snapshot) if a
-    hydration warning ever appears.
-  - initial pages/meta via `getQuotationProducts` — **shielded.** The canvas
-    content renders inside the `ssr:false` `QuotationCanvas`, so the page bodies
-    never SSR and can't mismatch; the only exposure is the Save-button path
-    above.
-  - `pendingHomeContactIdRef` — **safe.** A ref read only inside the
-    client-seeding effect, never during render.
-
-**All of 5.7 (a–e) is complete.** The only follow-up is the deferred
-`use-quotation-load.ts:67` (quotation module, 2.3/3.3) and the optional hardening
-of the two latent initializers in 5.7e if a hydration warning surfaces.
-
-### Task 5.7f — Extract shared effect hooks (Phase 5, follow-up to the 5.7 audit)
-
-The audit asked whether the kept effects should become custom hooks. Verdict:
-only where it removes real duplication — a lone subscription effect
-(Escape/outside-click, timer, image load) is clearer inline, so those stay.
-
-- **Infinite-scroll `IntersectionObserver`** — ✅ DONE. `product-catalog.tsx` and
-  `quotation-list.tsx` had an identical observer effect; extracted to
-  `src/app/_hooks/use-infinite-scroll-sentinel.ts` (unit-tested: no-observe when
-  no next page, default 200px margin, fetch on intersect, skip while fetching,
-  skip when not intersecting, disconnect on unmount). Behaviour-preserving.
-- **Modal Escape / outside-click** (`confirm-modal`, `add-product-modal`,
-  `actions-menu`) — **deferred to Task 5.6**, which already scopes a shared
-  Escape/outside-click hook "only if its API stays simpler than the current
-  effects." Risk: a flag-laden hook (`closeOnEscape`/`closeOnOutsideClick`/
-  `autoFocusRef`) muddier than the three bespoke effects.
-- **`STORAGE_EVENT` sync** (`quotation-bar.tsx`, `product-card.tsx`) — **optional
-  follow-up.** Mild duplication; the correct primitive is a
-  `useQuotationSelection()` built on `useSyncExternalStore` (also SSR-safe,
-  unlike the current mount effect). Bundle with any 5.7e storage hardening.
-
 ### Task 5.9 — Draft protection is an in-session band-aid (Phase 5) — deferred to the quotation module
 
 `editor-client.tsx` derives `isDraft` ("unsaved content worth protecting") and
@@ -269,63 +161,6 @@ Task 4.4 added direct tests (`parseColor`, `wrapText`, `collectImageElements`,
 `resolveImages`); `drawTable` cell iteration is still only covered indirectly via
 `table-ops` / `line-items` tests. Add a focused test when next touching the
 exporter.
-
-### Task 5.12 — Human-readable, shareable save-validation errors (Phase 5) — ✅ DONE
-
-Done on branch `fix/save-validation-error-messages`. Decisions taken: **(1A)** the
-server `errorFormatter` (`trpc.ts`) now exposes a trimmed `zodIssues`
-(`{ path, code, maximum }[]`, preserving nested paths `.flatten()` drops) and a
-pure, unit-tested `_lib/format-save-error.ts` maps the first issue to the toast
-message; **(2)** bespoke copy for the copy-reachable caps (`id`, element `text`,
-table cell text, elements-per-page) + a generic fallback; **(3)** per-field codes
-(`QUOT-ID-TOO-LONG`, `QUOT-TEXT-TOO-LONG`, `QUOT-CELL-TOO-LONG`,
-`QUOT-TOO-MANY-ELEMENTS`, `QUOT-SAVE-FAILED`); **(4)** the 4.5 MB 413 is detected
-by message signature and mapped to a clean user sentence with the infra detail
-(Vercel) carried only in the code `QUOT-TOO-LARGE-VERCEL`. `onError` keeps full
-technical detail in `console.error`.
-
-### Task 5.13 — Audit & guard remaining copy-reachable schema caps (Phase 5) — ✅ DONE
-
-Done on branch `chore/audit-copy-reachable-caps`. Follow-up to the element-`id`
-compounding fix (#24).
-
-**Audit result (2026-11-05, verified against the code):** the id case was the ONLY
-field a copy made *grow past its own cap*. Other caps are either abuse-ceilings
-not reachable by normal editing (page `id` 200, color fields 64, `fontFamily` 200,
-`colWidths` 100, `cells` 1,000 rows, pages 500) or copy *content* verbatim without
-inflating it (element `text` 20k, table cell 10k, image `src` 5M). Resolutions to
-the open questions:
-
-1. **elements-per-page (1,000):** message-only — already surfaced clearly by Task
-   5.12's `QUOT-TOO-MANY-ELEMENTS` toast. A hard mid-edit block is worse UX and
-   1,000 is far beyond real use; no runtime guard added.
-2. **Other id-mint sites:** confirmed there are none that append to an existing
-   id. Element ids are minted at exactly 4 sites — `makePastedElement` and
-   `handleDuplicateElement` (both use `freshCopyId`), `handleAddElement` and
-   `handlePasteImage` (both mint fresh `el-<type>-<ts>`). Page ids are reassigned
-   from the array index (`page-${index+1}`) at both renumber sites, so they also
-   cannot compound.
-3. **Regression test:** added to `quotation-schema.test.ts` — drives `freshCopyId`
-   through 100 successive copies from the longest real base id and asserts the
-   lineage both stays ≤ 200 chars AND parses against the real
-   `quotationDocumentSchema` every step (locks the helper and the id cap together;
-   fails on either regressing), plus a sanity case that a 201-char id is rejected.
-
-### Task 5.14 — Inline editor no-op commits dirty the draft (Phase 5) — ✅ DONE
-
-Branch `fix/inline-editor-noop-commit`. Found while writing the 6.2 e2e spec:
-closing the inline textarea always called `onElementChange` — blur re-wrote the
-same text and **Esc** (meant as cancel) re-wrote the original — so merely
-opening/closing an editor marked the draft dirty ("Cambios sin guardar", false
-draft-protection prompts) and pushed an empty undo step. **Fix:** pure
-`_lib/inline-commit.ts` (`buildTextCommitPatch` / `buildCellCommitPatch`)
-returns `null` when the commit changes nothing; `use-inline-editing` skips the
-write on `null` for blur, Esc and Tab-to-next-cell. Cells compare the
-**normalized** row (line-items price formatting + subtotal), so a price that
-formats back to the stored value is a no-op, while correcting a stale subtotal
-still commits. Scope kept to inline commits (option A); drag/resize no-ops
-untouched. Follow-up (after #27 + #28): the 6.2 spec dropped its "read only as
-the last step" workaround and gained Esc/blur no-op regression specs.
 
 ## Phase 6 — End-to-end tests (Playwright, main-flow coverage)
 
@@ -389,8 +224,8 @@ name LIKE '[E2E]%'`; `client_contact` cascades. (Tables are physically
 >    **stub server** so interception happens at the `externalGet` boundary and the
 >    tRPC layer stays real. Start with `page.route`; fall back only if needed.
 
-> **Status (Phase 6):** **Flow track complete** (6.0–6.4, branch
-> `test/e2e-flow-track-6-1-6-4`). Next: the **editor track (6.5)** — core subset
+> **Status (Phase 6):** **Harness + flow track complete** (6.0–6.4, see
+> **Done → Phase 6**). Next: the **editor track (6.5)** — core subset
 > first (selection, inline edit, duplicate/delete, undo/redo) — then 6.6 auth,
 > 6.7 lookup negative paths, 6.8 nightly (optional). `pnpm test:e2e` = 9/9 green
 > against the dev DB; zero residual e2e rows after a run (verified by count).
@@ -401,107 +236,6 @@ name LIKE '[E2E]%'`; `client_contact` cascades. (Tables are physically
 >   undo/redo, duplicate/delete) to prove the canvas-interaction harness, then add
 >   formatting + table ops. The 6.2 helpers (`e2e/_support/editor.ts`) already
 >   prove coordinate-based canvas interaction + DOM read-back.
-
-### Task 6.0 — Playwright setup & DB-cleanup harness (Phase 6, prerequisite) — ✅ DONE & VERIFIED
-
-Stand up the e2e infrastructure and the isolation/teardown harness **before**
-writing specs, so every spec is clean-by-construction.
-
-> **Landed:** `@playwright/test@1.64.1` (pinned); `playwright.config.ts`
-> (`testDir: e2e/`, `webServer: pnpm dev:db:dev`, global setup/teardown, Chromium,
-> shared `storageState`); `e2e/_support/` harness — `db.ts` (direct `postgres`
-> over `DIRECT_URL`, user-scoped `deleteQuotationsForUser` /
-> `deleteE2eClientsForUser` / `countE2eRowsForUser`), `env.ts`, `global-setup.ts`
-> (resolve e2e user id + sign-in storageState), `global-teardown.ts` (scoped
-> sweep), `mock-external.ts` (`mockResolveReferences` via `page.route`),
-> `fixtures.ts` (per-test cleanup seam); `e2e/smoke.spec.ts`; `test:e2e` /
-> `test:e2e:ui` scripts; `.env.example` + `.gitignore` updated; ESLint relaxes
-> `react-hooks/rules-of-hooks` for `e2e/**` (Playwright's `use` fixture param).
-> Verified without a DB: `typecheck`/`lint` clean, Vitest unaffected (270/270),
-> `playwright test --list` finds both specs, Chromium installed, and `test:e2e`
-> reaches global setup (fails with the intended "seed E2E_USER…" message).
-> **Verified green (2026-11-04)** against the dev DB: both smoke specs pass
-> (login page renders; authenticated `storageState` reaches `/editor`).
-> **Run locally:** scripts load `.env.local` (needs DB creds + `E2E_USER_EMAIL`/
-> `E2E_USER_PASSWORD`); seed the e2e user once, then `pnpm test:e2e`. Use
-> `E2E_PORT=<n>` if 3000 is busy. Seed with the exact env value to avoid a
-> shell-mangled password mismatch:
-> `pnpm exec dotenv -e .env.local -- sh -c 'node scripts/seed-user.mjs "$E2E_USER_EMAIL" "$E2E_USER_PASSWORD" "E2E User"'`
-
-- **Add:** `@playwright/test` (pinned devDep); `playwright.config.ts` (own
-  `testDir`, e.g. `e2e/`, separate from Vitest's `src/**/*.test.*`); `test:e2e`
-  (+ `test:e2e:ui`) scripts loading `.env.local`; a `webServer` entry so
-  Playwright boots the app. Browser install is `pnpm exec playwright install`.
-- **E2e user:** seed one dedicated user (e.g. `e2e@test.local`) via
-  `pnpm db:seed:dev`; record credentials as e2e env vars. Resolve the e2e user's
-  `id` once in global setup (store for teardown scoping). **No product seeding**
-  — products come from the mocked external API.
-- **Auth fixture:** a Playwright fixture that signs in once (credentials) and
-  **reuses `storageState`** so each spec starts authenticated — except the
-  dedicated login specs (6.6), which drive the form directly.
-- **Cleanup harness:** a small `e2e/_support/db.ts` using a direct `postgres`
-  client over `DIRECT_URL`:
-  - `deleteQuotationsForUser(userId)` → `DELETE FROM mm_web_quotation WHERE
-user_id = $1`.
-  - `deleteE2eClientsForUser(userId)` → `DELETE FROM mm_web_client WHERE user_id
-= $1 AND name LIKE '[E2E]%'` (contacts cascade).
-  - Wire per-test `afterEach` (delete captured IDs) **and** `globalTeardown`
-    (sweep by e2e `user_id`).
-- **External-API mock helper:** `e2e/_support/mock-external.ts` exposing
-  `mockResolveReferences(page, { resolved, unresolved })` via `page.route` on
-  `**/api/trpc/**` (handle batch + superjson). Keep the stub-server fallback
-  behind the same helper API so specs don't change if we switch techniques.
-- **Acceptance:** `pnpm test:e2e` runs a trivial smoke spec (app boots, login
-  page renders) green locally; a deliberately row-creating throwaway spec leaves
-  **zero** residual rows for the e2e user after teardown (verify by querying
-  counts before/after); `pnpm test` (Vitest) is unaffected (separate testDir).
-- **Effort:** medium–large (one-time). **Risk:** medium — teardown scoping is
-  safety-critical; always filter by the e2e `user_id`, never a bare `LIKE`.
-
-## Flow track — the reachable end-to-end journey
-
-### Task 6.1 — SKU lookup → create quotation (Phase 6) — ✅ DONE
-
-`e2e/lookup-flow.spec.ts`: (a) all-resolved lookup → "Cargar en el editor" →
-editor with 2 product pages + policies; (b) manual start → blank draft (header +
-policies), client handoff reaches the editor. **Decisions/findings:**
-`customer.list` is **mocked too** (`mockClientList`), so 6.1/6.2 write nothing.
-The mock had to speak tRPC's **JSONL stream** format — `httpBatchStreamLink`
-always parses the body as a stream even though the server labels it
-`application/json`, so the plain `[{result}]` array from 6.0 failed (captured the
-real wire format; see `mock-external.ts`). Single-procedure requests only;
-batches fall through. Added a DOM hook on the canvas container:
-`data-testid="quotation-canvas"` + `data-page-count`.
-
-### Task 6.2 — Edit data in the editor (Phase 6) — ✅ DONE
-
-Same spec file: edit the page-1 product name via the inline editor → dirty +
-undo enabled; undo → nothing to undo, redo enabled; redo reapplies; undo restores
-the original value. Canvas interaction is by template coordinates
-(`e2e/_support/editor.ts`), values are read back through the DOM `<textarea>`.
-**Findings:** (1) closing the inline editor **committed even when unchanged**
-(dirtied the draft + empty undo step) — fixed in Task 5.14 (#28); the spec now
-reads values freely mid-flow and has Esc/blur no-op regression checks; (2) the selected
-element's floating toolbar overlaps the "Acciones" button at the default
-viewport, so helpers deselect (click stage margin) after each edit.
-
-### Task 6.3 — Save a quotation (Phase 6) — ✅ DONE
-
-`e2e/save-export.spec.ts`: creates an `[E2E] cliente <ts>` client through the
-real UI (Save checks client ownership server-side, so it can't be mocked), loads
-mocked products, saves → `Cotización n.º M…` badge, dirty cleared, export
-unlocked; the row is re-queried (`getQuotationsForUser`) for `client_id`,
-`product_count = 2`, `references`. **Bug fixed in the harness:**
-`customer.create` lowercases names, so the `LIKE '[E2E]%'` sentinel never matched
-UI-created clients (they'd leak) → now `ILIKE`, still double-scoped by `user_id`.
-Cleanup flags are set **before** writing so a mid-test failure still sweeps.
-
-### Task 6.4 — PDF export (Phase 6) — ✅ DONE
-
-Same file: export is only enabled after Save (`disabled={!saved}`), so the spec
-saves first, then asserts the download name
-`Cotización N°<n> - [E2E] CLIENTE <ts> - Magic Medios SAS.pdf`, non-empty size and
-`%PDF-` magic bytes (wiring, not fidelity).
 
 ## Editor track — dedicated functionality suite (the app's core)
 
@@ -829,6 +563,278 @@ Replaced the `Record<string, unknown>` + double cast with a real
 The `clipboard.ts` regexp/unsafe-return and `quotation-canvas.tsx`
 ref-reads-in-render were resolved in Phase 3 + Task 4.0 (`pnpm lint` = 0 errors).
 Only the `set-state-in-effect` **warning** remains, tracked under Task 5.7.
+
+### Task 5.7 — Audit `useEffect` usage app-wide (Phase 5) — ✅ DONE (a–e)
+
+Keep or replace, per effect. Start with the post-mount effect added in
+`editor-client.tsx` that reads `takePendingQuotationClient()` from
+`sessionStorage` into `selectedClientId` (added to fix a Save-button **hydration
+mismatch**: the old `useState(() => takePendingQuotationClient())` initializer
+returned `null` on the server but the stored value on the client, so the button's
+`disabled`/label diverged during hydration). The effect is correct but trips
+`react-hooks/set-state-in-effect` (a warn under this project's policy). Decide
+whether to keep it or replace it with a better idiom — `useSyncExternalStore`
+with a `null` server snapshot, a `mounted` gate, or moving the handoff off
+`sessionStorage` to a cookie/search param the **server** can read (removes the
+effect entirely but changes the handoff mechanism). Note `selectedClientId` is
+also set elsewhere, so a read-only `useSyncExternalStore` doesn't drop in cleanly.
+Then **sweep every other `useEffect` in the app** (grep) and, for each, decide
+keep vs. replace: is it a genuine effect (subscription, external sync, imperative
+DOM), or is it compensating for something that belongs in render, an event
+handler, derived state, or `useSyncExternalStore`? Record the keep/replace
+decision per effect. Watch for the same SSR/browser-storage hydration trap in the
+other storage-reading initializers in `editor-client.tsx` (`isManualStart`,
+`hasInitialProducts`, `pendingHomeContactIdRef`, and the initial pages/meta via
+`getQuotationProducts`) — they carry the same latent risk but aren't flagged today
+because they don't drive a rendered attribute.
+
+**Audit result (2026-11-04) and split into sub-tasks.** Every `useEffect` was
+classified; one change per sub-task, each on its own branch, verified
+independently.
+
+_Genuine effects — KEEP, no change:_ `quotation-list.tsx:40` and
+`product-catalog.tsx:42` (IntersectionObserver); `quotation-bar.tsx:13` and
+`product-card.tsx:46` (`STORAGE_EVENT` subscription); `confirm-modal.tsx:37`,
+`add-product-modal.tsx:88`, `actions-menu.tsx:38` (document key/click listeners);
+`toast-context.tsx:110` (unmount timer cleanup) and `:169` (rAF enter
+transition); `quotation-canvas.tsx:104` (scroll/visible-pages),
+`use-canvas-stage.ts:44` (ResizeObserver), `use-inline-editing.ts:86` (scroll
+listener); `canvas-page-renderer.tsx:294` (imperative `Image` load, see 5.4);
+`use-editor-keyboard-shortcuts.ts:29` (global keydown); `editor-client.tsx:191`
+(`beforeunload`).
+
+_Sub-tasks:_
+
+- **5.7a — `selectedClientId` hydration effect** — ✅ DONE. Replaced the
+  post-mount effect with `usePendingQuotationClient` (`useSyncExternalStore`, null
+  server snapshot) plus a user/load override in `editor-client.tsx`. Lint warning
+  gone (0 warnings).
+- **5.7b — Derived state / event-handler candidates** — ✅ DONE.
+  `visiblePageNumbers` + active page now derived in render (`_lib/visible-pages`
+  `withActivePage` + `useMemo`; the active page now always stays mounted);
+  `use-canvas-stage` wraps `setSelectedId` to notify `onSelectionChange`
+  directly (effect removed). `pagesRef.current = pages` mirror **kept** as an
+  effect (render-time assignment violates `react-hooks/refs`); commented in code.
+- **5.7c — Apply-on-data-arrival effects (ref-guarded)** — ✅ DONE (live ones);
+  `use-quotation-load.ts:67` DEFERRED. Both live effects are genuine
+  run-once-on-query-data effects (react to async data, imperatively rewrite
+  pages/history/meta — not derivable in render), so **kept** with clarifying
+  comments: `use-representative-profile.ts:32` (guard tests already cover
+  clean/no-data/dirty/saved/pending-load) and `editor-client.tsx:359`, where a
+  **phantom `selectedClientId` dep was removed** (leftover from 5.7a; never read
+  in the body). `use-quotation-load.ts:67` belongs to the feature-flagged
+  quotation module (2.3/3.3) — not touched until that path is live and
+  verifiable.
+- **5.7d — Keep-but-confirm** — ✅ DONE, both KEPT (comment-only).
+  `quotation-canvas.tsx:365` is a genuine imperative Konva `Transformer.nodes()`
+  sync (node lives outside React's tree). `editor-client.tsx:207` is a genuine
+  external-sync effect publishing `isDraft` to the nav bar (a non-descendant
+  sibling via context), with unmount cleanup; kept as state, not a ref (ref
+  de-synced across remount — see 5.10). Both annotated in code.
+- **5.7e — Latent storage-reading initializers** — ✅ DONE (documented, no code
+  change). Verdicts, annotated in code:
+  - `isManualStart` and `hasInitialProducts` — **latent risk.** They read
+    browser storage at mount (false on the server, possibly true on the client)
+    and feed `canSaveWhen`/`isDraft`, which drive the Save button's rendered
+    `disabled` state — the **same class of mismatch 5.7a fixed**. Not reproduced
+    today (`force-dynamic`, consume-on-read handoff). Harden with a shared
+    SSR-safe storage read (`useSyncExternalStore`, null server snapshot) if a
+    hydration warning ever appears.
+  - initial pages/meta via `getQuotationProducts` — **shielded.** The canvas
+    content renders inside the `ssr:false` `QuotationCanvas`, so the page bodies
+    never SSR and can't mismatch; the only exposure is the Save-button path
+    above.
+  - `pendingHomeContactIdRef` — **safe.** A ref read only inside the
+    client-seeding effect, never during render.
+
+**All of 5.7 (a–e) is complete.** The only follow-up is the deferred
+`use-quotation-load.ts:67` (quotation module, 2.3/3.3) and the optional hardening
+of the two latent initializers in 5.7e if a hydration warning surfaces.
+
+### Task 5.7f — Extract shared effect hooks (Phase 5, follow-up to the 5.7 audit) — ✅ DONE (rest deferred to 5.6 / optional)
+
+The audit asked whether the kept effects should become custom hooks. Verdict:
+only where it removes real duplication — a lone subscription effect
+(Escape/outside-click, timer, image load) is clearer inline, so those stay.
+
+- **Infinite-scroll `IntersectionObserver`** — ✅ DONE. `product-catalog.tsx` and
+  `quotation-list.tsx` had an identical observer effect; extracted to
+  `src/app/_hooks/use-infinite-scroll-sentinel.ts` (unit-tested: no-observe when
+  no next page, default 200px margin, fetch on intersect, skip while fetching,
+  skip when not intersecting, disconnect on unmount). Behaviour-preserving.
+- **Modal Escape / outside-click** (`confirm-modal`, `add-product-modal`,
+  `actions-menu`) — **deferred to Task 5.6**, which already scopes a shared
+  Escape/outside-click hook "only if its API stays simpler than the current
+  effects." Risk: a flag-laden hook (`closeOnEscape`/`closeOnOutsideClick`/
+  `autoFocusRef`) muddier than the three bespoke effects.
+- **`STORAGE_EVENT` sync** (`quotation-bar.tsx`, `product-card.tsx`) — **optional
+  follow-up.** Mild duplication; the correct primitive is a
+  `useQuotationSelection()` built on `useSyncExternalStore` (also SSR-safe,
+  unlike the current mount effect). Bundle with any 5.7e storage hardening.
+
+### Task 5.12 — Human-readable, shareable save-validation errors (Phase 5) — ✅ DONE
+
+Done on branch `fix/save-validation-error-messages`. Decisions taken: **(1A)** the
+server `errorFormatter` (`trpc.ts`) now exposes a trimmed `zodIssues`
+(`{ path, code, maximum }[]`, preserving nested paths `.flatten()` drops) and a
+pure, unit-tested `_lib/format-save-error.ts` maps the first issue to the toast
+message; **(2)** bespoke copy for the copy-reachable caps (`id`, element `text`,
+table cell text, elements-per-page) + a generic fallback; **(3)** per-field codes
+(`QUOT-ID-TOO-LONG`, `QUOT-TEXT-TOO-LONG`, `QUOT-CELL-TOO-LONG`,
+`QUOT-TOO-MANY-ELEMENTS`, `QUOT-SAVE-FAILED`); **(4)** the 4.5 MB 413 is detected
+by message signature and mapped to a clean user sentence with the infra detail
+(Vercel) carried only in the code `QUOT-TOO-LARGE-VERCEL`. `onError` keeps full
+technical detail in `console.error`.
+
+### Task 5.13 — Audit & guard remaining copy-reachable schema caps (Phase 5) — ✅ DONE
+
+Done on branch `chore/audit-copy-reachable-caps`. Follow-up to the element-`id`
+compounding fix (#24).
+
+**Audit result (2026-11-05, verified against the code):** the id case was the ONLY
+field a copy made _grow past its own cap_. Other caps are either abuse-ceilings
+not reachable by normal editing (page `id` 200, color fields 64, `fontFamily` 200,
+`colWidths` 100, `cells` 1,000 rows, pages 500) or copy _content_ verbatim without
+inflating it (element `text` 20k, table cell 10k, image `src` 5M). Resolutions to
+the open questions:
+
+1. **elements-per-page (1,000):** message-only — already surfaced clearly by Task
+   5.12's `QUOT-TOO-MANY-ELEMENTS` toast. A hard mid-edit block is worse UX and
+   1,000 is far beyond real use; no runtime guard added.
+2. **Other id-mint sites:** confirmed there are none that append to an existing
+   id. Element ids are minted at exactly 4 sites — `makePastedElement` and
+   `handleDuplicateElement` (both use `freshCopyId`), `handleAddElement` and
+   `handlePasteImage` (both mint fresh `el-<type>-<ts>`). Page ids are reassigned
+   from the array index (`page-${index+1}`) at both renumber sites, so they also
+   cannot compound.
+3. **Regression test:** added to `quotation-schema.test.ts` — drives `freshCopyId`
+   through 100 successive copies from the longest real base id and asserts the
+   lineage both stays ≤ 200 chars AND parses against the real
+   `quotationDocumentSchema` every step (locks the helper and the id cap together;
+   fails on either regressing), plus a sanity case that a 201-char id is rejected.
+
+### Task 5.14 — Inline editor no-op commits dirty the draft (Phase 5) — ✅ DONE
+
+Branch `fix/inline-editor-noop-commit`. Found while writing the 6.2 e2e spec:
+closing the inline textarea always called `onElementChange` — blur re-wrote the
+same text and **Esc** (meant as cancel) re-wrote the original — so merely
+opening/closing an editor marked the draft dirty ("Cambios sin guardar", false
+draft-protection prompts) and pushed an empty undo step. **Fix:** pure
+`_lib/inline-commit.ts` (`buildTextCommitPatch` / `buildCellCommitPatch`)
+returns `null` when the commit changes nothing; `use-inline-editing` skips the
+write on `null` for blur, Esc and Tab-to-next-cell. Cells compare the
+**normalized** row (line-items price formatting + subtotal), so a price that
+formats back to the stored value is a no-op, while correcting a stale subtotal
+still commits. Scope kept to inline commits (option A); drag/resize no-ops
+untouched. Follow-up (after #27 + #28): the 6.2 spec dropped its "read only as
+the last step" workaround and gained Esc/blur no-op regression specs.
+
+## Phase 6 — End-to-end tests (Playwright)
+
+Scope, design constraints and the remaining tasks (6.5–6.8) are under **Pending → Phase 6**.
+
+### Task 6.0 — Playwright setup & DB-cleanup harness (Phase 6, prerequisite) — ✅ DONE & VERIFIED
+
+Stand up the e2e infrastructure and the isolation/teardown harness **before**
+writing specs, so every spec is clean-by-construction.
+
+> **Landed:** `@playwright/test@1.64.1` (pinned); `playwright.config.ts`
+> (`testDir: e2e/`, `webServer: pnpm dev:db:dev`, global setup/teardown, Chromium,
+> shared `storageState`); `e2e/_support/` harness — `db.ts` (direct `postgres`
+> over `DIRECT_URL`, user-scoped `deleteQuotationsForUser` /
+> `deleteE2eClientsForUser` / `countE2eRowsForUser`), `env.ts`, `global-setup.ts`
+> (resolve e2e user id + sign-in storageState), `global-teardown.ts` (scoped
+> sweep), `mock-external.ts` (`mockResolveReferences` via `page.route`),
+> `fixtures.ts` (per-test cleanup seam); `e2e/smoke.spec.ts`; `test:e2e` /
+> `test:e2e:ui` scripts; `.env.example` + `.gitignore` updated; ESLint relaxes
+> `react-hooks/rules-of-hooks` for `e2e/**` (Playwright's `use` fixture param).
+> Verified without a DB: `typecheck`/`lint` clean, Vitest unaffected (270/270),
+> `playwright test --list` finds both specs, Chromium installed, and `test:e2e`
+> reaches global setup (fails with the intended "seed E2E_USER…" message).
+> **Verified green (2026-11-04)** against the dev DB: both smoke specs pass
+> (login page renders; authenticated `storageState` reaches `/editor`).
+> **Run locally:** scripts load `.env.local` (needs DB creds + `E2E_USER_EMAIL`/
+> `E2E_USER_PASSWORD`); seed the e2e user once, then `pnpm test:e2e`. Use
+> `E2E_PORT=<n>` if 3000 is busy. Seed with the exact env value to avoid a
+> shell-mangled password mismatch:
+> `pnpm exec dotenv -e .env.local -- sh -c 'node scripts/seed-user.mjs "$E2E_USER_EMAIL" "$E2E_USER_PASSWORD" "E2E User"'`
+
+- **Add:** `@playwright/test` (pinned devDep); `playwright.config.ts` (own
+  `testDir`, e.g. `e2e/`, separate from Vitest's `src/**/*.test.*`); `test:e2e`
+  (+ `test:e2e:ui`) scripts loading `.env.local`; a `webServer` entry so
+  Playwright boots the app. Browser install is `pnpm exec playwright install`.
+- **E2e user:** seed one dedicated user (e.g. `e2e@test.local`) via
+  `pnpm db:seed:dev`; record credentials as e2e env vars. Resolve the e2e user's
+  `id` once in global setup (store for teardown scoping). **No product seeding**
+  — products come from the mocked external API.
+- **Auth fixture:** a Playwright fixture that signs in once (credentials) and
+  **reuses `storageState`** so each spec starts authenticated — except the
+  dedicated login specs (6.6), which drive the form directly.
+- **Cleanup harness:** a small `e2e/_support/db.ts` using a direct `postgres`
+  client over `DIRECT_URL`:
+  - `deleteQuotationsForUser(userId)` → `DELETE FROM mm_web_quotation WHERE
+user_id = $1`.
+  - `deleteE2eClientsForUser(userId)` → `DELETE FROM mm_web_client WHERE user_id
+= $1 AND name LIKE '[E2E]%'` (contacts cascade).
+  - Wire per-test `afterEach` (delete captured IDs) **and** `globalTeardown`
+    (sweep by e2e `user_id`).
+- **External-API mock helper:** `e2e/_support/mock-external.ts` exposing
+  `mockResolveReferences(page, { resolved, unresolved })` via `page.route` on
+  `**/api/trpc/**` (handle batch + superjson). Keep the stub-server fallback
+  behind the same helper API so specs don't change if we switch techniques.
+- **Acceptance:** `pnpm test:e2e` runs a trivial smoke spec (app boots, login
+  page renders) green locally; a deliberately row-creating throwaway spec leaves
+  **zero** residual rows for the e2e user after teardown (verify by querying
+  counts before/after); `pnpm test` (Vitest) is unaffected (separate testDir).
+- **Effort:** medium–large (one-time). **Risk:** medium — teardown scoping is
+  safety-critical; always filter by the e2e `user_id`, never a bare `LIKE`.
+
+### Flow track — the reachable end-to-end journey
+
+All four landed together in PR #27 (follow-up #29).
+
+#### Task 6.1 — SKU lookup → create quotation (Phase 6) — ✅ DONE
+
+`e2e/lookup-flow.spec.ts`: (a) all-resolved lookup → "Cargar en el editor" →
+editor with 2 product pages + policies; (b) manual start → blank draft (header +
+policies), client handoff reaches the editor. **Decisions/findings:**
+`customer.list` is **mocked too** (`mockClientList`), so 6.1/6.2 write nothing.
+The mock had to speak tRPC's **JSONL stream** format — `httpBatchStreamLink`
+always parses the body as a stream even though the server labels it
+`application/json`, so the plain `[{result}]` array from 6.0 failed (captured the
+real wire format; see `mock-external.ts`). Single-procedure requests only;
+batches fall through. Added a DOM hook on the canvas container:
+`data-testid="quotation-canvas"` + `data-page-count`.
+
+#### Task 6.2 — Edit data in the editor (Phase 6) — ✅ DONE
+
+Same spec file: edit the page-1 product name via the inline editor → dirty +
+undo enabled; undo → nothing to undo, redo enabled; redo reapplies; undo restores
+the original value. Canvas interaction is by template coordinates
+(`e2e/_support/editor.ts`), values are read back through the DOM `<textarea>`.
+**Findings:** (1) closing the inline editor **committed even when unchanged**
+(dirtied the draft + empty undo step) — fixed in Task 5.14 (#28); the spec now
+reads values freely mid-flow and has Esc/blur no-op regression checks; (2) the selected
+element's floating toolbar overlaps the "Acciones" button at the default
+viewport, so helpers deselect (click stage margin) after each edit.
+
+#### Task 6.3 — Save a quotation (Phase 6) — ✅ DONE
+
+`e2e/save-export.spec.ts`: creates an `[E2E] cliente <ts>` client through the
+real UI (Save checks client ownership server-side, so it can't be mocked), loads
+mocked products, saves → `Cotización n.º M…` badge, dirty cleared, export
+unlocked; the row is re-queried (`getQuotationsForUser`) for `client_id`,
+`product_count = 2`, `references`. **Bug fixed in the harness:**
+`customer.create` lowercases names, so the `LIKE '[E2E]%'` sentinel never matched
+UI-created clients (they'd leak) → now `ILIKE`, still double-scoped by `user_id`.
+Cleanup flags are set **before** writing so a mid-test failure still sweeps.
+
+#### Task 6.4 — PDF export (Phase 6) — ✅ DONE
+
+Same file: export is only enabled after Save (`disabled={!saved}`), so the spec
+saves first, then asserts the download name
+`Cotización N°<n> - [E2E] CLIENTE <ts> - Magic Medios SAS.pdf`, non-empty size and
+`%PDF-` magic bytes (wiring, not fidelity).
 
 ---
 
