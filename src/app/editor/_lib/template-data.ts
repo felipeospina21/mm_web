@@ -408,6 +408,11 @@ function buildInventoryFootnote(
   };
 }
 
+/** Clear every body cell but keep the header row (index 0) text intact. */
+function blankBodyCells(cells: string[][]): string[][] {
+  return cells.map((row, index) => (index === 0 ? row : row.map(() => "")));
+}
+
 /** Build a blank product page while keeping each product field editable. */
 export function makeEmptyProductPage(
   pageNumber: number,
@@ -421,7 +426,7 @@ export function makeEmptyProductPage(
       ? {
           table: {
             ...element.table,
-            cells: element.table.cells.map((row) => row.map(() => "")),
+            cells: blankBodyCells(element.table.cells),
           },
         }
       : {}),
@@ -435,7 +440,7 @@ export function makeEmptyProductPage(
   if (inventory.table) {
     inventory.table = {
       ...inventory.table,
-      cells: inventory.table.cells.map((row) => row.map(() => "")),
+      cells: blankBodyCells(inventory.table.cells),
     };
   }
 
@@ -644,7 +649,7 @@ export function makeEmptyQuotationPages(
           ? {
               table: {
                 ...element.table,
-                cells: element.table.cells.map((row) => row.map(() => "")),
+                cells: blankBodyCells(element.table.cells),
               },
             }
           : {}),
@@ -663,7 +668,7 @@ export function makeEmptyQuotationPages(
   if (inventory.table) {
     inventory.table = {
       ...inventory.table,
-      cells: inventory.table.cells.map((row) => row.map(() => "")),
+      cells: blankBodyCells(inventory.table.cells),
     };
   }
   const footerIndex = elements.findIndex(
